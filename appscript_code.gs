@@ -30,6 +30,7 @@ var SHEET_KATEGORI_VENDOR = 'Kategori Vendor';
 var SHEET_KRITERIA_PENILAIAN = 'Kriteria Penilaian';
 var SHEET_PO = 'Purchase Order';
 var SHEET_PR = 'Purchase Request';
+var SHEET_KONTRAK = 'Kontrak Vendor';
 
 /**
  * GET Request
@@ -50,6 +51,7 @@ function doGet(e) {
     var prList = getPurchaseRequests(ss);
     var scoreSummary = getVendorScoreSummary(ss);
     var allVendors = getAllVendors(ss);
+    var contractCompliance = getContractCompliance(ss);
 
     // Jika ada request verifikasi PIN
     if (pin) {
@@ -63,7 +65,8 @@ function doGet(e) {
           kriteria: kriteriaList,
           poStats: poStats,
           prList: prList,
-          scoreSummary: scoreSummary
+          scoreSummary: scoreSummary,
+          contractCompliance: contractCompliance
         });
       }
 
@@ -91,7 +94,8 @@ function doGet(e) {
             kriteria: kriteriaList,
             poStats: poStats,
             prList: prList,
-            scoreSummary: scoreSummary
+            scoreSummary: scoreSummary,
+            contractCompliance: contractCompliance
           });
         }
       }
@@ -110,7 +114,8 @@ function doGet(e) {
       kriteria: kriteriaList,
       poStats: poStats,
       prList: prList,
-      scoreSummary: scoreSummary
+      scoreSummary: scoreSummary,
+      contractCompliance: contractCompliance
     });
 
   } catch (error) {
@@ -700,6 +705,96 @@ function initAllDatabaseSheets(ss) {
     sheet = ss.insertSheet(SHEET_PENILAIAN_VENDOR);
     setupSheetPenilaianHeaders(sheet);
   }
+
+  // 8. Kontrak Vendor (KPI Point 4)
+  sheet = ss.getSheetByName(SHEET_KONTRAK);
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_KONTRAK);
+    var h = ['No Kontrak', 'Vendor', 'Tanggal Mulai', 'Tanggal Selesai', 'Status Kepatuhan', 'Keterangan'];
+    sheet.appendRow(h);
+    var rows = [
+      ['KTR-2026-001', 'CHIPSET COMPUTER - EKI', '2026-01-01', '2026-12-31', 'Comply', 'Kinerja hardware & respon pemeliharaan baik'],
+      ['KTR-2026-002', 'PT BIZNET GIO NUSANTARA', '2026-02-01', '2026-08-01', 'Comply', 'SLA Cloud server 99.9% terpenuhi'],
+      ['KTR-2026-003', 'PT.GLOBAL JET EXPRESS', '2026-01-01', '2026-06-30', 'Not Comply', 'Keterlambatan ganti rugi barang rusak']
+    ];
+    for (var i = 0; i < rows.length; i++) sheet.appendRow(rows[i]);
+    styleHeaders(sheet, h.length);
+    sheet.setColumnWidth(1, 130);
+    sheet.setColumnWidth(2, 260);
+    sheet.setColumnWidth(3, 140);
+    sheet.setColumnWidth(4, 140);
+    sheet.setColumnWidth(5, 150);
+    sheet.setColumnWidth(6, 300);
+  }
+}
+
+/**
+ * Mendapatkan data kepatuhan kontrak (KPI Point 4)
+ */
+function getContractCompliance(ss) {
+  var sheet = ss.getSheetByName(SHEET_KONTRAK);
+  var stats = {
+    totalContracts: 0,
+    totalCompliantContracts: 0,
+    complianceRate: 100,
+    uniqueContractedVendors: 0,
+    uniqueCompliantVendors: 0,
+    vendorComplianceRate: 100,
+    list: []
+  };
+
+  if (!sheet || sheet.getLastRow() < 2) return stats;
+
+  var data = sheet.getDataRange().getValues();
+  var uniqueVendors = {}; // { 'Vendor A': { total: X, comply: Y } }
+
+  for (var i = 1; i < data.length; i++) {
+    var noKontrak = data[i][0] ? data[i][0].toString().trim() : '';
+    var vendor = data[i][1] ? data[i][1].toString().trim() : '';
+    var tglMulai = data[i][2] ? formatDate(data[i][2]) : '-';
+    var tglSelesai = data[i][3] ? formatDate(data[i][3]) : '-';
+    var status = data[i][4] ? data[i][4].toString().trim() : 'Comply';
+    var keterangan = data[i][5] ? data[i][5].toString().trim() : '';
+
+    if (noKontrak && vendor) {
+      stats.totalContracts++;
+      var isComply = status.toLowerCase() === 'comply';
+      if (isComply) stats.totalCompliantContracts++;
+
+      if (!uniqueVendors[vendor]) {
+        uniqueVendors[vendor] = { total: 0, comply: 0 };
+      }
+      uniqueVendors[vendor].total++;
+      if (isComply) uniqueVendors[vendor].comply++;
+
+      stats.list.push({
+        noKontrak: noKontrak,
+        vendor: vendor,
+        tglMulai: tglMulai,
+        tglSelesai: tglSelesai,
+        status: status,
+        keterangan: keterangan
+      });
+    }
+  }
+
+  // Hitung unique vendor stats
+  var berkontrakCount = 0;
+  var complyCount = 0;
+  for (var v in uniqueVendors) {
+    berkontrakCount++;
+    // Vendor dianggap comply jika semua kontraknya comply
+    if (uniqueVendors[v].comply === uniqueVendors[v].total) {
+      complyCount++;
+    }
+  }
+
+  stats.uniqueContractedVendors = berkontrakCount;
+  stats.uniqueCompliantVendors = complyCount;
+  stats.complianceRate = stats.totalContracts > 0 ? Math.round((stats.totalCompliantContracts / stats.totalContracts) * 100) : 100;
+  stats.vendorComplianceRate = berkontrakCount > 0 ? Math.round((complyCount / berkontrakCount) * 100) : 100;
+
+  return stats;
 }
 
 function styleHeaders(sheet, numCols) {

@@ -37,33 +37,42 @@
 
     <main class="main-content dashboard-content">
         <!-- Dashboard Summary Row -->
+        <!-- Dashboard Summary Row (aligned with corporate KPIs) -->
         <div class="db-summary-grid">
+            <!-- KPI 1: Vendor Performance Score -->
             <div class="db-card stat-card">
-                <div class="stat-icon" style="background: rgba(10, 46, 92, 0.08); color: var(--primary);">🏢</div>
+                <div class="stat-icon" style="background: rgba(10, 46, 92, 0.08); color: var(--primary);">⭐</div>
                 <div class="stat-info">
-                    <span class="stat-label">Total Vendor</span>
-                    <h3 id="statTotalVendors">0</h3>
-                </div>
-            </div>
-            <div class="db-card stat-card">
-                <div class="stat-icon" style="background: rgba(2, 132, 199, 0.08); color: var(--secondary);">📦</div>
-                <div class="stat-info">
-                    <span class="stat-label">Total Purchase Order</span>
-                    <h3 id="statTotalPo">0</h3>
-                </div>
-            </div>
-            <div class="db-card stat-card">
-                <div class="stat-icon" style="background: rgba(16, 185, 129, 0.08); color: var(--accent);">📝</div>
-                <div class="stat-info">
-                    <span class="stat-label">Total Purchase Request</span>
-                    <h3 id="statTotalPr">0</h3>
-                </div>
-            </div>
-            <div class="db-card stat-card">
-                <div class="stat-icon" style="background: rgba(245, 158, 11, 0.08); color: #f59e0b;">⭐</div>
-                <div class="stat-info">
-                    <span class="stat-label">Rata-rata Skor</span>
+                    <span class="stat-label">KPI 1: Performance Score</span>
                     <h3 id="statAvgScore">0.0</h3>
+                    <span class="stat-subtext" id="statEvalCount" style="font-size:0.72rem; color:var(--text3); margin-top:0.15rem;">0 vendor dinilai</span>
+                </div>
+            </div>
+            <!-- KPI 2: Vendor Evaluation Completion -->
+            <div class="db-card stat-card">
+                <div class="stat-icon" style="background: rgba(2, 132, 199, 0.08); color: var(--secondary);">📊</div>
+                <div class="stat-info">
+                    <span class="stat-label">KPI 2: Eval Completion</span>
+                    <h3 id="statEvalCompletion">0%</h3>
+                    <span class="stat-subtext" id="statEvalRatio" style="font-size:0.72rem; color:var(--text3); margin-top:0.15rem;">0 / 0 vendor aktif</span>
+                </div>
+            </div>
+            <!-- KPI 3: VMS Development Progress -->
+            <div class="db-card stat-card">
+                <div class="stat-icon" style="background: rgba(16, 185, 129, 0.08); color: var(--accent);">🛠️</div>
+                <div class="stat-info">
+                    <span class="stat-label">KPI 3: VMS Development</span>
+                    <h3>95%</h3>
+                    <span class="stat-subtext" style="font-size:0.72rem; color:var(--text3); margin-top:0.15rem;">Database & Dashboard OK</span>
+                </div>
+            </div>
+            <!-- KPI 4: Contract Compliance -->
+            <div class="db-card stat-card">
+                <div class="stat-icon" style="background: rgba(245, 158, 11, 0.08); color: #f59e0b;">📜</div>
+                <div class="stat-info">
+                    <span class="stat-label">KPI 4: Contract Compliance</span>
+                    <h3 id="statContractCompliance">0%</h3>
+                    <span class="stat-subtext" id="statContractRatio" style="font-size:0.72rem; color:var(--text3); margin-top:0.15rem;">0 / 0 berkontrak comply</span>
                 </div>
             </div>
         </div>

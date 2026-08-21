@@ -56,12 +56,10 @@ function renderDashboard() {
 
     const { vendors, poStats, prList, scoreSummary, kategori } = dashboardData;
 
-    // 1. Render Summary Cards
+    // 1. Render Summary Cards (KPI 1 - KPI 4)
     const totalVendors = vendors ? vendors.length : 0;
-    const totalPo = poStats ? poStats.totalOrders : 0;
-    const totalPr = prList ? prList.length : 0;
     
-    // Hitung rata-rata total skor evaluasi
+    // Hitung KPI 1: Vendor Performance Score & evaluasi count
     let sumScore = 0;
     let countScore = 0;
     if (scoreSummary) {
@@ -72,10 +70,21 @@ function renderDashboard() {
     }
     const avgScore = countScore > 0 ? (sumScore / countScore).toFixed(1) : '0.0';
 
-    document.getElementById('statTotalVendors').textContent = totalVendors;
-    document.getElementById('statTotalPo').textContent = totalPo;
-    document.getElementById('statTotalPr').textContent = totalPr;
-    document.getElementById('statAvgScore').textContent = avgScore;
+    // Hitung KPI 2: Vendor Evaluation Completion
+    const evalCompletionPct = totalVendors > 0 ? Math.round((countScore / totalVendors) * 100) : 0;
+
+    // Ambil KPI 4: Contract Compliance
+    const cc = dashboardData.contractCompliance || { uniqueContractedVendors: 0, uniqueCompliantVendors: 0, vendorComplianceRate: 100 };
+
+    // Update UI elements
+    document.getElementById('statAvgScore').textContent = `${avgScore} / 5.0`;
+    document.getElementById('statEvalCount').textContent = `${countScore} vendor dinilai`;
+    
+    document.getElementById('statEvalCompletion').textContent = `${evalCompletionPct}%`;
+    document.getElementById('statEvalRatio').textContent = `${countScore} / ${totalVendors} vendor selesai`;
+
+    document.getElementById('statContractCompliance').textContent = `${cc.vendorComplianceRate}%`;
+    document.getElementById('statContractRatio').textContent = `${cc.uniqueCompliantVendors} / ${cc.uniqueContractedVendors} vendor comply`;
 
     // 2. Render Top 5 Vendors
     renderTopVendors(scoreSummary, vendors, kategori);
