@@ -155,14 +155,29 @@
                 </div>
             </div>
 
-            <!-- Chart 2: Spend & Nilai Kontrak per Kategori (Bar Chart) -->
+            <!-- Position 2: TOP 5 Vendor Terbaik (Table) -->
             <div class="db-card">
                 <div class="db-card-header">
-                    <h4>💰 Distribusi Nilai Kontrak per Kategori (Spend)</h4>
-                    <span class="badge" style="background:#0284c715; color:#0284c7; border:1px solid #0284c730;">Komitmen Anggaran</span>
+                    <h4>🏆 TOP 5 Vendor Terbaik</h4>
+                    <span class="badge badge-success">Skor Tertinggi</span>
                 </div>
-                <div style="padding: 1rem; display:flex; justify-content:center; align-items:center; min-height:280px;">
-                    <canvas id="spendChart" style="max-width:100%; max-height:280px;"></canvas>
+                <div class="table-responsive">
+                    <table class="db-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 35px;">No</th>
+                                <th>Nama Vendor</th>
+                                <th>Kategori</th>
+                                <th style="text-align: right;">Skor</th>
+                                <th style="text-align: center;">Predikat</th>
+                            </tr>
+                        </thead>
+                        <tbody id="topVendorsTable">
+                            <tr>
+                                <td colspan="5" style="text-align: center; color: var(--text3); padding: 2rem;">Memuat data ranking...</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -210,32 +225,17 @@
             </div>
         </div>
 
-        <!-- Section 2: Vendor Performance Grid (Top 5 & Low Attention) -->
+        <!-- Section 2: Vendor Performance Grid (Spend & Low Attention vs PO) -->
         <div class="db-main-grid" id="sectionPerformance" style="margin-bottom: 1.5rem;">
-            <!-- Left Column: Ranking & Attention -->
+            <!-- Left Column: Spend Distribution & Attention -->
             <div class="db-col">
                 <div class="db-card">
                     <div class="db-card-header">
-                        <h4>🏆 TOP 5 Vendor Terbaik</h4>
-                        <span class="badge badge-success">Skor Tertinggi</span>
+                        <h4>💰 Distribusi Nilai Kontrak per Kategori (Spend)</h4>
+                        <span class="badge" style="background:#0284c715; color:#0284c7; border:1px solid #0284c730;">Komitmen Anggaran</span>
                     </div>
-                    <div class="table-responsive">
-                        <table class="db-table">
-                            <thead>
-                                <tr>
-                                    <th style="width: 40px;">No</th>
-                                    <th>Nama Vendor</th>
-                                    <th>Kategori</th>
-                                    <th style="text-align: right;">Skor</th>
-                                    <th style="text-align: center;">Predikat</th>
-                                </tr>
-                            </thead>
-                            <tbody id="topVendorsTable">
-                                <tr>
-                                    <td colspan="5" style="text-align: center; color: var(--text3); padding: 2rem;">Memuat data ranking...</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <div style="padding: 1rem; display:flex; justify-content:center; align-items:center; min-height:280px;">
+                        <canvas id="spendChart" style="max-width:100%; max-height:280px;"></canvas>
                     </div>
                 </div>
 
