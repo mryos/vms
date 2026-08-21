@@ -36,7 +36,7 @@
     </header>
 
     <main class="main-content dashboard-content">
-        <!-- Gatekeeper-Style Subnav & Tab Filters -->
+        <!-- Gatekeeper-Style Subnav & Compact Filter Bar -->
         <div class="dashboard-subnav">
             <div class="db-tabs" id="dashboardTabs">
                 <button class="db-tab-btn active" data-tab="all">🏢 Semua Ringkasan</button>
@@ -44,51 +44,24 @@
                 <button class="db-tab-btn" data-tab="performance">⭐ Kinerja &amp; Evaluasi</button>
                 <button class="db-tab-btn" data-tab="orders">🚚 PO &amp; Delivery</button>
             </div>
-            <div class="db-filter-action">
-                <span class="db-quick-badge" id="badgeLastUpdate">🔄 Live Sync Google Sheets</span>
-            </div>
-        </div>
-
-        <!-- Mokkup.ai Interactive Slicers Panel (Slice Buttons) -->
-        <div class="slicer-panel" id="slicerPanel">
-            <div class="slicer-header">
-                <div class="slicer-header-title">
-                    <span>🎛️</span> Interactive Data Slicers
-                    <span class="slicer-active-indicator" id="slicerActiveInfo">Menampilkan seluruh data vendor</span>
-                </div>
-                <button class="slicer-reset-btn" id="slicerResetBtn" onclick="resetAllSlicers()">
-                    <span>🔄</span> Reset Filter
+            <div class="db-filter-action" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                <select id="slicerCategorySelect" class="db-select" title="Filter Bidang Vendor">
+                    <option value="all">📁 Semua Bidang</option>
+                </select>
+                <select id="slicerComplianceSelect" class="db-select" title="Filter Status Kontrak">
+                    <option value="all">📜 Semua Kontrak</option>
+                    <option value="comply">🟢 Comply Saja</option>
+                    <option value="not-comply">🔴 Not Comply Saja</option>
+                </select>
+                <select id="slicerTierSelect" class="db-select" title="Filter Rating Skor">
+                    <option value="all">⭐ Semua Rating</option>
+                    <option value="high">⭐ Sangat Baik (&ge; 4.5)</option>
+                    <option value="good">👍 Baik (3.5 - 4.4)</option>
+                    <option value="poor">⚠️ Perlu Perhatian (&lt; 2.5)</option>
+                </select>
+                <button class="slicer-reset-btn" id="slicerResetBtn" onclick="resetAllSlicers()" title="Reset Filter">
+                    <span>🔄</span> Reset
                 </button>
-            </div>
-            <div class="slicers-container">
-                <!-- Slicer 1: Kategori / Bidang -->
-                <div class="slicer-row">
-                    <span class="slicer-label">📁 Bidang:</span>
-                    <div class="slicer-chips" id="slicerCategoryChips">
-                        <button class="slicer-btn active" data-slicer="category" data-val="all">Semua Bidang</button>
-                    </div>
-                </div>
-
-                <!-- Slicer 2: Kepatuhan Kontrak (KPI 4) -->
-                <div class="slicer-row">
-                    <span class="slicer-label">📜 Kontrak:</span>
-                    <div class="slicer-chips" id="slicerComplianceChips">
-                        <button class="slicer-btn active" data-slicer="compliance" data-val="all">Semua Status</button>
-                        <button class="slicer-btn" data-slicer="compliance" data-val="comply">🟢 Comply Saja</button>
-                        <button class="slicer-btn" data-slicer="compliance" data-val="not-comply">🔴 Not Comply Saja</button>
-                    </div>
-                </div>
-
-                <!-- Slicer 3: Tingkat Skor Evaluasi (KPI 1) -->
-                <div class="slicer-row">
-                    <span class="slicer-label">⭐ Rating:</span>
-                    <div class="slicer-chips" id="slicerTierChips">
-                        <button class="slicer-btn active" data-slicer="tier" data-val="all">Semua Skor</button>
-                        <button class="slicer-btn" data-slicer="tier" data-val="high">⭐ Sangat Baik (&ge; 4.5)</button>
-                        <button class="slicer-btn" data-slicer="tier" data-val="good">👍 Baik (3.5 - 4.4)</button>
-                        <button class="slicer-btn" data-slicer="tier" data-val="poor">⚠️ Perlu Perhatian (&lt; 2.5)</button>
-                    </div>
-                </div>
             </div>
         </div>
 

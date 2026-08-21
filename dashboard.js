@@ -73,40 +73,37 @@ function applyTabFilter(tab) {
 }
 
 function initSlicers(kategoriList) {
-    // 1. Inisialisasi Category Slicer Chips secara dinamis dari database
-    const catContainer = document.getElementById('slicerCategoryChips');
-    if (catContainer && kategoriList && kategoriList.length > 0) {
-        catContainer.innerHTML = `<button class="slicer-btn ${slicerState.category === 'all' ? 'active' : ''}" data-slicer="category" data-val="all">Semua Bidang</button>` +
-            kategoriList.map(k => `
-                <button class="slicer-btn ${slicerState.category === k.kode ? 'active' : ''}" data-slicer="category" data-val="${esc(k.kode)}">
-                    ${k.ikon || '📦'} ${esc(k.nama)}
-                </button>
-            `).join('');
+    // 1. Inisialisasi Category Select Options secara dinamis dari database
+    const catSelect = document.getElementById('slicerCategorySelect');
+    if (catSelect && kategoriList && kategoriList.length > 0) {
+        catSelect.innerHTML = `<option value="all">📁 Semua Bidang</option>` +
+            kategoriList.map(k => `<option value="${esc(k.kode)}">${k.ikon || '📦'} ${esc(k.nama)}</option>`).join('');
     }
 
-    // 2. Pasang event listener untuk semua tombol slicer
-    document.querySelectorAll('.slicer-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const slicerType = btn.dataset.slicer;
-            const slicerVal = btn.dataset.val;
+    // 2. Pasang event listener untuk dropdown filter
+    const compSelect = document.getElementById('slicerComplianceSelect');
+    const tierSelect = document.getElementById('slicerTierSelect');
 
-            // Hapus class active pada group yang sama
-            const parentRow = btn.closest('.slicer-chips');
-            if (parentRow) {
-                parentRow.querySelectorAll('.slicer-btn').forEach(b => b.classList.remove('active', 'active-green', 'active-amber', 'active-red'));
-            }
-
-            // Tambah active class
-            if (slicerVal === 'comply' || slicerVal === 'high') btn.classList.add('active-green');
-            else if (slicerVal === 'good') btn.classList.add('active-amber');
-            else if (slicerVal === 'not-comply' || slicerVal === 'poor') btn.classList.add('active-red');
-            else btn.classList.add('active');
-
-            // Simpan state dan re-render
-            slicerState[slicerType] = slicerVal;
+    if (catSelect) {
+        catSelect.addEventListener('change', () => {
+            slicerState.category = catSelect.value;
             filterAndRenderDashboard();
         });
-    });
+    }
+
+    if (compSelect) {
+        compSelect.addEventListener('change', () => {
+            slicerState.compliance = compSelect.value;
+            filterAndRenderDashboard();
+        });
+    }
+
+    if (tierSelect) {
+        tierSelect.addEventListener('change', () => {
+            slicerState.tier = tierSelect.value;
+            filterAndRenderDashboard();
+        });
+    }
 }
 
 function resetAllSlicers() {
@@ -116,16 +113,17 @@ function resetAllSlicers() {
         tier: 'all'
     };
 
-    // Reset tombol UI
-    document.querySelectorAll('.slicer-chips').forEach(group => {
-        group.querySelectorAll('.slicer-btn').forEach(b => {
-            b.classList.remove('active', 'active-green', 'active-amber', 'active-red');
-            if (b.dataset.val === 'all') b.classList.add('active');
-        });
-    });
+    // Reset dropdown UI
+    const catSelect = document.getElementById('slicerCategorySelect');
+    const compSelect = document.getElementById('slicerComplianceSelect');
+    const tierSelect = document.getElementById('slicerTierSelect');
+
+    if (catSelect) catSelect.value = 'all';
+    if (compSelect) compSelect.value = 'all';
+    if (tierSelect) tierSelect.value = 'all';
 
     filterAndRenderDashboard();
-    showToast('Semua filter slicer telah direset ke kondisi awal.', 'info');
+    showToast('Filter telah direset ke kondisi awal.', 'info');
 }
 
 async function loadDashboardData() {
