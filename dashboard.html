@@ -225,21 +225,11 @@
             </div>
         </div>
 
-        <!-- Section 2: Vendor Performance Grid (Spend & Low Attention vs PO) -->
+        <!-- Section 2: Vendor Performance & Operations Grid (Vendor Perlu Perhatian vs PO Delivery) -->
         <div class="db-main-grid" id="sectionPerformance" style="margin-bottom: 1.5rem;">
-            <!-- Left Column: Spend Distribution & Attention -->
+            <!-- Left Column: Attention Vendors -->
             <div class="db-col">
-                <div class="db-card">
-                    <div class="db-card-header">
-                        <h4>💰 Distribusi Nilai Kontrak per Kategori (Spend)</h4>
-                        <span class="badge" style="background:#0284c715; color:#0284c7; border:1px solid #0284c730;">Komitmen Anggaran</span>
-                    </div>
-                    <div style="padding: 1rem; display:flex; justify-content:center; align-items:center; min-height:280px;">
-                        <canvas id="spendChart" style="max-width:100%; max-height:280px;"></canvas>
-                    </div>
-                </div>
-
-                <div class="db-card">
+                <div class="db-card" style="height: 100%;">
                     <div class="db-card-header">
                         <h4>⚠️ Vendor Perlu Perhatian</h4>
                         <span class="badge badge-danger">Skor &lt; 2.5</span>
@@ -271,7 +261,7 @@
                         <h4>🚚 Kinerja Ketepatan Waktu Pengiriman PO</h4>
                         <span id="overallOnTimeBadge" class="badge">0% On-Time</span>
                     </div>
-                    <div class="po-performance-list" id="poPerformanceList" style="max-height: 620px;">
+                    <div class="po-performance-list" id="poPerformanceList" style="max-height: 420px;">
                         <div style="text-align: center; color: var(--text3); padding: 2rem;">Memuat data pengiriman...</div>
                     </div>
                 </div>

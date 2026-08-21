@@ -282,7 +282,6 @@ function renderDashboard(vendors, scoreSummary, cc, poStats, kategori) {
 
     // 3. Render Enterprise Charts (Chart.js)
     renderComplianceChart(cc);
-    renderSpendChart(cc, kategori, poStats);
     renderRadarChart(vendors, scoreSummary, kategori);
 
     // 4. Render Tables
@@ -602,7 +601,6 @@ function showToast(msg, type = 'success') {
 // =====================================================
 let radarChartInstance = null;
 let complianceChartInstance = null;
-let spendChartInstance = null;
 
 function renderRadarChart(vendors, scoreSummary, kategori) {
     const canvas = document.getElementById('radarChart');
@@ -771,90 +769,6 @@ function renderComplianceChart(cc) {
                 ctx.restore();
             }
         }]
-    });
-}
-
-function renderSpendChart(cc, kategori, poStats) {
-    const canvas = document.getElementById('spendChart');
-    if (!canvas) return;
-
-    // Hitung spend per kategori (dari kontrak dan PO)
-    const catSpend = {};
-    if (cc && cc.list) {
-        cc.list.forEach(c => {
-            const vendorName = c.vendor || '';
-            let catName = 'Lainnya';
-            if (c.noKontrak && c.noKontrak.includes('IT')) catName = 'IT & Hardware';
-            else if (c.noKontrak && c.noKontrak.includes('LOG')) catName = 'Ekspedisi / Logistik';
-            else if (c.noKontrak && c.noKontrak.includes('PRN')) catName = 'Percetakan';
-            else if (c.noKontrak && c.noKontrak.includes('BRD')) catName = 'Branding & Desain';
-            else if (c.noKontrak && c.noKontrak.includes('DEV')) catName = 'Software & Dev';
-
-            catSpend[catName] = (catSpend[catName] || 0) + (Number(c.nilai) || 0);
-        });
-    }
-
-    const labels = Object.keys(catSpend);
-    const data = Object.values(catSpend);
-
-    if (labels.length === 0) {
-        labels.push('Belum ada data kontrak');
-        data.push(0);
-    }
-
-    if (spendChartInstance) spendChartInstance.destroy();
-
-    spendChartInstance = new Chart(canvas, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Nilai Kontrak (Rp)',
-                data: data,
-                backgroundColor: [
-                    'rgba(2, 132, 199, 0.8)',
-                    'rgba(16, 185, 129, 0.8)',
-                    'rgba(245, 158, 11, 0.8)',
-                    'rgba(139, 92, 246, 0.8)',
-                    'rgba(79, 70, 229, 0.8)'
-                ],
-                borderRadius: 6
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        callback: function(value) {
-                            return 'Rp ' + (value / 1000000) + ' Jt';
-                        },
-                        font: { size: 11 }
-                    },
-                    grid: { color: '#f1f5f9' }
-                },
-                x: {
-                    ticks: { font: { size: 11, weight: '600' } },
-                    grid: { display: false }
-                }
-            },
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    backgroundColor: '#1e293b',
-                    titleFont: { size: 13, weight: '700' },
-                    padding: 10,
-                    cornerRadius: 8,
-                    callbacks: {
-                        label: function(ctx) {
-                            return formatRupiah(ctx.raw);
-                        }
-                    }
-                }
-            }
-        }
     });
 }
 
