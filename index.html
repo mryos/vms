@@ -46,7 +46,10 @@
                     <span class="header-company">PT Ethos Kreatif Indonesia</span>
                 </div>
             </div>
-            <div class="header-right">
+            <div class="header-right" style="display: flex; align-items: center; gap: 1.25rem;">
+                <a href="dashboard.html" class="nav-link" style="text-decoration: none; color: var(--primary); font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 0.25rem;">
+                    <span>📊</span> Dashboard Kinerja
+                </a>
                 <span class="header-user" id="headerUser" title="Klik untuk ganti nama"></span>
             </div>
         </div>
@@ -70,16 +73,11 @@
             </div>
         </div>
 
-        <!-- Filter Bidang / Kategori Vendor (Multi-Select Supported) -->
+        <!-- Filter Bidang / Kategori Vendor (Dinamis dari Spreadsheet) -->
         <div class="category-bar">
             <div class="category-chips" id="categoryChips">
+                <!-- Di-render dinamis oleh JS -->
                 <button class="cat-chip active" data-cat="all">Semua Bidang</button>
-                <button class="cat-chip" data-cat="it">💻 IT & Komputer</button>
-                <button class="cat-chip" data-cat="logistics">🚚 Ekspedisi & Logistik</button>
-                <button class="cat-chip" data-cat="branding">📣 Branding & Marketing</button>
-                <button class="cat-chip" data-cat="printing">🖨️ Percetakan & Custom</button>
-                <button class="cat-chip" data-cat="consultant">💼 Konsultan & Services</button>
-                <button class="cat-chip" data-cat="general">📦 General & ATK</button>
             </div>
         </div>
 

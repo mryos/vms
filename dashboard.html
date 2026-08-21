@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Dashboard Kinerja Vendor - PT Ethos Kreatif Indonesia">
+<title>Dashboard Kinerja Vendor - PT Ethos Kreatif Indonesia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="header-inner">
+            <div class="header-left">
+                <a href="index.html" class="header-logo-link" style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 0.5rem;">
+                    <div class="header-logo">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                    </div>
+                    <div>
+                        <span class="header-title">Dashboard Kinerja</span>
+                        <span class="header-company">PT Ethos Kreatif Indonesia</span>
+                    </div>
+                </a>
+            </div>
+            <div class="header-right" style="display: flex; align-items: center; gap: 1.25rem;">
+                <a href="index.html" class="nav-link" style="text-decoration: none; color: var(--primary); font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 0.25rem;">
+                    <span>📝</span> Evaluasi Vendor
+                </a>
+                <span class="header-user" id="headerUser">👤 Guest</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content dashboard-content">
+        <!-- Dashboard Summary Row -->
+        <div class="db-summary-grid">
+            <div class="db-card stat-card">
+                <div class="stat-icon" style="background: rgba(10, 46, 92, 0.08); color: var(--primary);">🏢</div>
+                <div class="stat-info">
+                    <span class="stat-label">Total Vendor</span>
+                    <h3 id="statTotalVendors">0</h3>
+                </div>
+            </div>
+            <div class="db-card stat-card">
+                <div class="stat-icon" style="background: rgba(2, 132, 199, 0.08); color: var(--secondary);">📦</div>
+                <div class="stat-info">
+                    <span class="stat-label">Total Purchase Order</span>
+                    <h3 id="statTotalPo">0</h3>
+                </div>
+            </div>
+            <div class="db-card stat-card">
+                <div class="stat-icon" style="background: rgba(16, 185, 129, 0.08); color: var(--accent);">📝</div>
+                <div class="stat-info">
+                    <span class="stat-label">Total Purchase Request</span>
+                    <h3 id="statTotalPr">0</h3>
+                </div>
+            </div>
+            <div class="db-card stat-card">
+                <div class="stat-icon" style="background: rgba(245, 158, 11, 0.08); color: #f59e0b;">⭐</div>
+                <div class="stat-info">
+                    <span class="stat-label">Rata-rata Skor</span>
+                    <h3 id="statAvgScore">0.0</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Dashboard Layout -->
+        <div class="db-main-grid">
+            
+            <!-- Left Column: Ranking & Attention -->
+            <div class="db-col">
+                <div class="db-card">
+                    <div class="db-card-header">
+                        <h4>🏆 TOP 5 Vendor Terbaik</h4>
+                        <span class="badge badge-success">Skor Tertinggi</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="db-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50px;">No</th>
+                                    <th>Nama Vendor</th>
+                                    <th>Kategori</th>
+                                    <th style="text-align: right;">Skor</th>
+                                    <th style="text-align: center;">Predikat</th>
+                                </tr>
+                            </thead>
+                            <tbody id="topVendorsTable">
+                                <tr>
+                                    <td colspan="5" style="text-align: center; color: var(--text3); padding: 2rem;">Memuat data ranking...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="db-card">
+                    <div class="db-card-header">
+                        <h4>⚠️ Vendor Perlu Perhatian</h4>
+                        <span class="badge badge-danger">Skor &lt; 2.5</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="db-table">
+                            <thead>
+                                <tr>
+                                    <th>Nama Vendor</th>
+                                    <th>Kategori</th>
+                                    <th style="text-align: right;">Skor</th>
+                                    <th style="text-align: center;">Predikat</th>
+                                </tr>
+                            </thead>
+                            <tbody id="attentionVendorsTable">
+                                <tr>
+                                    <td colspan="4" style="text-align: center; color: var(--text3); padding: 2rem;">Memuat data...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Delivery Performance & PRs -->
+            <div class="db-col">
+                <div class="db-card">
+                    <div class="db-card-header">
+                        <h4>🚚 Kinerja Ketepatan Waktu PO</h4>
+                        <span id="overallOnTimeBadge" class="badge">0% On-Time</span>
+                    </div>
+                    <div class="po-performance-list" id="poPerformanceList">
+                        <div style="text-align: center; color: var(--text3); padding: 2rem;">Memuat data pengiriman...</div>
+                    </div>
+                </div>
+
+                <div class="db-card">
+                    <div class="db-card-header">
+                        <h4>📋 Purchase Request Terbaru</h4>
+                        <a href="#" onclick="alert('Kelola PR dilakukan langsung melalui Google Sheets.'); return false;" style="font-size: 0.8rem; color: var(--secondary); text-decoration: none;">Kelola PR &rsaquo;</a>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="db-table">
+                            <thead>
+                                <tr>
+                                    <th>No PR</th>
+                                    <th>Tanggal</th>
+                                    <th>Item</th>
+                                    <th>Estimasi (Rp)</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="prTableBody">
+                                <tr>
+                                    <td colspan="5" style="text-align: center; color: var(--text3); padding: 2rem;">Memuat data Purchase Request...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </main>
+
+    <!-- Success Overlay -->
+    <div class="success-bg" id="successBg"></div>
+    <!-- Toast -->
+    <div class="toast-box" id="toastBox"></div>
+
+    <script src="dashboard.js"></script>
+</body>
+</html>

@@ -118,6 +118,7 @@ let viewMode = 'all'; // 'all' | 'pinned'
 let ratings = {}; // Akan diisi dinamis berdasarkan kriteria aktif
 let vendorCategoryMap = {}; // { 'Nama Vendor': 'it', ... } — diisi dari spreadsheet
 let kriteriaList = []; // Diambil dari spreadsheet
+let categoriesList = []; // Diambil dari spreadsheet
 let poStats = { totalOrders: 0, totalOnTime: 0, overallOnTimePct: 0, vendorMap: {} };
 
 const DEFAULT_KRITERIA = [
@@ -200,12 +201,20 @@ function checkWelcome() {
     const savedName = localStorage.getItem('ethos_nama');
     const savedVendors = localStorage.getItem('ethos_user_vendors');
     const savedKriteria = localStorage.getItem('ethos_kriteria');
+    const savedCategories = localStorage.getItem('ethos_categories');
 
     if (savedKriteria) {
         try { kriteriaList = JSON.parse(savedKriteria); } catch { kriteriaList = [...DEFAULT_KRITERIA]; }
     } else {
         kriteriaList = [...DEFAULT_KRITERIA];
     }
+
+    if (savedCategories) {
+        try { categoriesList = JSON.parse(savedCategories); } catch { categoriesList = []; }
+    }
+
+    // Render kategori terlebih dahulu
+    renderCategoryChips(categoriesList.length > 0 ? categoriesList : DEFAULT_CATEGORIES);
 
     if (savedPin && savedName && savedVendors) {
         currentPin = savedPin;
@@ -236,7 +245,7 @@ async function refreshPoStatsFromServer(pin) {
                 poStats = data.poStats;
                 renderVendorList(); // Re-render agar badge PO di vendor rows muncul
             }
-            // Update vendors dari server (fresh list — sekarang bisa berupa [{nama,kategori}])
+            // Update vendors dari server (fresh list)
             if (data.vendors && data.vendors.length > 0) {
                 processVendorData(data.vendors);
                 localStorage.setItem('ethos_user_vendors', JSON.stringify(vendors));
@@ -247,6 +256,12 @@ async function refreshPoStatsFromServer(pin) {
             if (data.kriteria && data.kriteria.length > 0) {
                 kriteriaList = data.kriteria;
                 localStorage.setItem('ethos_kriteria', JSON.stringify(kriteriaList));
+            }
+            // Update kategori dari server (fresh kategori)
+            if (data.kategori && data.kategori.length > 0) {
+                categoriesList = data.kategori;
+                localStorage.setItem('ethos_categories', JSON.stringify(categoriesList));
+                renderCategoryChips(categoriesList);
             }
         }
     } catch (err) {
@@ -311,6 +326,12 @@ async function processPinLogin(pin) {
                 if (data.kriteria && data.kriteria.length > 0) {
                     kriteriaList = data.kriteria;
                     localStorage.setItem('ethos_kriteria', JSON.stringify(kriteriaList));
+                }
+                // Simpan Kategori dari server ke state
+                if (data.kategori && data.kategori.length > 0) {
+                    categoriesList = data.kategori;
+                    localStorage.setItem('ethos_categories', JSON.stringify(categoriesList));
+                    renderCategoryChips(categoriesList);
                 }
                 // Proses vendor data (bisa string atau {nama, kategori})
                 processVendorData(data.vendors);
@@ -413,9 +434,32 @@ function initHeaderUser() {
 // =====================================================
 // CATEGORY CHIPS (Multi-Select Supported)
 // =====================================================
+const DEFAULT_CATEGORIES = [
+    { kode: 'it', nama: 'IT & Komputer', ikon: '💻' },
+    { kode: 'logistics', nama: 'Ekspedisi & Logistik', ikon: '🚚' },
+    { kode: 'branding', nama: 'Branding & Marketing', ikon: '📣' },
+    { kode: 'printing', nama: 'Percetakan & Custom', ikon: '🖨️' },
+    { kode: 'consultant', nama: 'Konsultan & Services', ikon: '💼' },
+    { kode: 'general', nama: 'General & ATK', ikon: '📦' }
+];
+
 function initCategoryChips() {
+    renderCategoryChips(categoriesList.length > 0 ? categoriesList : DEFAULT_CATEGORIES);
+}
+
+function renderCategoryChips(categories) {
     const container = document.getElementById('categoryChips');
     if (!container) return;
+
+    let html = `<button class="cat-chip ${activeCategories.includes('all') ? 'active' : ''}" data-cat="all">Semua Bidang</button>`;
+    
+    categories.forEach(cat => {
+        const isActive = activeCategories.includes(cat.kode);
+        const icon = cat.ikon || '📦';
+        html += `<button class="cat-chip ${isActive ? 'active' : ''}" data-cat="${esc(cat.kode)}">${esc(icon)} ${esc(cat.nama)}</button>`;
+    });
+
+    container.innerHTML = html;
 
     container.querySelectorAll('.cat-chip').forEach(chip => {
         chip.addEventListener('click', () => {
@@ -426,7 +470,6 @@ function initCategoryChips() {
                 container.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
                 chip.classList.add('active');
             } else {
-                // Hapus 'all' jika kategori spesifik dipilih
                 activeCategories = activeCategories.filter(c => c !== 'all');
                 
                 if (activeCategories.includes(cat)) {
@@ -439,7 +482,6 @@ function initCategoryChips() {
                     activeCategories = ['all'];
                 }
 
-                // Update UI active states
                 container.querySelector('[data-cat="all"]').classList.toggle('active', activeCategories.includes('all'));
                 chip.classList.toggle('active', activeCategories.includes(cat));
             }
@@ -543,6 +585,17 @@ async function fetchVendors() {
             if (data.poStats) {
                 poStats = data.poStats;
                 updatePoInsightsBanner();
+            }
+            // Simpan Kategori dari server
+            if (data.kategori && data.kategori.length > 0) {
+                categoriesList = data.kategori;
+                localStorage.setItem('ethos_categories', JSON.stringify(categoriesList));
+                renderCategoryChips(categoriesList);
+            }
+            // Simpan Kriteria dari server
+            if (data.kriteria && data.kriteria.length > 0) {
+                kriteriaList = data.kriteria;
+                localStorage.setItem('ethos_kriteria', JSON.stringify(kriteriaList));
             }
             renderVendorList();
         }
