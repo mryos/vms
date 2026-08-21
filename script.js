@@ -2,7 +2,7 @@
 // KONFIGURASI
 // =====================================================
 // Ganti URL di bawah dengan URL Web App Google Apps Script Anda
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbye_zCYekrKoZvcIdoEMWtAI7nj0FQnrb0qT5QGPxcXDIXwybXd7DFU7MoGjGt1CcW45Q/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzZoqLwWggG_JSQ3Imyd6AMQwfCbDBHng9GkCddAlJorKSB_jcxMlZejJIUmaqYqMSUkg/exec';
 
 // Daftar vendor dari spreadsheet (gid=783208627)
 const DEFAULT_VENDORS = [
