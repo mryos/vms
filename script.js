@@ -112,7 +112,11 @@ let currentAssessorName = '';
 let vendors = []; // Array of string (nama vendor) yang BERHAK dinilai oleh PIN ini
 let allMasterVendors = [...DEFAULT_VENDORS];
 let selectedVendor = null;
-let selectedPeriode = 'Q4 2026';
+let selectedPeriode = (() => {
+    const now = new Date();
+    const q = Math.floor(now.getMonth() / 3) + 1;
+    return `Q${q} ${now.getFullYear()}`;
+})();
 let activeCategories = ['all'];
 let viewMode = 'all'; // 'all' | 'pinned'
 let ratings = {}; // Akan diisi dinamis berdasarkan kriteria aktif
@@ -561,11 +565,30 @@ function initPeriodeChips() {
     const container = document.getElementById('periodeChips');
     if (!container) return;
 
+    const now = new Date();
+    const year = now.getFullYear();
+    const quarter = Math.floor(now.getMonth() / 3) + 1;
+
+    // Generate: previous quarter, current quarter, next quarter
+    const quarters = [];
+    for (let offset = -1; offset <= 1; offset++) {
+        let q = quarter + offset;
+        let y = year;
+        if (q < 1) { q = 4; y--; }
+        if (q > 4) { q = 1; y++; }
+        quarters.push({ label: `Q${q} ${y}`, value: `Q${q} ${y}` });
+    }
+
+    container.innerHTML = quarters.map(p =>
+        `<button class="chip${p.value === selectedPeriode ? ' active' : ''}" data-value="${p.value}">${p.label}</button>`
+    ).join('');
+
     container.querySelectorAll('.chip').forEach(chip => {
         chip.addEventListener('click', () => {
             container.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
             chip.classList.add('active');
             selectedPeriode = chip.dataset.value;
+            renderVendorList();
         });
     });
 }

@@ -1050,6 +1050,13 @@ body {
     gap: 1.25rem;
 }
 
+.db-chart-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
 .db-col {
     display: flex;
     flex-direction: column;
@@ -1148,7 +1155,8 @@ body {
 
 /* ============ MEDIA QUERIES FOR DASHBOARD ============ */
 @media (max-width: 800px) {
-    .db-main-grid {
+    .db-main-grid,
+    .db-chart-grid {
         grid-template-columns: 1fr;
     }
 }

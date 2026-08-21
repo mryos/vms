@@ -77,17 +77,27 @@
             </div>
         </div>
 
-        <!-- Interactive Treemap Card -->
-        <div class="db-card" style="margin-bottom: 1.5rem;">
-            <div class="db-card-header">
-                <h4>🗺️ Peta Distribusi & Kinerja Vendor (Treemap)</h4>
-                <span class="badge" style="background:#0284c715; color:#0284c7; border:1px solid #0284c730; text-transform:none;">Ukuran = Nilai PO (Spend) | Warna = Skor Evaluasi</span>
+        <!-- Charts Row -->
+        <div class="db-chart-grid">
+            <!-- Radar Chart: Score per Category -->
+            <div class="db-card">
+                <div class="db-card-header">
+                    <h4>📈 Skor Rata-rata per Kategori</h4>
+                    <span class="badge" style="background:#0284c715; color:#0284c7; border:1px solid #0284c730;">Radar Chart</span>
+                </div>
+                <div style="padding: 1rem; display:flex; justify-content:center; align-items:center; min-height:300px;">
+                    <canvas id="radarChart" style="max-width:400px; max-height:300px;"></canvas>
+                </div>
             </div>
-            <div id="treemap_div" style="width: 100%; height: 350px; border-radius: 8px; overflow: hidden; background:#f8fafc;">
-                <div style="text-align: center; color: var(--text3); padding: 7.5rem 0;">Memuat Peta Visual Kinerja...</div>
-            </div>
-            <div style="font-size: 0.75rem; color: var(--text3); margin-top: 0.75rem; text-align: center; font-weight: 500;">
-                💡 *Tips: Klik kiri pada bidang untuk Zoom In (memperbesar). Klik kanan untuk Zoom Out (memperkecil).*
+            <!-- Doughnut Chart: Contract Compliance (KPI 4) -->
+            <div class="db-card">
+                <div class="db-card-header">
+                    <h4>📜 Contract Compliance (KPI 4)</h4>
+                    <span class="badge" style="background:#f59e0b15; color:#f59e0b; border:1px solid #f59e0b30;">Kepatuhan Kontrak</span>
+                </div>
+                <div style="padding: 1rem; display:flex; justify-content:center; align-items:center; min-height:300px; position:relative;">
+                    <canvas id="complianceChart" style="max-width:280px; max-height:280px;"></canvas>
+                </div>
             </div>
         </div>
 
@@ -192,7 +202,7 @@
     <!-- Toast -->
     <div class="toast-box" id="toastBox"></div>
 
-    <script src="https://www.gstatic.com/charts/loader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script src="dashboard.js"></script>
 </body>
 </html>
