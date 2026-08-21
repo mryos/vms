@@ -86,16 +86,19 @@ function renderDashboard() {
     document.getElementById('statContractCompliance').textContent = `${cc.vendorComplianceRate}%`;
     document.getElementById('statContractRatio').textContent = `${cc.uniqueCompliantVendors} / ${cc.uniqueContractedVendors} vendor comply`;
 
-    // 2. Render Top 5 Vendors
+    // 2. Render Treemap (Google Charts)
+    renderTreemap(vendors, poStats, scoreSummary, kategori, cc);
+
+    // 3. Render Top 5 Vendors
     renderTopVendors(scoreSummary, vendors, kategori);
 
-    // 3. Render Attention Vendors
+    // 4. Render Attention Vendors
     renderAttentionVendors(scoreSummary, vendors, kategori);
 
-    // 4. Render PO Performance
+    // 5. Render PO Performance
     renderPoPerformance(poStats);
 
-    // 5. Render PR Table
+    // 6. Render PR Table
     renderPrTable(prList);
 }
 
@@ -303,4 +306,164 @@ function showToast(msg, type = 'success') {
         t.classList.remove('show');
         setTimeout(() => t.remove(), 400);
     }, 4000);
+}
+
+// =====================================================
+// TREEMAP RENDERING (Google Charts)
+// =====================================================
+function renderTreemap(vendors, poStats, scoreSummary, kategori, contractCompliance) {
+    const container = document.getElementById('treemap_div');
+    if (!container) return;
+
+    // Pastikan Google Charts sudah tersedia
+    if (typeof google === 'undefined' || !google.visualization) {
+        google.charts.load('current', { packages: ['treemap'] });
+        google.charts.setOnLoadCallback(function() {
+            drawTreemap(vendors, poStats, scoreSummary, kategori, contractCompliance);
+        });
+    } else {
+        drawTreemap(vendors, poStats, scoreSummary, kategori, contractCompliance);
+    }
+}
+
+function drawTreemap(vendors, poStats, scoreSummary, kategori, cc) {
+    const container = document.getElementById('treemap_div');
+    if (!container || !vendors || vendors.length === 0) {
+        container.innerHTML = `<div style="text-align:center; color:#94a3b8; padding:7.5rem 0;">Belum ada data vendor.</div>`;
+        return;
+    }
+
+    // Bangun data treemap: [ID, Parent, Size(PO Spend), Color(Score)]
+    const rows = [];
+
+    // Root node
+    rows.push(['Semua Vendor', null, 0, 0]);
+
+    // Bangun parent kategori unik
+    const catMap = {};
+    vendors.forEach(v => {
+        const catCode = v.kategori || 'GENERAL';
+        if (!catMap[catCode]) {
+            const catInfo = kategori.find(c => c.kode === catCode) || { nama: catCode, ikon: '📦' };
+            catMap[catCode] = {
+                label: `${catInfo.ikon || '📦'} ${catInfo.nama}`,
+                totalSpend: 0,
+                totalScore: 0,
+                scoreCount: 0
+            };
+        }
+    });
+
+    // Hitung data per vendor dan akumulasi ke kategori
+    const vendorRows = [];
+    vendors.forEach(v => {
+        const name = v.nama;
+        const catCode = v.kategori || 'GENERAL';
+        const catLabel = catMap[catCode].label;
+
+        // Ambil spend dari PO
+        const poData = (poStats && poStats.vendorMap && poStats.vendorMap[name]) ? poStats.vendorMap[name] : null;
+        const spend = poData ? poData.totalValue : 0;
+
+        // Ambil skor evaluasi
+        const evalData = scoreSummary ? scoreSummary[name] : null;
+        const score = evalData ? evalData.avgScore : 0;
+
+        // Akumulasi kategori
+        catMap[catCode].totalSpend += spend;
+        if (score > 0) {
+            catMap[catCode].totalScore += score;
+            catMap[catCode].scoreCount++;
+        }
+
+        vendorRows.push({
+            name: name,
+            parent: catLabel,
+            spend: Math.max(spend, 1), // min 1 agar tetap terlihat
+            score: score
+        });
+    });
+
+    // Tambah parent rows (kategori)
+    for (const code in catMap) {
+        const cat = catMap[code];
+        const avgCatScore = cat.scoreCount > 0 ? (cat.totalScore / cat.scoreCount) : 0;
+        rows.push([cat.label, 'Semua Vendor', Math.max(cat.totalSpend, 1), avgCatScore]);
+    }
+
+    // Tambah child rows (vendor)
+    vendorRows.forEach(v => {
+        rows.push([v.name, v.parent, v.spend, v.score]);
+    });
+
+    // Buat DataTable
+    const data = new google.visualization.DataTable();
+    data.addColumn('string', 'ID');
+    data.addColumn('string', 'Parent');
+    data.addColumn('number', 'Size (PO Spend)');
+    data.addColumn('number', 'Color (Eval Score)');
+    data.addRows(rows);
+
+    // Opsi treemap
+    const options = {
+        minColor: '#ef4444',
+        midColor: '#f59e0b',
+        maxColor: '#10b981',
+        noColor: '#e2e8f0',
+        headerHeight: 28,
+        fontColor: '#1e293b',
+        headerColor: '#f1f5f9',
+        fontSize: 12,
+        showScale: true,
+        maxDepth: 2,
+        maxPostDepth: 1,
+        minHighlightColor: '#dbeafe',
+        midHighlightColor: '#93c5fd',
+        maxHighlightColor: '#3b82f6',
+        useWeightedAverageForAggregation: true,
+        generateTooltip: showTooltip
+    };
+
+    function showTooltip(row, size, value) {
+        const id = data.getValue(row, 0);
+        const parent = data.getValue(row, 1);
+        const spend = data.getValue(row, 2);
+        const score = data.getValue(row, 3);
+
+        // Cek apakah ini vendor (bukan kategori atau root)
+        const isVendor = parent && parent !== 'Semua Vendor';
+        const evalInfo = (scoreSummary && scoreSummary[id]) ? scoreSummary[id] : null;
+        const poInfo = (poStats && poStats.vendorMap && poStats.vendorMap[id]) ? poStats.vendorMap[id] : null;
+
+        // Cek compliance
+        const ccList = (cc && cc.list) ? cc.list.filter(c => c.vendor === id) : [];
+        const complianceHtml = ccList.length > 0
+            ? `<div style="margin-top:6px; padding-top:6px; border-top:1px solid #e2e8f0;">
+                 <b>📜 Kontrak:</b> ${ccList.length} kontrak<br>
+                 <b>Status:</b> ${ccList.filter(c => c.status.toLowerCase() === 'comply').length}/${ccList.length} comply
+               </div>`
+            : '';
+
+        if (isVendor) {
+            return `<div style="background:#fff; padding:10px 14px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.15); max-width:280px; font-size:13px; line-height:1.6; font-family:Inter,sans-serif; color:#1e293b;">
+                <div style="font-weight:700; font-size:14px; margin-bottom:4px;">${esc(id)}</div>
+                <div style="color:#64748b; font-size:11px; margin-bottom:6px;">${esc(parent)}</div>
+                <b>⭐ Skor Evaluasi:</b> ${score > 0 ? score.toFixed(2) + ' / 5.0' : '<span style="color:#94a3b8;">Belum dinilai</span>'}<br>
+                ${evalInfo ? `<b>📊 Predikat:</b> ${evalInfo.predikat}<br>` : ''}
+                <b>💰 Nilai PO:</b> ${poInfo ? formatRupiah(poInfo.totalValue) : '<span style="color:#94a3b8;">Belum ada PO</span>'}<br>
+                ${poInfo ? `<b>🚚 On-Time:</b> ${poInfo.onTimeRatePct}% (${poInfo.onTimePo}/${poInfo.totalPo} PO)<br>` : ''}
+                ${complianceHtml}
+            </div>`;
+        } else {
+            return `<div style="background:#fff; padding:10px 14px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.15); max-width:240px; font-size:13px; line-height:1.6; font-family:Inter,sans-serif; color:#1e293b;">
+                <div style="font-weight:700; font-size:14px; margin-bottom:4px;">${esc(id)}</div>
+                <b>📦 Total Spend:</b> ${formatRupiah(spend)}<br>
+                <b>⭐ Avg Score:</b> ${score > 0 ? score.toFixed(2) : '-'}
+            </div>`;
+        }
+    }
+
+    // Render chart
+    const chart = new google.visualization.TreeMap(container);
+    chart.draw(data, options);
 }

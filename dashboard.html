@@ -77,6 +77,20 @@
             </div>
         </div>
 
+        <!-- Interactive Treemap Card -->
+        <div class="db-card" style="margin-bottom: 1.5rem;">
+            <div class="db-card-header">
+                <h4>🗺️ Peta Distribusi & Kinerja Vendor (Treemap)</h4>
+                <span class="badge" style="background:#0284c715; color:#0284c7; border:1px solid #0284c730; text-transform:none;">Ukuran = Nilai PO (Spend) | Warna = Skor Evaluasi</span>
+            </div>
+            <div id="treemap_div" style="width: 100%; height: 350px; border-radius: 8px; overflow: hidden; background:#f8fafc;">
+                <div style="text-align: center; color: var(--text3); padding: 7.5rem 0;">Memuat Peta Visual Kinerja...</div>
+            </div>
+            <div style="font-size: 0.75rem; color: var(--text3); margin-top: 0.75rem; text-align: center; font-weight: 500;">
+                💡 *Tips: Klik kiri pada bidang untuk Zoom In (memperbesar). Klik kanan untuk Zoom Out (memperkecil).*
+            </div>
+        </div>
+
         <!-- Main Dashboard Layout -->
         <div class="db-main-grid">
             
@@ -178,6 +192,7 @@
     <!-- Toast -->
     <div class="toast-box" id="toastBox"></div>
 
+    <script src="https://www.gstatic.com/charts/loader.js"></script>
     <script src="dashboard.js"></script>
 </body>
 </html>
