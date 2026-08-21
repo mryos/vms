@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Sistem Penilaian Vendor - PT Ethos Kreatif Indonesia">
+    <title>Penilaian Vendor - PT Ethos Kreatif Indonesia</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Welcome Overlay (Login Kode PIN Penilai) -->
+    <div class="welcome-overlay" id="welcomeOverlay">
+        <div class="welcome-card">
+            <div class="welcome-icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <h2>Akses Penilai</h2>
+            <p>Masukkan Kode PIN Penilai Anda untuk melihat daftar vendor yang ditugaskan.</p>
+            
+            <div class="input-group">
+                <input type="password" class="welcome-input" id="welcomePinInput" placeholder="Masukkan Kode PIN (Contoh: 1001)" autofocus autocomplete="off">
+            </div>
+
+            <div class="pin-error-msg" id="pinErrorMsg" style="display:none; color:#ef4444; font-size:0.8rem; font-weight:700; margin-bottom:0.75rem;"></div>
+
+            <button class="btn btn-primary btn-block" id="welcomeSubmit">
+                <span class="btn-text">Masuk & Verifikasi PIN</span>
+                <span class="btn-spinner" style="display:none"></span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="header-inner">
+            <div class="header-left">
+                <div class="header-logo">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                </div>
+                <div>
+                    <span class="header-title">Penilaian Vendor</span>
+                    <span class="header-company">PT Ethos Kreatif Indonesia</span>
+                </div>
+            </div>
+            <div class="header-right">
+                <span class="header-user" id="headerUser" title="Klik untuk ganti nama"></span>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <!-- Periode & View Filter Bar -->
+        <div class="periode-bar">
+            <div class="periode-group">
+                <label class="periode-label">Periode:</label>
+                <div class="periode-chips" id="periodeChips">
+                    <button class="chip" data-value="Q2 2026">Q2 2026</button>
+                    <button class="chip" data-value="Q3 2026">Q3 2026</button>
+                    <button class="chip active" data-value="Q4 2026">Q4 2026</button>
+                </div>
+            </div>
+
+            <div class="view-filter-group">
+                <button class="filter-toggle-btn active" id="btnFilterAll" title="Tampilkan semua vendor">🌐 Semua Vendor</button>
+                <button class="filter-toggle-btn" id="btnFilterPinned" title="Tampilkan vendor favorit / pilihan saya">📌 Vendorku (<span id="pinnedCount">0</span>)</button>
+            </div>
+        </div>
+
+        <!-- Filter Bidang / Kategori Vendor (Multi-Select Supported) -->
+        <div class="category-bar">
+            <div class="category-chips" id="categoryChips">
+                <button class="cat-chip active" data-cat="all">Semua Bidang</button>
+                <button class="cat-chip" data-cat="it">💻 IT & Komputer</button>
+                <button class="cat-chip" data-cat="logistics">🚚 Ekspedisi & Logistik</button>
+                <button class="cat-chip" data-cat="branding">📣 Branding & Marketing</button>
+                <button class="cat-chip" data-cat="printing">🖨️ Percetakan & Custom</button>
+                <button class="cat-chip" data-cat="consultant">💼 Konsultan & Services</button>
+                <button class="cat-chip" data-cat="general">📦 General & ATK</button>
+            </div>
+        </div>
+
+        <!-- Search & Info Bar -->
+        <div class="search-row">
+            <input type="text" class="search-input" id="searchInput" placeholder="Cari nama vendor atau bidang..." autocomplete="off">
+            <span class="vendor-count" id="vendorCount">0 vendor</span>
+        </div>
+
+        <!-- Vendor List -->
+        <div class="vendor-list" id="vendorList">
+            <!-- Rendered by JS -->
+        </div>
+    </main>
+
+    <!-- Assessment Modal -->
+    <div class="modal-bg" id="modalBg">
+        <div class="modal" id="modal">
+            <button class="modal-x" id="modalX" title="Tutup">&times;</button>
+            
+            <div class="modal-vendor-name" id="modalVendorName">Nama Vendor</div>
+
+            <form id="assessmentForm" autocomplete="off">
+                <!-- Pertanyaan Dinamis (di-render dari Spreadsheet) -->
+                <div id="questionsContainer"></div>
+
+                <!-- Catatan -->
+                <div class="q-card q-card-notes">
+                    <label class="q-label" for="catatan">
+                        <span class="q-num">&#9998;</span>
+                        Catatan <span class="optional">(opsional)</span>
+                    </label>
+                    <textarea id="catatan" rows="2" placeholder="Tulis catatan tambahan..."></textarea>
+                </div>
+
+                <!-- Submit -->
+                <button type="submit" class="btn btn-primary btn-block btn-submit" id="btnSubmit">
+                    <span class="btn-text">Kirim Penilaian</span>
+                    <span class="btn-spinner" style="display:none"></span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Success Overlay -->
+    <div class="success-bg" id="successBg">
+        <div class="success-card">
+            <div class="success-check">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            </div>
+            <h3>Penilaian Terkirim!</h3>
+            <p>Data tersimpan ke Google Spreadsheet.</p>
+            <button class="btn btn-primary btn-block" id="successClose">OK</button>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast-box" id="toastBox"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
