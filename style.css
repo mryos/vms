@@ -1122,6 +1122,23 @@ body {
     display: inline-block;
 }
 
+.po-performance-list {
+    max-height: 285px;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+}
+
+.po-performance-list::-webkit-scrollbar {
+    width: 4px;
+}
+.po-performance-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+.po-performance-list::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 2px;
+}
+
 /* ============ MEDIA QUERIES FOR DASHBOARD ============ */
 @media (max-width: 800px) {
     .db-main-grid {

@@ -191,7 +191,12 @@ function renderPoPerformance(poStats) {
         badge.style.color = poStats.overallOnTimePct >= 80 ? '#10b981' : poStats.overallOnTimePct >= 60 ? '#f59e0b' : '#ef4444';
     }
 
-    const html = Object.keys(poStats.vendorMap).map(name => {
+    // Urutkan vendor berdasarkan total PO terbanyak agar yang paling aktif tampil di atas
+    const sortedVendorNames = Object.keys(poStats.vendorMap).sort((a, b) => {
+        return poStats.vendorMap[b].totalPo - poStats.vendorMap[a].totalPo;
+    });
+
+    const html = sortedVendorNames.map(name => {
         const v = poStats.vendorMap[name];
         const pct = v.onTimeRatePct;
         const color = pct >= 80 ? 'var(--accent)' : pct >= 60 ? '#f59e0b' : '#ef4444';
@@ -199,8 +204,8 @@ function renderPoPerformance(poStats) {
         return `
         <div class="po-perf-item" style="margin-bottom: 1.25rem;">
             <div style="display:flex; justify-content:space-between; margin-bottom:0.35rem; font-size:0.875rem;">
-                <span style="font-weight:600; color:var(--text);">${esc(name)}</span>
-                <span style="font-weight:700; color:${color};">${pct}% (${v.onTimePo}/${v.totalPo} PO)</span>
+                <span style="font-weight:600; color:var(--text); text-overflow:ellipsis; overflow:hidden; white-space:nowrap; max-width:260px;" title="${esc(name)}">${esc(name)}</span>
+                <span style="font-weight:700; color:${color}; font-size:0.8rem; white-space:nowrap; margin-left:0.5rem;">${pct}% (${v.onTimePo}/${v.totalPo} PO)</span>
             </div>
             <div class="progress-bar-container" style="background:var(--border); height:8px; border-radius:4px; overflow:hidden; display:flex;">
                 <div class="progress-bar-fill" style="width:${pct}%; background:${color}; height:100%; border-radius:4px;"></div>
