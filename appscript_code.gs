@@ -706,25 +706,31 @@ function initAllDatabaseSheets(ss) {
     setupSheetPenilaianHeaders(sheet);
   }
 
-  // 8. Kontrak Vendor (KPI Point 4)
+  // 8. Kontrak Vendor (KPI Point 4: Contract Compliance)
   sheet = ss.getSheetByName(SHEET_KONTRAK);
   if (!sheet) {
     sheet = ss.insertSheet(SHEET_KONTRAK);
-    var h = ['No Kontrak', 'Vendor', 'Tanggal Mulai', 'Tanggal Selesai', 'Status Kepatuhan', 'Keterangan'];
+    var h = ['No Kontrak', 'Vendor', 'Jenis Pekerjaan', 'Tanggal Mulai', 'Tanggal Selesai', 'Kelengkapan Dokumen', 'Nilai Kontrak', 'Status Kepatuhan', 'Keterangan'];
     sheet.appendRow(h);
     var rows = [
-      ['KTR-2026-001', 'CHIPSET COMPUTER - EKI', '2026-01-01', '2026-12-31', 'Comply', 'Kinerja hardware & respon pemeliharaan baik'],
-      ['KTR-2026-002', 'PT BIZNET GIO NUSANTARA', '2026-02-01', '2026-08-01', 'Comply', 'SLA Cloud server 99.9% terpenuhi'],
-      ['KTR-2026-003', 'PT.GLOBAL JET EXPRESS', '2026-01-01', '2026-06-30', 'Not Comply', 'Keterlambatan ganti rugi barang rusak']
+      ['KTR/2026/IT/001', 'CHIPSET COMPUTER - EKI', 'Pengadaan & Maintenance Perangkat IT', '2026-01-01', '2026-12-31', 'Lengkap (NPWP, NIB, SLA, NDA)', 150000000, 'Comply', 'Klaim garansi hardware & SLA respon 24 jam terpenuhi baik'],
+      ['KTR/2026/IT/002', 'PT BIZNET GIO NUSANTARA', 'Layanan Cloud Server & Infrastructure Hosting', '2026-02-01', '2026-08-01', 'Lengkap (NPWP, NIB, ISO 27001, SLA)', 75000000, 'Comply', 'Uptime server 99.95% sesuai ketentuan kontrak'],
+      ['KTR/2026/LOG/001', 'PT.GLOBAL JET EXPRESS', 'Jasa Ekspedisi Logistik Distribusi Nasional', '2026-01-01', '2026-06-30', 'Kurang (Klaim Asuransi Pending)', 45000000, 'Not Comply', 'Keterlambatan ganti rugi barang rusak melebihi batas 14 hari kerja'],
+      ['KTR/2026/PRN/001', 'PERURI (Perusahaan Umum Percetakan Uang Republik Indonesia)', 'Percetakan Dokumen Resmi & Kertas Berpengaman', '2026-03-01', '2026-09-30', 'Lengkap (NPWP, NIB, Sertifikat Keamanan)', 120000000, 'Comply', 'Kualitas spesifikasi cetak dan ketepatan jumlah 100% presisi'],
+      ['KTR/2026/BRD/001', 'SOOCA BCKM Network, PT', 'Jasa Desain Kreatif & Corporate Branding', '2026-01-15', '2026-07-15', 'Lengkap (NPWP, NIB, Portofolio, NDA)', 65000000, 'Comply', 'Penyerahan deliverables tepat waktu & revisi sangat responsif'],
+      ['KTR/2026/DEV/001', 'PT TRI LINE TEKNOLOGI', 'Pengembangan Modul & Integrasi API Sistem', '2026-02-15', '2026-05-15', 'Kurang (BAST Tertunda)', 90000000, 'Not Comply', 'Keterlambatan penyelesaian milestone fase 2 melebihi toleransi']
     ];
     for (var i = 0; i < rows.length; i++) sheet.appendRow(rows[i]);
     styleHeaders(sheet, h.length);
-    sheet.setColumnWidth(1, 130);
+    sheet.setColumnWidth(1, 140);
     sheet.setColumnWidth(2, 260);
-    sheet.setColumnWidth(3, 140);
-    sheet.setColumnWidth(4, 140);
-    sheet.setColumnWidth(5, 150);
-    sheet.setColumnWidth(6, 300);
+    sheet.setColumnWidth(3, 260);
+    sheet.setColumnWidth(4, 120);
+    sheet.setColumnWidth(5, 120);
+    sheet.setColumnWidth(6, 220);
+    sheet.setColumnWidth(7, 140);
+    sheet.setColumnWidth(8, 130);
+    sheet.setColumnWidth(9, 320);
   }
 }
 
@@ -746,15 +752,30 @@ function getContractCompliance(ss) {
   if (!sheet || sheet.getLastRow() < 2) return stats;
 
   var data = sheet.getDataRange().getValues();
+  var headers = data[0].map(function(h) { return h.toString().toLowerCase().trim(); });
+
+  var idxNo = getHeaderIndex(headers, ['no kontrak', 'nomor kontrak', 'kode kontrak']);
+  var idxVendor = getHeaderIndex(headers, ['vendor', 'nama vendor', 'rekanan']);
+  var idxPekerjaan = getHeaderIndex(headers, ['jenis pekerjaan', 'pekerjaan', 'ruang lingkup', 'deskripsi']);
+  var idxMulai = getHeaderIndex(headers, ['tanggal mulai', 'tgl mulai', 'mulai', 'start date']);
+  var idxSelesai = getHeaderIndex(headers, ['tanggal selesai', 'tanggal berakhir', 'tgl selesai', 'tgl berakhir', 'end date']);
+  var idxKelengkapan = getHeaderIndex(headers, ['kelengkapan dokumen', 'kelengkapan', 'dokumen']);
+  var idxNilai = getHeaderIndex(headers, ['nilai kontrak', 'nilai', 'nominal', 'amount', 'harga']);
+  var idxStatus = getHeaderIndex(headers, ['status kepatuhan', 'status', 'kepatuhan', 'compliance']);
+  var idxKeterangan = getHeaderIndex(headers, ['keterangan', 'catatan', 'remarks', 'note']);
+
   var uniqueVendors = {}; // { 'Vendor A': { total: X, comply: Y } }
 
   for (var i = 1; i < data.length; i++) {
-    var noKontrak = data[i][0] ? data[i][0].toString().trim() : '';
-    var vendor = data[i][1] ? data[i][1].toString().trim() : '';
-    var tglMulai = data[i][2] ? formatDate(data[i][2]) : '-';
-    var tglSelesai = data[i][3] ? formatDate(data[i][3]) : '-';
-    var status = data[i][4] ? data[i][4].toString().trim() : 'Comply';
-    var keterangan = data[i][5] ? data[i][5].toString().trim() : '';
+    var noKontrak = idxNo !== -1 && data[i][idxNo] ? data[i][idxNo].toString().trim() : (data[i][0] ? data[i][0].toString().trim() : '');
+    var vendor = idxVendor !== -1 && data[i][idxVendor] ? data[i][idxVendor].toString().trim() : (data[i][1] ? data[i][1].toString().trim() : '');
+    var jenisPekerjaan = idxPekerjaan !== -1 && data[i][idxPekerjaan] ? data[i][idxPekerjaan].toString().trim() : '-';
+    var tglMulai = idxMulai !== -1 && data[i][idxMulai] ? formatDate(data[i][idxMulai]) : '-';
+    var tglSelesai = idxSelesai !== -1 && data[i][idxSelesai] ? formatDate(data[i][idxSelesai]) : '-';
+    var kelengkapan = idxKelengkapan !== -1 && data[i][idxKelengkapan] ? data[i][idxKelengkapan].toString().trim() : 'Lengkap';
+    var nilai = idxNilai !== -1 && !isNaN(Number(data[i][idxNilai])) ? Number(data[i][idxNilai]) : 0;
+    var status = idxStatus !== -1 && data[i][idxStatus] ? data[i][idxStatus].toString().trim() : 'Comply';
+    var keterangan = idxKeterangan !== -1 && data[i][idxKeterangan] ? data[i][idxKeterangan].toString().trim() : '';
 
     if (noKontrak && vendor) {
       stats.totalContracts++;
@@ -770,8 +791,11 @@ function getContractCompliance(ss) {
       stats.list.push({
         noKontrak: noKontrak,
         vendor: vendor,
+        jenisPekerjaan: jenisPekerjaan,
         tglMulai: tglMulai,
         tglSelesai: tglSelesai,
+        kelengkapan: kelengkapan,
+        nilai: nilai,
         status: status,
         keterangan: keterangan
       });

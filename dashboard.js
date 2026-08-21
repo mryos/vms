@@ -101,6 +101,9 @@ function renderDashboard() {
 
     // 6. Render PR Table
     renderPrTable(prList);
+
+    // 7. Render Contract Compliance Table (KPI 4)
+    renderContractTable(cc);
 }
 
 function renderTopVendors(scoreSummary, vendors, categories) {
@@ -261,6 +264,45 @@ function renderPrTable(prList) {
             </td>
         </tr>
     `;
+    }).join('');
+}
+
+function renderContractTable(cc) {
+    const tableBody = document.getElementById('contractTableBody');
+    if (!tableBody) return;
+
+    if (!cc || !cc.list || cc.list.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:var(--text3); padding:2rem;">Belum ada data kontrak vendor terdaftar di sheet 'Kontrak Vendor'.</td></tr>`;
+        return;
+    }
+
+    tableBody.innerHTML = cc.list.map(c => {
+        const isComply = c.status && c.status.toLowerCase() === 'comply';
+        const statusColor = isComply ? '#10b981' : '#ef4444';
+        
+        const isDocComplete = c.kelengkapan && c.kelengkapan.toLowerCase().includes('lengkap');
+        const docColor = isDocComplete ? '#0284c7' : '#f59e0b';
+
+        return `
+        <tr>
+            <td style="font-weight:700; color:var(--primary); font-size:0.85rem; white-space:nowrap;">${esc(c.noKontrak)}</td>
+            <td style="font-weight:600; color:var(--text);">${esc(c.vendor)}</td>
+            <td style="font-size:0.85rem; color:var(--text2); max-width:220px;">${esc(c.jenisPekerjaan)}</td>
+            <td style="font-size:0.8rem; color:var(--text3); white-space:nowrap;">${esc(c.tglMulai)}</td>
+            <td style="font-size:0.8rem; color:var(--text3); white-space:nowrap;">${esc(c.tglSelesai)}</td>
+            <td>
+                <span class="predikat-badge" style="background:${docColor}15; color:${docColor}; border:1px solid ${docColor}30; font-size:0.75rem; font-weight:600;">
+                    ${esc(c.kelengkapan)}
+                </span>
+            </td>
+            <td style="text-align:right; font-weight:600; color:var(--text); font-size:0.85rem; white-space:nowrap;">${c.nilai ? formatRupiah(c.nilai) : '-'}</td>
+            <td style="text-align:center;">
+                <span class="predikat-badge" style="background:${statusColor}15; color:${statusColor}; border:1px solid ${statusColor}30; font-size:0.75rem; font-weight:700;">
+                    ${isComply ? '✓ Comply' : '✗ Not Comply'}
+                </span>
+            </td>
+            <td style="font-size:0.8rem; color:var(--text3); max-width:240px;">${esc(c.keterangan)}</td>
+        </tr>`;
     }).join('');
 }
 
