@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Dashboard Kinerja Vendor - PT Ethos Kreatif Indonesia">
-<title>Dashboard Kinerja Vendor - PT Ethos Kreatif Indonesia</title>
+<meta name="description" content="Vendor & Contract Lifecycle Management - PT Ethos Kreatif Indonesia">
+<title>Vendor & Contract Lifecycle Management - PT Ethos Kreatif Indonesia</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -16,19 +16,19 @@
     <header class="header">
         <div class="header-inner">
             <div class="header-left">
-                <a href="index.html" class="header-logo-link" style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 0.5rem;">
-                    <div class="header-logo">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                <a href="index.html" class="header-logo-link" style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 0.6rem;">
+                    <div class="header-logo" style="background: linear-gradient(135deg, #0284c7, #0a2e5c);">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
                     </div>
                     <div>
-                        <span class="header-title">Dashboard Kinerja</span>
-                        <span class="header-company">PT Ethos Kreatif Indonesia</span>
+                        <span class="header-title" style="font-size: 1.05rem; font-weight: 800;">Vendor &amp; Contract Lifecycle Management</span>
+                        <span class="header-company" style="font-size: 0.75rem;">PT Ethos Kreatif Indonesia &bull; Enterprise VMS</span>
                     </div>
                 </a>
             </div>
             <div class="header-right" style="display: flex; align-items: center; gap: 1.25rem;">
-                <a href="index.html" class="nav-link" style="text-decoration: none; color: var(--primary); font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 0.25rem;">
-                    <span>📝</span> Evaluasi Vendor
+                <a href="index.html" class="nav-link" style="text-decoration: none; color: var(--primary); font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 0.35rem; background:#f1f5f9; padding:0.4rem 0.85rem; border-radius:8px;">
+                    <span>📝</span> Form Penilaian
                 </a>
                 <span class="header-user" id="headerUser">👤 Guest</span>
             </div>
@@ -36,74 +36,166 @@
     </header>
 
     <main class="main-content dashboard-content">
-        <!-- Dashboard Summary Row -->
-        <!-- Dashboard Summary Row (aligned with corporate KPIs) -->
-        <div class="db-summary-grid">
-            <!-- KPI 1: Vendor Performance Score -->
-            <div class="db-card stat-card">
-                <div class="stat-icon" style="background: rgba(10, 46, 92, 0.08); color: var(--primary);">⭐</div>
-                <div class="stat-info">
-                    <span class="stat-label">KPI 1: Performance Score</span>
-                    <h3 id="statAvgScore">0.0</h3>
-                    <span class="stat-subtext" id="statEvalCount" style="font-size:0.72rem; color:var(--text3); margin-top:0.15rem;">0 vendor dinilai</span>
+        <!-- Gatekeeper-Style Subnav & Tab Filters -->
+        <div class="dashboard-subnav">
+            <div class="db-tabs" id="dashboardTabs">
+                <button class="db-tab-btn active" data-tab="all">🏢 Semua Ringkasan</button>
+                <button class="db-tab-btn" data-tab="clm">📜 Contract Lifecycle (CLM)</button>
+                <button class="db-tab-btn" data-tab="performance">⭐ Kinerja &amp; Evaluasi</button>
+                <button class="db-tab-btn" data-tab="orders">🚚 PO &amp; Delivery</button>
+            </div>
+            <div class="db-filter-action">
+                <span class="db-quick-badge" id="badgeLastUpdate">🔄 Live Sync Google Sheets</span>
+            </div>
+        </div>
+
+        <!-- Gatekeeper Expiring Contracts Alert Banner -->
+        <div class="clm-alert-card" id="expiringContractsBanner" style="display: none;">
+            <div class="clm-alert-left">
+                <div class="clm-alert-icon">⚠️</div>
+                <div class="clm-alert-text">
+                    <h5 id="alertBannerTitle">Peringatan Masa Berlaku Kontrak</h5>
+                    <p id="alertBannerDesc">Terdapat kontrak vendor yang akan segera berakhir dalam 90 hari ke depan.</p>
                 </div>
             </div>
-            <!-- KPI 2: Vendor Evaluation Completion -->
-            <div class="db-card stat-card">
-                <div class="stat-icon" style="background: rgba(2, 132, 199, 0.08); color: var(--secondary);">📊</div>
-                <div class="stat-info">
-                    <span class="stat-label">KPI 2: Eval Completion</span>
-                    <h3 id="statEvalCompletion">0%</h3>
-                    <span class="stat-subtext" id="statEvalRatio" style="font-size:0.72rem; color:var(--text3); margin-top:0.15rem;">0 / 0 vendor aktif</span>
+            <button class="clm-alert-btn" onclick="document.getElementById('sectionContracts').scrollIntoView({behavior: 'smooth'})">Lihat Rincian Kontrak &rsaquo;</button>
+        </div>
+
+        <!-- Gatekeeper 5-Card Key Metric Summary Grid -->
+        <div class="clm-summary-grid">
+            <!-- 1. Total Contract Value (CLM) -->
+            <div class="clm-stat-card card-accent-blue">
+                <div class="clm-stat-top">
+                    <span class="clm-stat-label">Total Nilai Kontrak</span>
+                    <span class="clm-stat-icon">💰</span>
+                </div>
+                <h3 id="statTotalContractValue">Rp 0</h3>
+                <div class="clm-stat-meta" id="statTotalContractsCount">0 kontrak terdaftar</div>
+            </div>
+
+            <!-- 2. KPI 4: Contract Compliance Rate -->
+            <div class="clm-stat-card card-accent-amber">
+                <div class="clm-stat-top">
+                    <span class="clm-stat-label">KPI 4: Contract Compliance</span>
+                    <span class="clm-stat-icon">📜</span>
+                </div>
+                <h3 id="statContractCompliance">0%</h3>
+                <div class="clm-stat-meta" id="statContractRatio">0 / 0 vendor comply</div>
+                <div class="stat-mini-progress">
+                    <div class="stat-mini-progress-fill" id="progressCompliance" style="width: 0%; background: #f59e0b;"></div>
                 </div>
             </div>
-            <!-- KPI 3: VMS Development Progress -->
-            <div class="db-card stat-card">
-                <div class="stat-icon" style="background: rgba(16, 185, 129, 0.08); color: var(--accent);">🛠️</div>
-                <div class="stat-info">
-                    <span class="stat-label">KPI 3: VMS Development</span>
-                    <h3>95%</h3>
-                    <span class="stat-subtext" style="font-size:0.72rem; color:var(--text3); margin-top:0.15rem;">Database & Dashboard OK</span>
+
+            <!-- 3. KPI 1: Vendor Performance Score -->
+            <div class="clm-stat-card card-accent-emerald">
+                <div class="clm-stat-top">
+                    <span class="clm-stat-label">KPI 1: Performance Score</span>
+                    <span class="clm-stat-icon">⭐</span>
+                </div>
+                <h3 id="statAvgScore">0.0</h3>
+                <div class="clm-stat-meta" id="statEvalCount">0 vendor dinilai</div>
+                <div class="stat-mini-progress">
+                    <div class="stat-mini-progress-fill" id="progressScore" style="width: 0%; background: #10b981;"></div>
                 </div>
             </div>
-            <!-- KPI 4: Contract Compliance -->
-            <div class="db-card stat-card">
-                <div class="stat-icon" style="background: rgba(245, 158, 11, 0.08); color: #f59e0b;">📜</div>
-                <div class="stat-info">
-                    <span class="stat-label">KPI 4: Contract Compliance</span>
-                    <h3 id="statContractCompliance">0%</h3>
-                    <span class="stat-subtext" id="statContractRatio" style="font-size:0.72rem; color:var(--text3); margin-top:0.15rem;">0 / 0 berkontrak comply</span>
+
+            <!-- 4. KPI 2: Evaluation Completion Rate -->
+            <div class="clm-stat-card card-accent-purple">
+                <div class="clm-stat-top">
+                    <span class="clm-stat-label">KPI 2: Eval Completion</span>
+                    <span class="clm-stat-icon">📊</span>
+                </div>
+                <h3 id="statEvalCompletion">0%</h3>
+                <div class="clm-stat-meta" id="statEvalRatio">0 / 0 vendor aktif</div>
+                <div class="stat-mini-progress">
+                    <div class="stat-mini-progress-fill" id="progressCompletion" style="width: 0%; background: #8b5cf6;"></div>
+                </div>
+            </div>
+
+            <!-- 5. On-Time Delivery Rate -->
+            <div class="clm-stat-card card-accent-indigo">
+                <div class="clm-stat-top">
+                    <span class="clm-stat-label">On-Time PO Delivery</span>
+                    <span class="clm-stat-icon">🚚</span>
+                </div>
+                <h3 id="statOnTimePct">0%</h3>
+                <div class="clm-stat-meta" id="statTotalPoMeta">0 total pesanan PO</div>
+                <div class="stat-mini-progress">
+                    <div class="stat-mini-progress-fill" id="progressOnTime" style="width: 0%; background: #4f46e5;"></div>
                 </div>
             </div>
         </div>
 
-        <!-- Charts Row -->
-        <div class="db-chart-grid">
-            <!-- Radar Chart: Score per Category -->
+        <!-- Enterprise CLM & Vendor Analytics Chart Grid -->
+        <div class="clm-chart-grid" id="chartsSection">
+            <!-- Chart 1: Contract Compliance & Status Breakdown (Donut) -->
             <div class="db-card">
                 <div class="db-card-header">
-                    <h4>📈 Skor Rata-rata per Kategori</h4>
-                    <span class="badge" style="background:#0284c715; color:#0284c7; border:1px solid #0284c730;">Radar Chart</span>
+                    <h4>📜 Kepatuhan &amp; Lifecycle Kontrak (KPI 4)</h4>
+                    <span class="badge" style="background:#f59e0b15; color:#f59e0b; border:1px solid #f59e0b30;">Status Compliance</span>
                 </div>
-                <div style="padding: 1rem; display:flex; justify-content:center; align-items:center; min-height:300px;">
-                    <canvas id="radarChart" style="max-width:400px; max-height:300px;"></canvas>
-                </div>
-            </div>
-            <!-- Doughnut Chart: Contract Compliance (KPI 4) -->
-            <div class="db-card">
-                <div class="db-card-header">
-                    <h4>📜 Contract Compliance (KPI 4)</h4>
-                    <span class="badge" style="background:#f59e0b15; color:#f59e0b; border:1px solid #f59e0b30;">Kepatuhan Kontrak</span>
-                </div>
-                <div style="padding: 1rem; display:flex; justify-content:center; align-items:center; min-height:300px; position:relative;">
+                <div style="padding: 1rem; display:flex; justify-content:center; align-items:center; min-height:280px; position:relative;">
                     <canvas id="complianceChart" style="max-width:280px; max-height:280px;"></canvas>
                 </div>
             </div>
+
+            <!-- Chart 2: Spend & Nilai Kontrak per Kategori (Bar Chart) -->
+            <div class="db-card">
+                <div class="db-card-header">
+                    <h4>💰 Distribusi Nilai Kontrak per Kategori (Spend)</h4>
+                    <span class="badge" style="background:#0284c715; color:#0284c7; border:1px solid #0284c730;">Komitmen Anggaran</span>
+                </div>
+                <div style="padding: 1rem; display:flex; justify-content:center; align-items:center; min-height:280px;">
+                    <canvas id="spendChart" style="max-width:100%; max-height:280px;"></canvas>
+                </div>
+            </div>
+
+            <!-- Chart 3: Skor Rata-rata per Kategori (Radar Chart) -->
+            <div class="db-card" style="grid-column: span 2;">
+                <div class="db-card-header">
+                    <h4>📈 Skor Rata-rata Kinerja per Bidang Vendor</h4>
+                    <span class="badge" style="background:#10b98115; color:#10b981; border:1px solid #10b98130;">Radar Mutu &amp; Kinerja</span>
+                </div>
+                <div style="padding: 1rem; display:flex; justify-content:center; align-items:center; min-height:300px;">
+                    <canvas id="radarChart" style="max-width:500px; max-height:300px;"></canvas>
+                </div>
+            </div>
         </div>
 
-        <!-- Main Dashboard Layout -->
-        <div class="db-main-grid">
-            
+        <!-- Section 1: Gatekeeper Contract Repository & Compliance Log (Full Width) -->
+        <div class="db-card" id="sectionContracts" style="margin-bottom: 1.5rem;">
+            <div class="db-card-header">
+                <div>
+                    <h4>📜 Contract Repository &amp; Compliance Matrix (KPI 4)</h4>
+                    <p style="font-size:0.8rem; color:var(--text3); margin:0.2rem 0 0 0;">Monitoring kelengkapan dokumen legalitas dan kepatuhan klausul SLA kontrak vendor</p>
+                </div>
+                <span class="badge" style="background:#f59e0b15; color:#f59e0b; border:1px solid #f59e0b30;">Sheet 'Kontrak Vendor'</span>
+            </div>
+            <div class="table-responsive">
+                <table class="db-table">
+                    <thead>
+                        <tr>
+                            <th>No Kontrak</th>
+                            <th>Vendor</th>
+                            <th>Ruang Lingkup Pekerjaan</th>
+                            <th>Masa Berlaku</th>
+                            <th>Kelengkapan Dokumen</th>
+                            <th style="text-align: right;">Nilai Kontrak</th>
+                            <th style="text-align: center;">Status Kepatuhan</th>
+                            <th>Catatan Kepatuhan</th>
+                        </tr>
+                    </thead>
+                    <tbody id="contractTableBody">
+                        <tr>
+                            <td colspan="8" style="text-align: center; color: var(--text3); padding: 2rem;">Memuat data kontrak vendor...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Section 2: Vendor Performance Grid (Top 5 & Low Attention) -->
+        <div class="db-main-grid" id="sectionPerformance" style="margin-bottom: 1.5rem;">
             <!-- Left Column: Ranking & Attention -->
             <div class="db-col">
                 <div class="db-card">
@@ -115,7 +207,7 @@
                         <table class="db-table">
                             <thead>
                                 <tr>
-                                    <th style="width: 50px;">No</th>
+                                    <th style="width: 40px;">No</th>
                                     <th>Nama Vendor</th>
                                     <th>Kategori</th>
                                     <th style="text-align: right;">Skor</th>
@@ -157,7 +249,7 @@
             </div>
 
             <!-- Right Column: Delivery Performance & PRs -->
-            <div class="db-col">
+            <div class="db-col" id="sectionOrders">
                 <div class="db-card">
                     <div class="db-card-header">
                         <h4>🚚 Kinerja Ketepatan Waktu PO</h4>
@@ -192,37 +284,6 @@
                         </table>
                     </div>
                 </div>
-            </div>
-            
-        </div>
-
-        <!-- Full-Width Contract Compliance Details Table (KPI 4) -->
-        <div class="db-card" style="margin-top: 1.5rem;">
-            <div class="db-card-header">
-                <h4>📜 Log & Monitoring Kepatuhan Kontrak Vendor (KPI 4)</h4>
-                <span class="badge" style="background:#f59e0b15; color:#f59e0b; border:1px solid #f59e0b30;">Database Sheet 'Kontrak Vendor'</span>
-            </div>
-            <div class="table-responsive">
-                <table class="db-table">
-                    <thead>
-                        <tr>
-                            <th>No Kontrak</th>
-                            <th>Vendor</th>
-                            <th>Ruang Lingkup / Pekerjaan</th>
-                            <th>Mulai</th>
-                            <th>Berakhir</th>
-                            <th>Kelengkapan Dokumen</th>
-                            <th style="text-align: right;">Nilai Kontrak</th>
-                            <th style="text-align: center;">Status Kepatuhan</th>
-                            <th>Keterangan / Catatan</th>
-                        </tr>
-                    </thead>
-                    <tbody id="contractTableBody">
-                        <tr>
-                            <td colspan="9" style="text-align: center; color: var(--text3); padding: 2rem;">Memuat data kontrak vendor...</td>
-                        </tr>
-                    </tbody>
-                </table>
             </div>
         </div>
     </main>

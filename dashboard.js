@@ -7,9 +7,11 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbye_zCYekrKoZvcIdoEM
 // STATE & INIT
 // =====================================================
 let dashboardData = null;
+let activeTab = 'all';
 
 document.addEventListener('DOMContentLoaded', () => {
     initHeader();
+    initTabs();
     loadDashboardData();
 });
 
@@ -20,6 +22,47 @@ function initHeader() {
 
     if (savedPin && savedName && userEl) {
         userEl.textContent = `👤 ${savedName} (PIN: ${savedPin})`;
+    }
+}
+
+function initTabs() {
+    const tabs = document.querySelectorAll('.db-tab-btn');
+    tabs.forEach(btn => {
+        btn.addEventListener('click', () => {
+            tabs.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            activeTab = btn.dataset.tab;
+            applyTabFilter(activeTab);
+        });
+    });
+}
+
+function applyTabFilter(tab) {
+    const chartsSec = document.getElementById('chartsSection');
+    const contractsSec = document.getElementById('sectionContracts');
+    const perfSec = document.getElementById('sectionPerformance');
+    const ordersCol = document.getElementById('sectionOrders');
+
+    if (tab === 'all') {
+        if (chartsSec) chartsSec.style.display = 'grid';
+        if (contractsSec) contractsSec.style.display = 'block';
+        if (perfSec) perfSec.style.display = 'grid';
+        if (ordersCol) ordersCol.style.display = 'flex';
+    } else if (tab === 'clm') {
+        if (chartsSec) chartsSec.style.display = 'grid';
+        if (contractsSec) contractsSec.style.display = 'block';
+        if (perfSec) perfSec.style.display = 'none';
+        if (ordersCol) ordersCol.style.display = 'none';
+    } else if (tab === 'performance') {
+        if (chartsSec) chartsSec.style.display = 'grid';
+        if (contractsSec) contractsSec.style.display = 'none';
+        if (perfSec) perfSec.style.display = 'grid';
+        if (ordersCol) ordersCol.style.display = 'none';
+    } else if (tab === 'orders') {
+        if (chartsSec) chartsSec.style.display = 'none';
+        if (contractsSec) contractsSec.style.display = 'none';
+        if (perfSec) perfSec.style.display = 'grid';
+        if (ordersCol) ordersCol.style.display = 'flex';
     }
 }
 
@@ -55,11 +98,54 @@ function renderDashboard() {
     if (!dashboardData) return;
 
     const { vendors, poStats, prList, scoreSummary, kategori } = dashboardData;
+    const cc = dashboardData.contractCompliance || { uniqueContractedVendors: 0, uniqueCompliantVendors: 0, vendorComplianceRate: 100, list: [] };
 
-    // 1. Render Summary Cards (KPI 1 - KPI 4)
+    // 1. Render Gatekeeper 5-Card Key Metrics
+    renderSummaryCards(vendors, scoreSummary, cc, poStats);
+
+    // 2. Check for Expiring Contracts Banner (Gatekeeper CLM feature)
+    checkExpiringContracts(cc);
+
+    // 3. Render Enterprise Charts (Chart.js)
+    renderComplianceChart(cc);
+    renderSpendChart(cc, kategori, poStats);
+    renderRadarChart(vendors, scoreSummary, kategori);
+
+    // 4. Render Tables
+    renderContractTable(cc);
+    renderTopVendors(scoreSummary, vendors, kategori);
+    renderAttentionVendors(scoreSummary, vendors, kategori);
+    renderPoPerformance(poStats);
+    renderPrTable(prList);
+}
+
+function renderSummaryCards(vendors, scoreSummary, cc, poStats) {
     const totalVendors = vendors ? vendors.length : 0;
     
-    // Hitung KPI 1: Vendor Performance Score & evaluasi count
+    // 1. Total Contract Value
+    let totalContractVal = 0;
+    let totalContractsCount = 0;
+    if (cc && cc.list) {
+        totalContractsCount = cc.list.length;
+        cc.list.forEach(c => {
+            totalContractVal += (Number(c.nilai) || 0);
+        });
+    }
+    const valEl = document.getElementById('statTotalContractValue');
+    const valCountEl = document.getElementById('statTotalContractsCount');
+    if (valEl) valEl.textContent = formatRupiah(totalContractVal);
+    if (valCountEl) valCountEl.textContent = `${totalContractsCount} kontrak terdaftar`;
+
+    // 2. KPI 4: Contract Compliance
+    const ccRate = cc.vendorComplianceRate != null ? cc.vendorComplianceRate : 100;
+    const ccEl = document.getElementById('statContractCompliance');
+    const ccRatioEl = document.getElementById('statContractRatio');
+    const ccProg = document.getElementById('progressCompliance');
+    if (ccEl) ccEl.textContent = `${ccRate}%`;
+    if (ccRatioEl) ccRatioEl.textContent = `${cc.uniqueCompliantVendors || 0} / ${cc.uniqueContractedVendors || 0} vendor comply`;
+    if (ccProg) ccProg.style.width = `${ccRate}%`;
+
+    // 3. KPI 1: Performance Score
     let sumScore = 0;
     let countScore = 0;
     if (scoreSummary) {
@@ -69,41 +155,64 @@ function renderDashboard() {
         }
     }
     const avgScore = countScore > 0 ? (sumScore / countScore).toFixed(1) : '0.0';
+    const scorePct = Math.round((Number(avgScore) / 5) * 100);
+    const scoreEl = document.getElementById('statAvgScore');
+    const scoreCountEl = document.getElementById('statEvalCount');
+    const scoreProg = document.getElementById('progressScore');
+    if (scoreEl) scoreEl.textContent = `${avgScore} / 5.0`;
+    if (scoreCountEl) scoreCountEl.textContent = `${countScore} vendor dinilai`;
+    if (scoreProg) scoreProg.style.width = `${scorePct}%`;
 
-    // Hitung KPI 2: Vendor Evaluation Completion
+    // 4. KPI 2: Evaluation Completion
     const evalCompletionPct = totalVendors > 0 ? Math.round((countScore / totalVendors) * 100) : 0;
+    const evalEl = document.getElementById('statEvalCompletion');
+    const evalRatioEl = document.getElementById('statEvalRatio');
+    const evalProg = document.getElementById('progressCompletion');
+    if (evalEl) evalEl.textContent = `${evalCompletionPct}%`;
+    if (evalRatioEl) evalRatioEl.textContent = `${countScore} / ${totalVendors} vendor selesai`;
+    if (evalProg) evalProg.style.width = `${evalCompletionPct}%`;
 
-    // Ambil KPI 4: Contract Compliance
-    const cc = dashboardData.contractCompliance || { uniqueContractedVendors: 0, uniqueCompliantVendors: 0, vendorComplianceRate: 100 };
+    // 5. On-Time PO Delivery Rate
+    const onTimePct = (poStats && poStats.overallOnTimePct != null) ? poStats.overallOnTimePct : 0;
+    const totalOrders = poStats ? poStats.totalOrders : 0;
+    const onTimeEl = document.getElementById('statOnTimePct');
+    const onTimeMetaEl = document.getElementById('statTotalPoMeta');
+    const onTimeProg = document.getElementById('progressOnTime');
+    if (onTimeEl) onTimeEl.textContent = `${onTimePct}%`;
+    if (onTimeMetaEl) onTimeMetaEl.textContent = `${totalOrders} total pesanan PO`;
+    if (onTimeProg) onTimeProg.style.width = `${onTimePct}%`;
+}
 
-    // Update UI elements
-    document.getElementById('statAvgScore').textContent = `${avgScore} / 5.0`;
-    document.getElementById('statEvalCount').textContent = `${countScore} vendor dinilai`;
-    
-    document.getElementById('statEvalCompletion').textContent = `${evalCompletionPct}%`;
-    document.getElementById('statEvalRatio').textContent = `${countScore} / ${totalVendors} vendor selesai`;
+function checkExpiringContracts(cc) {
+    const banner = document.getElementById('expiringContractsBanner');
+    if (!banner || !cc || !cc.list || cc.list.length === 0) {
+        if (banner) banner.style.display = 'none';
+        return;
+    }
 
-    document.getElementById('statContractCompliance').textContent = `${cc.vendorComplianceRate}%`;
-    document.getElementById('statContractRatio').textContent = `${cc.uniqueCompliantVendors} / ${cc.uniqueContractedVendors} vendor comply`;
+    const now = new Date();
+    const ninetyDaysAhead = new Date();
+    ninetyDaysAhead.setDate(now.getDate() + 90);
 
-    // 2. Render Charts (Chart.js)
-    renderRadarChart(vendors, scoreSummary, kategori);
-    renderComplianceChart(cc);
+    const expiring = [];
+    cc.list.forEach(c => {
+        if (c.tglSelesai && c.tglSelesai !== '-') {
+            const endDate = new Date(c.tglSelesai);
+            if (!isNaN(endDate.getTime()) && endDate >= now && endDate <= ninetyDaysAhead) {
+                expiring.push(c);
+            }
+        }
+    });
 
-    // 3. Render Top 5 Vendors
-    renderTopVendors(scoreSummary, vendors, kategori);
-
-    // 4. Render Attention Vendors
-    renderAttentionVendors(scoreSummary, vendors, kategori);
-
-    // 5. Render PO Performance
-    renderPoPerformance(poStats);
-
-    // 6. Render PR Table
-    renderPrTable(prList);
-
-    // 7. Render Contract Compliance Table (KPI 4)
-    renderContractTable(cc);
+    if (expiring.length > 0) {
+        banner.style.display = 'flex';
+        const titleEl = document.getElementById('alertBannerTitle');
+        const descEl = document.getElementById('alertBannerDesc');
+        if (titleEl) titleEl.textContent = `⚠️ Peringatan: ${expiring.length} Kontrak Segera Berakhir (< 90 Hari)`;
+        if (descEl) descEl.textContent = `Vendor: ${expiring.map(e => e.vendor).slice(0, 3).join(', ')}${expiring.length > 3 ? '...' : ''}. Persiapkan proses review & perpanjangan.`;
+    } else {
+        banner.style.display = 'none';
+    }
 }
 
 function renderTopVendors(scoreSummary, vendors, categories) {
@@ -115,11 +224,10 @@ function renderTopVendors(scoreSummary, vendors, categories) {
         return;
     }
 
-    // Ubah ke array, hubungkan dengan kategori asli vendor, lalu urutkan
     const sorted = Object.keys(scoreSummary).map(name => {
-        const vInfo = vendors.find(v => v.nama === name) || {};
+        const vInfo = (vendors && vendors.find(v => v.nama === name)) || {};
         const catCode = vInfo.kategori || 'general';
-        const catInfo = categories.find(c => c.kode === catCode) || { nama: 'General', ikon: '📦' };
+        const catInfo = (categories && categories.find(c => c.kode === catCode)) || { nama: 'General', ikon: '📦' };
 
         return {
             name: name,
@@ -154,9 +262,9 @@ function renderAttentionVendors(scoreSummary, vendors, categories) {
         for (let name in scoreSummary) {
             const score = scoreSummary[name].avgScore;
             if (score < 2.5) {
-                const vInfo = vendors.find(v => v.nama === name) || {};
+                const vInfo = (vendors && vendors.find(v => v.nama === name)) || {};
                 const catCode = vInfo.kategori || 'general';
-                const catInfo = categories.find(c => c.kode === catCode) || { nama: 'General', ikon: '📦' };
+                const catInfo = (categories && categories.find(c => c.kode === catCode)) || { nama: 'General', ikon: '📦' };
                 
                 poorVendors.push({
                     name: name,
@@ -207,7 +315,6 @@ function renderPoPerformance(poStats) {
         badge.style.color = poStats.overallOnTimePct >= 80 ? '#10b981' : poStats.overallOnTimePct >= 60 ? '#f59e0b' : '#ef4444';
     }
 
-    // Urutkan vendor berdasarkan total PO terbanyak agar yang paling aktif tampil di atas
     const sortedVendorNames = Object.keys(poStats.vendorMap).sort((a, b) => {
         return poStats.vendorMap[b].totalPo - poStats.vendorMap[a].totalPo;
     });
@@ -241,7 +348,6 @@ function renderPrTable(prList) {
         return;
     }
 
-    // Sort PR terbaru dan limit ke 5
     const latestPr = [...prList].reverse().slice(0, 5);
 
     tableBody.innerHTML = latestPr.map(pr => {
@@ -272,7 +378,7 @@ function renderContractTable(cc) {
     if (!tableBody) return;
 
     if (!cc || !cc.list || cc.list.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:var(--text3); padding:2rem;">Belum ada data kontrak vendor terdaftar di sheet 'Kontrak Vendor'.</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text3); padding:2rem;">Belum ada data kontrak vendor terdaftar di sheet 'Kontrak Vendor'.</td></tr>`;
         return;
     }
 
@@ -286,22 +392,23 @@ function renderContractTable(cc) {
         return `
         <tr>
             <td style="font-weight:700; color:var(--primary); font-size:0.85rem; white-space:nowrap;">${esc(c.noKontrak)}</td>
-            <td style="font-weight:600; color:var(--text);">${esc(c.vendor)}</td>
-            <td style="font-size:0.85rem; color:var(--text2); max-width:220px;">${esc(c.jenisPekerjaan)}</td>
-            <td style="font-size:0.8rem; color:var(--text3); white-space:nowrap;">${esc(c.tglMulai)}</td>
-            <td style="font-size:0.8rem; color:var(--text3); white-space:nowrap;">${esc(c.tglSelesai)}</td>
+            <td style="font-weight:600; color:var(--text); white-space:nowrap;">${esc(c.vendor)}</td>
+            <td style="font-size:0.85rem; color:var(--text2); max-width:200px;">${esc(c.jenisPekerjaan)}</td>
+            <td style="font-size:0.8rem; color:var(--text3); white-space:nowrap;">
+                <span>📅 ${esc(c.tglMulai)} &ndash; ${esc(c.tglSelesai)}</span>
+            </td>
             <td>
-                <span class="predikat-badge" style="background:${docColor}15; color:${docColor}; border:1px solid ${docColor}30; font-size:0.75rem; font-weight:600;">
+                <span class="predikat-badge" style="background:${docColor}15; color:${docColor}; border:1px solid ${docColor}30; font-size:0.72rem; font-weight:600;">
                     ${esc(c.kelengkapan)}
                 </span>
             </td>
-            <td style="text-align:right; font-weight:600; color:var(--text); font-size:0.85rem; white-space:nowrap;">${c.nilai ? formatRupiah(c.nilai) : '-'}</td>
+            <td style="text-align:right; font-weight:700; color:var(--text); font-size:0.85rem; white-space:nowrap;">${c.nilai ? formatRupiah(c.nilai) : '-'}</td>
             <td style="text-align:center;">
                 <span class="predikat-badge" style="background:${statusColor}15; color:${statusColor}; border:1px solid ${statusColor}30; font-size:0.75rem; font-weight:700;">
                     ${isComply ? '✓ Comply' : '✗ Not Comply'}
                 </span>
             </td>
-            <td style="font-size:0.8rem; color:var(--text3); max-width:240px;">${esc(c.keterangan)}</td>
+            <td style="font-size:0.8rem; color:var(--text3); max-width:220px;">${esc(c.keterangan)}</td>
         </tr>`;
     }).join('');
 }
@@ -352,16 +459,16 @@ function showToast(msg, type = 'success') {
 }
 
 // =====================================================
-// CHART.JS RENDERING
+// CHART.JS RENDERING (GATEKEEPER CLM CHARTS)
 // =====================================================
 let radarChartInstance = null;
 let complianceChartInstance = null;
+let spendChartInstance = null;
 
 function renderRadarChart(vendors, scoreSummary, kategori) {
     const canvas = document.getElementById('radarChart');
     if (!canvas) return;
 
-    // Hitung rata-rata skor per kategori
     const catScores = {};
     if (vendors && scoreSummary) {
         vendors.forEach(v => {
@@ -370,7 +477,7 @@ function renderRadarChart(vendors, scoreSummary, kategori) {
             const evalData = scoreSummary[name];
             if (evalData) {
                 if (!catScores[catCode]) {
-                    const catInfo = kategori.find(c => c.kode === catCode) || { nama: catCode, ikon: '📦' };
+                    const catInfo = (kategori && kategori.find(c => c.kode === catCode)) || { nama: catCode, ikon: '📦' };
                     catScores[catCode] = { label: catInfo.nama, icon: catInfo.ikon || '📦', sum: 0, count: 0 };
                 }
                 catScores[catCode].sum += evalData.avgScore;
@@ -387,13 +494,11 @@ function renderRadarChart(vendors, scoreSummary, kategori) {
         data.push(parseFloat((cat.sum / cat.count).toFixed(2)));
     }
 
-    // Fallback jika belum ada data
     if (labels.length === 0) {
-        labels.push('Belum ada data');
+        labels.push('Belum ada data evaluasi');
         data.push(0);
     }
 
-    // Destroy previous instance if exists
     if (radarChartInstance) radarChartInstance.destroy();
 
     radarChartInstance = new Chart(canvas, {
@@ -403,10 +508,10 @@ function renderRadarChart(vendors, scoreSummary, kategori) {
             datasets: [{
                 label: 'Skor Rata-rata',
                 data: data,
-                backgroundColor: 'rgba(2, 132, 199, 0.15)',
-                borderColor: '#0284c7',
+                backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                borderColor: '#10b981',
                 borderWidth: 2,
-                pointBackgroundColor: '#0284c7',
+                pointBackgroundColor: '#10b981',
                 pointBorderColor: '#fff',
                 pointBorderWidth: 2,
                 pointRadius: 5,
@@ -429,12 +534,8 @@ function renderRadarChart(vendors, scoreSummary, kategori) {
                         font: { size: 12, weight: '600' },
                         color: '#334155'
                     },
-                    grid: {
-                        color: '#e2e8f0'
-                    },
-                    angleLines: {
-                        color: '#e2e8f0'
-                    }
+                    grid: { color: '#e2e8f0' },
+                    angleLines: { color: '#e2e8f0' }
                 }
             },
             plugins: {
@@ -446,9 +547,7 @@ function renderRadarChart(vendors, scoreSummary, kategori) {
                     padding: 10,
                     cornerRadius: 8,
                     callbacks: {
-                        label: function(ctx) {
-                            return `Skor: ${ctx.raw} / 5.0`;
-                        }
+                        label: function(ctx) { return `Skor: ${ctx.raw} / 5.0`; }
                     }
                 }
             }
@@ -462,9 +561,8 @@ function renderComplianceChart(cc) {
 
     const comply = cc.uniqueCompliantVendors || 0;
     const notComply = Math.max((cc.uniqueContractedVendors || 0) - comply, 0);
-    const noContract = (comply === 0 && notComply === 0) ? 1 : 0; // fallback
+    const noContract = (comply === 0 && notComply === 0) ? 1 : 0;
 
-    // Destroy previous instance if exists
     if (complianceChartInstance) complianceChartInstance.destroy();
 
     complianceChartInstance = new Chart(canvas, {
@@ -482,12 +580,12 @@ function renderComplianceChart(cc) {
         options: {
             responsive: true,
             maintainAspectRatio: true,
-            cutout: '65%',
+            cutout: '68%',
             plugins: {
                 legend: {
                     position: 'bottom',
                     labels: {
-                        padding: 16,
+                        padding: 14,
                         usePointStyle: true,
                         pointStyle: 'circle',
                         font: { size: 12, weight: '600' },
@@ -512,31 +610,112 @@ function renderComplianceChart(cc) {
             }
         },
         plugins: [{
-            // Center text plugin: show compliance rate in the middle
             id: 'centerText',
             afterDraw(chart) {
                 const { ctx, chartArea } = chart;
                 const centerX = (chartArea.left + chartArea.right) / 2;
                 const centerY = (chartArea.top + chartArea.bottom) / 2;
-                const rate = cc.vendorComplianceRate != null ? cc.vendorComplianceRate : 0;
+                const rate = cc.vendorComplianceRate != null ? cc.vendorComplianceRate : 100;
 
                 ctx.save();
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
 
-                // Rate percentage
-                ctx.font = 'bold 28px Inter, sans-serif';
+                ctx.font = 'bold 26px Inter, sans-serif';
                 ctx.fillStyle = '#1e293b';
                 ctx.fillText(`${rate}%`, centerX, centerY - 8);
 
-                // Label
-                ctx.font = '500 11px Inter, sans-serif';
+                ctx.font = '600 11px Inter, sans-serif';
                 ctx.fillStyle = '#64748b';
-                ctx.fillText('Compliance', centerX, centerY + 16);
+                ctx.fillText('Compliance Rate', centerX, centerY + 14);
 
                 ctx.restore();
             }
         }]
+    });
+}
+
+function renderSpendChart(cc, kategori, poStats) {
+    const canvas = document.getElementById('spendChart');
+    if (!canvas) return;
+
+    // Hitung spend per kategori (dari kontrak dan PO)
+    const catSpend = {};
+    if (cc && cc.list) {
+        cc.list.forEach(c => {
+            const vendorName = c.vendor || '';
+            let catName = 'Lainnya';
+            if (c.noKontrak && c.noKontrak.includes('IT')) catName = 'IT & Hardware';
+            else if (c.noKontrak && c.noKontrak.includes('LOG')) catName = 'Ekspedisi / Logistik';
+            else if (c.noKontrak && c.noKontrak.includes('PRN')) catName = 'Percetakan';
+            else if (c.noKontrak && c.noKontrak.includes('BRD')) catName = 'Branding & Desain';
+            else if (c.noKontrak && c.noKontrak.includes('DEV')) catName = 'Software & Dev';
+
+            catSpend[catName] = (catSpend[catName] || 0) + (Number(c.nilai) || 0);
+        });
+    }
+
+    const labels = Object.keys(catSpend);
+    const data = Object.values(catSpend);
+
+    if (labels.length === 0) {
+        labels.push('Belum ada data kontrak');
+        data.push(0);
+    }
+
+    if (spendChartInstance) spendChartInstance.destroy();
+
+    spendChartInstance = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Nilai Kontrak (Rp)',
+                data: data,
+                backgroundColor: [
+                    'rgba(2, 132, 199, 0.8)',
+                    'rgba(16, 185, 129, 0.8)',
+                    'rgba(245, 158, 11, 0.8)',
+                    'rgba(139, 92, 246, 0.8)',
+                    'rgba(79, 70, 229, 0.8)'
+                ],
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return 'Rp ' + (value / 1000000) + ' Jt';
+                        },
+                        font: { size: 11 }
+                    },
+                    grid: { color: '#f1f5f9' }
+                },
+                x: {
+                    ticks: { font: { size: 11, weight: '600' } },
+                    grid: { display: false }
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#1e293b',
+                    titleFont: { size: 13, weight: '700' },
+                    padding: 10,
+                    cornerRadius: 8,
+                    callbacks: {
+                        label: function(ctx) {
+                            return formatRupiah(ctx.raw);
+                        }
+                    }
+                }
+            }
+        }
     });
 }
 
