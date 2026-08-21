@@ -566,9 +566,7 @@ function getPredikat(score) {
 
 function createJsonResponse(data) {
   return ContentService.createTextOutput(JSON.stringify(data))
-    .setMimeType(ContentService.MimeType.JSON)
-    .setHeader('Access-Control-Allow-Origin', '*')
-    .setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 /**
