@@ -4,10 +4,16 @@
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbySjL6G3zAUKQhWUK8qhBYQdGjx9MUPtYoeXJkZm1DrIAwPN_S-i9ygymgU3exNDe37Sw/exec';
 
 // =====================================================
+// =====================================================
 // STATE & INIT
 // =====================================================
 let dashboardData = null;
 let activeTab = 'all';
+let slicerState = {
+    category: 'all',
+    compliance: 'all', // 'all' | 'comply' | 'not-comply'
+    tier: 'all' // 'all' | 'high' | 'good' | 'poor'
+};
 
 document.addEventListener('DOMContentLoaded', () => {
     initHeader();
@@ -66,6 +72,62 @@ function applyTabFilter(tab) {
     }
 }
 
+function initSlicers(kategoriList) {
+    // 1. Inisialisasi Category Slicer Chips secara dinamis dari database
+    const catContainer = document.getElementById('slicerCategoryChips');
+    if (catContainer && kategoriList && kategoriList.length > 0) {
+        catContainer.innerHTML = `<button class="slicer-btn ${slicerState.category === 'all' ? 'active' : ''}" data-slicer="category" data-val="all">Semua Bidang</button>` +
+            kategoriList.map(k => `
+                <button class="slicer-btn ${slicerState.category === k.kode ? 'active' : ''}" data-slicer="category" data-val="${esc(k.kode)}">
+                    ${k.ikon || '📦'} ${esc(k.nama)}
+                </button>
+            `).join('');
+    }
+
+    // 2. Pasang event listener untuk semua tombol slicer
+    document.querySelectorAll('.slicer-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const slicerType = btn.dataset.slicer;
+            const slicerVal = btn.dataset.val;
+
+            // Hapus class active pada group yang sama
+            const parentRow = btn.closest('.slicer-chips');
+            if (parentRow) {
+                parentRow.querySelectorAll('.slicer-btn').forEach(b => b.classList.remove('active', 'active-green', 'active-amber', 'active-red'));
+            }
+
+            // Tambah active class
+            if (slicerVal === 'comply' || slicerVal === 'high') btn.classList.add('active-green');
+            else if (slicerVal === 'good') btn.classList.add('active-amber');
+            else if (slicerVal === 'not-comply' || slicerVal === 'poor') btn.classList.add('active-red');
+            else btn.classList.add('active');
+
+            // Simpan state dan re-render
+            slicerState[slicerType] = slicerVal;
+            filterAndRenderDashboard();
+        });
+    });
+}
+
+function resetAllSlicers() {
+    slicerState = {
+        category: 'all',
+        compliance: 'all',
+        tier: 'all'
+    };
+
+    // Reset tombol UI
+    document.querySelectorAll('.slicer-chips').forEach(group => {
+        group.querySelectorAll('.slicer-btn').forEach(b => {
+            b.classList.remove('active', 'active-green', 'active-amber', 'active-red');
+            if (b.dataset.val === 'all') b.classList.add('active');
+        });
+    });
+
+    filterAndRenderDashboard();
+    showToast('Semua filter slicer telah direset ke kondisi awal.', 'info');
+}
+
 async function loadDashboardData() {
     const savedPin = localStorage.getItem('ethos_pin') || '';
     const url = savedPin ? `${SCRIPT_URL}?pin=${encodeURIComponent(savedPin)}` : SCRIPT_URL;
@@ -81,7 +143,8 @@ async function loadDashboardData() {
         
         if (data.status === 'success') {
             dashboardData = data;
-            renderDashboard();
+            initSlicers(dashboardData.kategori);
+            filterAndRenderDashboard();
         } else {
             showToast(data.message || 'Gagal memuat data dari server.', 'error');
         }
@@ -92,14 +155,127 @@ async function loadDashboardData() {
 }
 
 // =====================================================
-// RENDERING FUNCTIONS
+// SLICER FILTERING & RENDERING
 // =====================================================
-function renderDashboard() {
+function filterAndRenderDashboard() {
     if (!dashboardData) return;
 
-    const { vendors, poStats, prList, scoreSummary, kategori } = dashboardData;
-    const cc = dashboardData.contractCompliance || { uniqueContractedVendors: 0, uniqueCompliantVendors: 0, vendorComplianceRate: 100, list: [] };
+    const rawVendors = dashboardData.vendors || [];
+    const rawScore = dashboardData.scoreSummary || {};
+    const rawCC = dashboardData.contractCompliance || { list: [] };
+    const rawPO = dashboardData.poStats || { vendorMap: {} };
+    const categories = dashboardData.kategori || [];
 
+    // Filter Vendors berdasarkan Slicers
+    const filteredVendors = rawVendors.filter(v => {
+        const name = v.nama;
+        const cat = v.kategori || 'GENERAL';
+
+        // 1. Slicer Kategori
+        if (slicerState.category !== 'all' && cat !== slicerState.category) {
+            return false;
+        }
+
+        // 2. Slicer Kepatuhan Kontrak
+        if (slicerState.compliance !== 'all') {
+            const vendorContracts = rawCC.list ? rawCC.list.filter(c => c.vendor === name) : [];
+            if (vendorContracts.length === 0) return false;
+            const hasComply = vendorContracts.some(c => c.status.toLowerCase() === 'comply');
+            const hasNotComply = vendorContracts.some(c => c.status.toLowerCase() !== 'comply');
+
+            if (slicerState.compliance === 'comply' && !hasComply) return false;
+            if (slicerState.compliance === 'not-comply' && !hasNotComply) return false;
+        }
+
+        // 3. Slicer Rating Tier
+        if (slicerState.tier !== 'all') {
+            const scoreData = rawScore[name];
+            const score = scoreData ? scoreData.avgScore : null;
+            if (score === null) return false;
+
+            if (slicerState.tier === 'high' && score < 4.5) return false;
+            if (slicerState.tier === 'good' && (score < 3.5 || score >= 4.5)) return false;
+            if (slicerState.tier === 'poor' && score >= 2.5) return false;
+        }
+
+        return true;
+    });
+
+    const activeVendorNames = new Set(filteredVendors.map(v => v.nama));
+
+    // Filter Score Summary
+    const filteredScore = {};
+    for (let name in rawScore) {
+        if (activeVendorNames.has(name)) {
+            filteredScore[name] = rawScore[name];
+        }
+    }
+
+    // Filter Contract Compliance List & Stats
+    const filteredContractsList = rawCC.list ? rawCC.list.filter(c => activeVendorNames.has(c.vendor)) : [];
+    let uniqueContrVendors = 0;
+    let uniqueComplVendors = 0;
+    const vendorContrMap = {};
+    filteredContractsList.forEach(c => {
+        if (!vendorContrMap[c.vendor]) vendorContrMap[c.vendor] = { total: 0, comply: 0 };
+        vendorContrMap[c.vendor].total++;
+        if (c.status.toLowerCase() === 'comply') vendorContrMap[c.vendor].comply++;
+    });
+    for (let v in vendorContrMap) {
+        uniqueContrVendors++;
+        if (vendorContrMap[v].comply === vendorContrMap[v].total) uniqueComplVendors++;
+    }
+    const filteredCC = {
+        totalContracts: filteredContractsList.length,
+        totalCompliantContracts: filteredContractsList.filter(c => c.status.toLowerCase() === 'comply').length,
+        uniqueContractedVendors: uniqueContrVendors,
+        uniqueCompliantVendors: uniqueComplVendors,
+        vendorComplianceRate: uniqueContrVendors > 0 ? Math.round((uniqueComplVendors / uniqueContrVendors) * 100) : 100,
+        list: filteredContractsList
+    };
+
+    // Filter PO Stats
+    const filteredVendorMap = {};
+    let totalPoOrders = 0;
+    let totalPoOnTime = 0;
+    let totalPoValue = 0;
+    if (rawPO.vendorMap) {
+        for (let name in rawPO.vendorMap) {
+            if (activeVendorNames.has(name)) {
+                filteredVendorMap[name] = rawPO.vendorMap[name];
+                totalPoOrders += (rawPO.vendorMap[name].totalPo || 0);
+                totalPoOnTime += (rawPO.vendorMap[name].onTimePo || 0);
+                totalPoValue += (rawPO.vendorMap[name].totalValue || 0);
+            }
+        }
+    }
+    const filteredPO = {
+        totalOrders: totalPoOrders,
+        totalOnTime: totalPoOnTime,
+        totalValue: totalPoValue,
+        overallOnTimePct: totalPoOrders > 0 ? Math.round((totalPoOnTime / totalPoOrders) * 100) : 0,
+        vendorMap: filteredVendorMap
+    };
+
+    // Update Slicer Indicator Text
+    const indicatorEl = document.getElementById('slicerActiveInfo');
+    if (indicatorEl) {
+        const isFiltered = slicerState.category !== 'all' || slicerState.compliance !== 'all' || slicerState.tier !== 'all';
+        if (isFiltered) {
+            indicatorEl.innerHTML = `<b style="color:var(--primary);">${filteredVendors.length}</b> dari ${rawVendors.length} vendor terpilih`;
+        } else {
+            indicatorEl.textContent = `Menampilkan seluruh ${rawVendors.length} vendor`;
+        }
+    }
+
+    // Render All Components with Sliced Data
+    renderDashboard(filteredVendors, filteredScore, filteredCC, filteredPO, categories);
+}
+
+// =====================================================
+// RENDERING FUNCTIONS
+// =====================================================
+function renderDashboard(vendors, scoreSummary, cc, poStats, kategori) {
     // 1. Render Gatekeeper 5-Card Key Metrics
     renderSummaryCards(vendors, scoreSummary, cc, poStats);
 
