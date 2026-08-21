@@ -977,9 +977,9 @@ body {
 
 /* ============ DASHBOARD SPECIFIC STYLES ============ */
 .dashboard-content {
-    max-width: 1000px;
+    max-width: 1440px;
     margin: 0 auto;
-    padding: 1.5rem 1.25rem;
+    padding: 1.5rem 2rem 3.5rem;
 }
 
 .db-card {
@@ -988,7 +988,7 @@ body {
     border-radius: var(--radius);
     padding: 1.25rem 1.5rem;
     margin-bottom: 1.25rem;
-    box-shadow: var(--shadow);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
 }
 
 .db-summary-grid {
@@ -1066,15 +1066,16 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.25rem;
+    margin-bottom: 1rem;
     padding-bottom: 0.75rem;
-    border-bottom: 1px dashed var(--border);
+    border-bottom: 1px solid var(--border);
 }
 
 .db-card-header h4 {
     font-size: 0.95rem;
     font-weight: 700;
     color: var(--primary);
+    margin: 0;
 }
 
 .badge {
@@ -1083,6 +1084,7 @@ body {
     padding: 0.25rem 0.6rem;
     border-radius: 50px;
     text-transform: uppercase;
+    letter-spacing: 0.3px;
 }
 
 .badge-success {
@@ -1109,18 +1111,24 @@ body {
 
 .db-table th {
     font-weight: 700;
-    color: var(--text3);
-    padding: 0.75rem 0.5rem;
+    color: #64748b;
+    background: #f8fafc;
+    padding: 0.75rem 0.75rem;
     border-bottom: 2px solid var(--border);
     text-transform: uppercase;
     font-size: 0.72rem;
     letter-spacing: 0.5px;
+    white-space: nowrap;
 }
 
 .db-table td {
-    padding: 0.85rem 0.5rem;
+    padding: 0.85rem 0.75rem;
     border-bottom: 1px solid var(--border);
     vertical-align: middle;
+}
+
+.db-table tbody tr:hover {
+    background: #f8fafc;
 }
 
 .db-table tr:last-child td {
@@ -1130,7 +1138,7 @@ body {
 .predikat-badge {
     font-size: 0.72rem;
     font-weight: 700;
-    padding: 0.15rem 0.45rem;
+    padding: 0.2rem 0.55rem;
     border-radius: 6px;
     white-space: nowrap;
     display: inline-block;
@@ -1286,7 +1294,7 @@ body {
 /* 5 Card Summary Grid */
 .clm-summary-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 1rem;
     margin-bottom: 1.5rem;
 }
@@ -1298,7 +1306,7 @@ body {
     padding: 1.15rem;
     position: relative;
     overflow: hidden;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
     transition: transform 0.2s, box-shadow 0.2s;
 }
 
@@ -1342,7 +1350,7 @@ body {
 }
 
 .clm-stat-card h3 {
-    font-size: 1.55rem;
+    font-size: 1.45rem;
     font-weight: 800;
     color: var(--text);
     line-height: 1.1;
@@ -1381,6 +1389,9 @@ body {
 
 /* ============ MEDIA QUERIES FOR DASHBOARD & WIDESCREEN ============ */
 @media (max-width: 1180px) {
+    .clm-summary-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
     .clm-chart-grid {
         grid-template-columns: 1fr 1fr;
     }
@@ -1390,6 +1401,9 @@ body {
 }
 
 @media (max-width: 860px) {
+    .clm-summary-grid {
+        grid-template-columns: 1fr;
+    }
     .clm-chart-grid,
     .db-main-grid {
         grid-template-columns: 1fr;
