@@ -248,40 +248,15 @@
                 </div>
             </div>
 
-            <!-- Right Column: Delivery Performance & PRs -->
+            <!-- Right Column: Delivery Performance (PO) -->
             <div class="db-col" id="sectionOrders">
-                <div class="db-card">
+                <div class="db-card" style="height: 100%;">
                     <div class="db-card-header">
-                        <h4>🚚 Kinerja Ketepatan Waktu PO</h4>
+                        <h4>🚚 Kinerja Ketepatan Waktu Pengiriman PO</h4>
                         <span id="overallOnTimeBadge" class="badge">0% On-Time</span>
                     </div>
-                    <div class="po-performance-list" id="poPerformanceList">
+                    <div class="po-performance-list" id="poPerformanceList" style="max-height: 620px;">
                         <div style="text-align: center; color: var(--text3); padding: 2rem;">Memuat data pengiriman...</div>
-                    </div>
-                </div>
-
-                <div class="db-card">
-                    <div class="db-card-header">
-                        <h4>📋 Purchase Request Terbaru</h4>
-                        <a href="#" onclick="alert('Kelola PR dilakukan langsung melalui Google Sheets.'); return false;" style="font-size: 0.8rem; color: var(--secondary); text-decoration: none;">Kelola PR &rsaquo;</a>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="db-table">
-                            <thead>
-                                <tr>
-                                    <th>No PR</th>
-                                    <th>Tanggal</th>
-                                    <th>Item</th>
-                                    <th>Estimasi (Rp)</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="prTableBody">
-                                <tr>
-                                    <td colspan="5" style="text-align: center; color: var(--text3); padding: 2rem;">Memuat data Purchase Request...</td>
-                                </tr>
-                            </tbody>
-                        </table>
                     </div>
                 </div>
             </div>

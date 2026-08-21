@@ -116,7 +116,6 @@ function renderDashboard() {
     renderTopVendors(scoreSummary, vendors, kategori);
     renderAttentionVendors(scoreSummary, vendors, kategori);
     renderPoPerformance(poStats);
-    renderPrTable(prList);
 }
 
 function renderSummaryCards(vendors, scoreSummary, cc, poStats) {
@@ -337,40 +336,6 @@ function renderPoPerformance(poStats) {
     }).join('');
 
     container.innerHTML = html;
-}
-
-function renderPrTable(prList) {
-    const tableBody = document.getElementById('prTableBody');
-    if (!tableBody) return;
-
-    if (!prList || prList.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text3); padding:2rem;">Belum ada Purchase Request terdaftar.</td></tr>`;
-        return;
-    }
-
-    const latestPr = [...prList].reverse().slice(0, 5);
-
-    tableBody.innerHTML = latestPr.map(pr => {
-        let badgeColor = '#94a3b8';
-        if (pr.status.toLowerCase().includes('po')) badgeColor = 'var(--secondary)';
-        else if (pr.status.toLowerCase().includes('approved')) badgeColor = 'var(--accent)';
-        else if (pr.status.toLowerCase().includes('pending')) badgeColor = '#f59e0b';
-        else if (pr.status.toLowerCase().includes('reject')) badgeColor = '#ef4444';
-
-        return `
-        <tr>
-            <td style="font-weight:600; color:var(--text);">${esc(pr.noPr)}</td>
-            <td style="font-size:0.85rem; color:var(--text2);">${esc(pr.tanggal)}</td>
-            <td style="font-size:0.85rem; font-weight:500; color:var(--text); max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${esc(pr.deskripsi)}">${esc(pr.deskripsi)}</td>
-            <td style="text-align:right; font-weight:600; color:var(--primary); font-size:0.9rem;">${formatRupiah(pr.nilai)}</td>
-            <td style="text-align:center;">
-                <span class="predikat-badge" style="background:${badgeColor}15; color:${badgeColor}; border:1px solid ${badgeColor}30; font-size:0.75rem;">
-                    ${esc(pr.status)}
-                </span>
-            </td>
-        </tr>
-    `;
-    }).join('');
 }
 
 function renderContractTable(cc) {
