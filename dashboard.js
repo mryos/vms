@@ -4,12 +4,12 @@
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbySjL6G3zAUKQhWUK8qhBYQdGjx9MUPtYoeXJkZm1DrIAwPN_S-i9ygymgU3exNDe37Sw/exec';
 
 // =====================================================
-// =====================================================
 // STATE & INIT
 // =====================================================
 let dashboardData = null;
 let activeTab = 'all';
 let slicerState = {
+    period: 'all',
     category: 'all',
     compliance: 'all', // 'all' | 'comply' | 'not-comply'
     tier: 'all' // 'all' | 'high' | 'good' | 'poor'
@@ -72,17 +72,31 @@ function applyTabFilter(tab) {
     }
 }
 
-function initSlicers(kategoriList) {
-    // 1. Inisialisasi Category Select Options secara dinamis dari database
+function initSlicers(kategoriList, periodList) {
+    // 1. Inisialisasi Period Select Options secara dinamis dari database multi-sheet
+    const periodSelect = document.getElementById('slicerPeriodSelect');
+    if (periodSelect && periodList && periodList.length > 0) {
+        periodSelect.innerHTML = `<option value="all">📅 Semua Periode</option>` +
+            periodList.map(p => `<option value="${esc(p)}">📅 ${esc(p)}</option>`).join('');
+    }
+
+    // 2. Inisialisasi Category Select Options secara dinamis dari database
     const catSelect = document.getElementById('slicerCategorySelect');
     if (catSelect && kategoriList && kategoriList.length > 0) {
         catSelect.innerHTML = `<option value="all">📁 Semua Bidang</option>` +
             kategoriList.map(k => `<option value="${esc(k.kode)}">${k.ikon || '📦'} ${esc(k.nama)}</option>`).join('');
     }
 
-    // 2. Pasang event listener untuk dropdown filter
+    // 3. Pasang event listener untuk dropdown filter
     const compSelect = document.getElementById('slicerComplianceSelect');
     const tierSelect = document.getElementById('slicerTierSelect');
+
+    if (periodSelect) {
+        periodSelect.addEventListener('change', () => {
+            slicerState.period = periodSelect.value;
+            filterAndRenderDashboard();
+        });
+    }
 
     if (catSelect) {
         catSelect.addEventListener('change', () => {
@@ -108,16 +122,19 @@ function initSlicers(kategoriList) {
 
 function resetAllSlicers() {
     slicerState = {
+        period: 'all',
         category: 'all',
         compliance: 'all',
         tier: 'all'
     };
 
     // Reset dropdown UI
+    const periodSelect = document.getElementById('slicerPeriodSelect');
     const catSelect = document.getElementById('slicerCategorySelect');
     const compSelect = document.getElementById('slicerComplianceSelect');
     const tierSelect = document.getElementById('slicerTierSelect');
 
+    if (periodSelect) periodSelect.value = 'all';
     if (catSelect) catSelect.value = 'all';
     if (compSelect) compSelect.value = 'all';
     if (tierSelect) tierSelect.value = 'all';
@@ -141,7 +158,7 @@ async function loadDashboardData() {
         
         if (data.status === 'success') {
             dashboardData = data;
-            initSlicers(dashboardData.kategori);
+            initSlicers(dashboardData.kategori, dashboardData.periodList);
             filterAndRenderDashboard();
         } else {
             showToast(data.message || 'Gagal memuat data dari server.', 'error');
@@ -158,13 +175,42 @@ async function loadDashboardData() {
 function filterAndRenderDashboard() {
     if (!dashboardData) return;
 
-    const rawVendors = dashboardData.vendors || [];
-    const rawScore = dashboardData.scoreSummary || {};
-    const rawCC = dashboardData.contractCompliance || { list: [] };
-    const rawPO = dashboardData.poStats || { vendorMap: {} };
+    let rawVendors = dashboardData.vendors || [];
+    let rawScore = dashboardData.scoreSummary || {};
+    let rawCC = dashboardData.contractCompliance || { list: [] };
+    let rawPO = dashboardData.poStats || { vendorMap: {} };
     const categories = dashboardData.kategori || [];
 
-    // Filter Vendors berdasarkan Slicers
+    // Jika filter periode dipilih secara spesifik
+    if (slicerState.period !== 'all' && dashboardData.periods && dashboardData.periods[slicerState.period]) {
+        const selectedPeriodData = dashboardData.periods[slicerState.period];
+        if (selectedPeriodData.vendors && selectedPeriodData.vendors.length > 0) {
+            rawVendors = selectedPeriodData.vendors;
+        }
+        if (selectedPeriodData.poStats) {
+            rawPO = selectedPeriodData.poStats;
+        }
+
+        // Filter skor evaluasi hanya yang dinilai pada periode tersebut
+        const periodScores = {};
+        for (let name in rawScore) {
+            const vData = rawScore[name];
+            if (vData && Array.isArray(vData.periodeScores)) {
+                const matchScores = vData.periodeScores.filter(p => p.periode === slicerState.period);
+                if (matchScores.length > 0) {
+                    const avg = matchScores.reduce((sum, s) => sum + s.score, 0) / matchScores.length;
+                    periodScores[name] = {
+                        avgScore: Math.round(avg * 100) / 100,
+                        predikat: matchScores[0].predikat || getPredikat(avg),
+                        periodeScores: matchScores
+                    };
+                }
+            }
+        }
+        rawScore = periodScores;
+    }
+
+    // Filter Vendors berdasarkan Slicers Kategori, Kepatuhan, Rating
     const filteredVendors = rawVendors.filter(v => {
         const name = v.nama;
         const cat = v.kategori || 'GENERAL';
@@ -251,20 +297,9 @@ function filterAndRenderDashboard() {
         totalOrders: totalPoOrders,
         totalOnTime: totalPoOnTime,
         totalValue: totalPoValue,
-        overallOnTimePct: totalPoOrders > 0 ? Math.round((totalPoOnTime / totalPoOrders) * 100) : 0,
+        overallOnTimePct: totalPoOrders > 0 ? Math.round((totalPoOnTime / totalPoOrders) * 100) : 100,
         vendorMap: filteredVendorMap
     };
-
-    // Update Slicer Indicator Text
-    const indicatorEl = document.getElementById('slicerActiveInfo');
-    if (indicatorEl) {
-        const isFiltered = slicerState.category !== 'all' || slicerState.compliance !== 'all' || slicerState.tier !== 'all';
-        if (isFiltered) {
-            indicatorEl.innerHTML = `<b style="color:var(--primary);">${filteredVendors.length}</b> dari ${rawVendors.length} vendor terpilih`;
-        } else {
-            indicatorEl.textContent = `Menampilkan seluruh ${rawVendors.length} vendor`;
-        }
-    }
 
     // Render All Components with Sliced Data
     renderDashboard(filteredVendors, filteredScore, filteredCC, filteredPO, categories);
@@ -274,10 +309,10 @@ function filterAndRenderDashboard() {
 // RENDERING FUNCTIONS
 // =====================================================
 function renderDashboard(vendors, scoreSummary, cc, poStats, kategori) {
-    // 1. Render Gatekeeper 5-Card Key Metrics
+    // 1. Render 5-Card Key Metrics
     renderSummaryCards(vendors, scoreSummary, cc, poStats);
 
-    // 2. Check for Expiring Contracts Banner (Gatekeeper CLM feature)
+    // 2. Check for Expiring Contracts Banner
     checkExpiringContracts(cc);
 
     // 3. Render Enterprise Charts (Chart.js)
@@ -345,7 +380,7 @@ function renderSummaryCards(vendors, scoreSummary, cc, poStats) {
     if (evalProg) evalProg.style.width = `${evalCompletionPct}%`;
 
     // 5. On-Time PO Delivery Rate
-    const onTimePct = (poStats && poStats.overallOnTimePct != null) ? poStats.overallOnTimePct : 0;
+    const onTimePct = (poStats && poStats.overallOnTimePct != null) ? poStats.overallOnTimePct : 100;
     const totalOrders = poStats ? poStats.totalOrders : 0;
     const onTimeEl = document.getElementById('statOnTimePct');
     const onTimeMetaEl = document.getElementById('statTotalPoMeta');
@@ -485,6 +520,7 @@ function renderPoPerformance(poStats) {
         badge.textContent = `${poStats.overallOnTimePct}% Tepat Waktu`;
         badge.style.background = poStats.overallOnTimePct >= 80 ? '#10b98120' : poStats.overallOnTimePct >= 60 ? '#f59e0b20' : '#ef444420';
         badge.style.color = poStats.overallOnTimePct >= 80 ? '#10b981' : poStats.overallOnTimePct >= 60 ? '#f59e0b' : '#ef4444';
+        badge.style.display = 'inline-block';
     }
 
     const sortedVendorNames = Object.keys(poStats.vendorMap).sort((a, b) => {
@@ -555,8 +591,9 @@ function renderContractTable(cc) {
 // UTILS
 // =====================================================
 function esc(str) {
+    if (str === undefined || str === null) return '';
     const d = document.createElement('div');
-    d.textContent = str || '';
+    d.textContent = str.toString();
     return d.innerHTML;
 }
 
@@ -567,6 +604,15 @@ function formatRupiah(number) {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0
     }).format(number);
+}
+
+function getPredikat(score) {
+    const val = parseFloat(score);
+    if (val >= 4.5) return 'Sangat Baik';
+    if (val >= 3.5) return 'Baik';
+    if (val >= 2.5) return 'Cukup';
+    if (val >= 1.5) return 'Kurang';
+    return 'Sangat Kurang';
 }
 
 function getPredikatColor(score) {
@@ -771,4 +817,3 @@ function renderComplianceChart(cc) {
         }]
     });
 }
-
