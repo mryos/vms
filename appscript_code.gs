@@ -6,29 +6,17 @@
  * https://docs.google.com/spreadsheets/d/1GqsrZeTHhEpyCu5iGWk5OxoT8XPnXKk8usJUWSs27sw/
  * ==============================================================================
  * Cara Deploy / Update:
- * 1. Buka Google Sheets Anda
+ * 1. Buka Google Sheets Anda (https://docs.google.com/spreadsheets/d/1GqsrZeTHhEpyCu5iGWk5OxoT8XPnXKk8usJUWSs27sw/)
  * 2. Klik menu Ekstensi -> Apps Script
- * 3. Hapus kode bawaan dan tempel (paste) seluruh kode ini
+ * 3. Hapus kode lama dan tempel (paste) seluruh kode ini
  * 4. Simpan (Ctrl+S / klik ikon 💾)
- * 5. Klik Deploy -> Manage deployments -> Edit (atau New deployment)
- * 6. Konfigurasi:
- *    - Description: VMS Multi-Period PO Database & Dashboard API
- *    - Execute as: Me (email Anda)
- *    - Who has access: Anyone (Penting agar web bisa akses)
- * 7. Klik Deploy, selesaikan otorisasi akun Google Anda jika diminta
- * 8. Salin URL Web App yang dihasilkan (format: https://script.google.com/macros/s/.../exec)
- * 9. Tempelkan URL tersebut ke variabel SCRIPT_URL di script.js dan dashboard.js
+ * 5. Klik Deploy -> Manage deployments -> klik ikon Pensil (Edit)
+ * 6. Pada bagian Version pilih "New version", lalu klik Deploy
  * ==============================================================================
- * FITUR MULTI-PERIODE FLEKSIBEL:
- * - Anda dapat membuat banyak sheet untuk masing-masing periode/quartal PO.
- * - Format nama sheet bebas, contoh:
- *   - "Quartal 2 2026", "Quartal 3 2026", "Quartal 2, 2027", "Quartal 1 2027"
- *   - "Q2 2026", "Q3 2026", "Q4 2026", "Q1 2027", "Q2 2027"
- *   - "PO Q2 2026", "PO Quartal 2 2027", "PO 2027 Q2"
- * - Cukup copy-paste data PO ke sheet periode baru, sistem web akan OTOMATIS:
- *   1. Membaca sheet periode tersebut.
- *   2. Menampilkan tombol chip periode (misal: "Q2 2027") di halaman utama.
- *   3. Menampilkan daftar vendor yang ada pada sheet PO periode tersebut untuk dinilai!
+ * FITUR DUAL-MODE PERIODE:
+ * 1. Mode Sheet Khusus: Buat/duplikat sheet seperti "Quartal 2 2026", "Quartal 2 2027", "Q2 2027", dll.
+ * 2. Mode Auto-Partition: Sheet master "PO" atau "Purchase Order" (format Odoo/ERP) otomatis
+ *    dikelompokkan per kuartal (Q3 2026, Q2 2026, Q1 2026, dst) berdasarkan Confirmation Date!
  * ==============================================================================
  */
 
@@ -41,6 +29,7 @@ var SHEET_KRITERIA_PENILAIAN = 'Kriteria Penilaian';
 var SHEET_PR = 'Purchase Request';
 var SHEET_KONTRAK = 'Kontrak Vendor';
 var SHEET_PO_DEFAULT = 'Purchase Order';
+var SHEET_PO_ALT = 'PO';
 
 /**
  * GET Request
@@ -62,7 +51,7 @@ function doGet(e) {
     var scoreSummary = getVendorScoreSummary(ss);
     var contractCompliance = getContractCompliance(ss);
 
-    // Deteksi seluruh sheet periode PO yang ada di spreadsheet
+    // Deteksi seluruh sheet & data periode PO yang ada di spreadsheet
     var periodDataResult = detectAllPeriodSheets(ss, allMasterVendors);
     var periods = periodDataResult.periods;
     var periodList = periodDataResult.periodList;
@@ -103,11 +92,11 @@ function doGet(e) {
         if (rowPin === pin) {
           var namaPenilai = dataAkses[i][1] ? dataAkses[i][1].toString().trim() : 'Penilai';
           var rawVendors = dataAkses[i][2] ? dataAkses[i][2].toString() : '';
-          var allowedNames = rawVendors.split(/[,;]+/).map(function(v) { return v.trim(); }).filter(Boolean);
+          var allowedNames = rawVendors.split(/[,;]+/).map(function(v) { return v.trim().toLowerCase(); }).filter(Boolean);
 
           // Filter baseVendors sesuai PIN
           var filteredVendors = baseVendors.filter(function(v) {
-            return allowedNames.indexOf(v.nama) !== -1;
+            return allowedNames.indexOf(v.nama.toLowerCase().trim()) !== -1;
           });
 
           // Filter juga list vendor per periode sesuai hak akses PIN
@@ -115,7 +104,7 @@ function doGet(e) {
           for (var pKey in periods) {
             var pObj = periods[pKey];
             var pFilteredVendors = pObj.vendors.filter(function(v) {
-              return allowedNames.indexOf(v.nama) !== -1;
+              return allowedNames.indexOf(v.nama.toLowerCase().trim()) !== -1;
             });
             filteredPeriods[pKey] = {
               id: pObj.id,
@@ -316,9 +305,8 @@ function doPost(e) {
 
 /**
  * ------------------------------------------------------------------------------
- * DETEKSI DYNAMIC PERIOD SHEETS
+ * DETEKSI DYNAMIC PERIOD SHEETS & AUTO-PARTITIONING DARI SHEET PO
  * ------------------------------------------------------------------------------
- * Mendeteksi semua sheet yang mewakili PO per periode (misal: "Quartal 2 2026", "Quartal 2, 2027", "Q2 2026")
  */
 function detectAllPeriodSheets(ss, masterVendors) {
   var systemSheets = [
@@ -331,7 +319,6 @@ function detectAllPeriodSheets(ss, masterVendors) {
     SHEET_KONTRAK.toLowerCase()
   ];
 
-  // Buat lookup map untuk master vendors
   var masterMap = {};
   for (var i = 0; i < masterVendors.length; i++) {
     var v = masterVendors[i];
@@ -340,7 +327,8 @@ function detectAllPeriodSheets(ss, masterVendors) {
 
   var sheets = ss.getSheets();
   var periodMap = {};
-  var periodList = [];
+  var dedicatedPeriodsFound = false;
+
   var aggregatedPoStats = {
     totalOrders: 0,
     totalOnTime: 0,
@@ -349,30 +337,22 @@ function detectAllPeriodSheets(ss, masterVendors) {
     vendorMap: {}
   };
 
+  // 1. Periksa Sheet Khusus Periode (contoh: "Quartal 2 2026", "Q2 2027", "PO Q3 2026")
   for (var s = 0; s < sheets.length; s++) {
     var sheet = sheets[s];
     var sheetName = sheet.getName().trim();
     var sNameLower = sheetName.toLowerCase();
 
-    // Skip sheet sistem
     if (systemSheets.indexOf(sNameLower) !== -1) continue;
+    if (sNameLower === SHEET_PO_DEFAULT.toLowerCase() || sNameLower === SHEET_PO_ALT.toLowerCase()) continue;
 
-    // Parse nama sheet untuk mencari periode (Quarter & Tahun)
     var periodInfo = parsePeriodName(sheetName);
 
-    // Proses data PO dari sheet ini
-    var parsedPo = parsePoFromSheet(sheet, masterMap);
-
-    // Jika sheet ini memiliki data PO atau memiliki nama periode yang valid
-    if (parsedPo.hasData || periodInfo.isPeriodSheet || sNameLower === SHEET_PO_DEFAULT.toLowerCase()) {
+    // Jika nama sheet mencerminkan periode tertentu
+    if (periodInfo.isPeriodSheet) {
+      var parsedPo = parsePoFromSheet(sheet, masterMap);
       var periodId = periodInfo.id || sheetName;
       var periodLabel = periodInfo.label || sheetName;
-
-      // Jika ID sudah ada (misal ada sheet Q2 2026 dan PO Q2 2026), bedakan ID
-      if (periodMap[periodId]) {
-        periodId = sheetName;
-        periodLabel = sheetName;
-      }
 
       periodMap[periodId] = {
         id: periodId,
@@ -385,34 +365,38 @@ function detectAllPeriodSheets(ss, masterVendors) {
         rawOrders: parsedPo.rawOrders
       };
 
-      periodList.push(periodId);
-
-      // Akumulasi ke aggregated stats
-      aggregatedPoStats.totalOrders += parsedPo.poStats.totalOrders;
-      aggregatedPoStats.totalOnTime += parsedPo.poStats.totalOnTime;
-      aggregatedPoStats.totalValue += parsedPo.poStats.totalValue;
-
-      for (var vName in parsedPo.poStats.vendorMap) {
-        var vData = parsedPo.poStats.vendorMap[vName];
-        if (!aggregatedPoStats.vendorMap[vName]) {
-          aggregatedPoStats.vendorMap[vName] = {
-            totalPo: 0,
-            onTimePo: 0,
-            latePo: 0,
-            totalValue: 0,
-            onTimeRatePct: 0,
-            recentOrders: []
-          };
-        }
-        var aggV = aggregatedPoStats.vendorMap[vName];
-        aggV.totalPo += vData.totalPo;
-        aggV.onTimePo += vData.onTimePo;
-        aggV.latePo += vData.latePo;
-        aggV.totalValue += vData.totalValue;
-        aggV.recentOrders = aggV.recentOrders.concat(vData.recentOrders).slice(0, 5);
-      }
+      dedicatedPeriodsFound = true;
+      mergePoStats(aggregatedPoStats, parsedPo.poStats);
     }
   }
+
+  // 2. Jika tidak ada sheet periode khusus yang banyak, atau ada sheet master PO ("PO" / "Purchase Order"),
+  // kita auto-partition data PO berdasarkan Confirmation Date / Tanggal PO!
+  var masterPoSheet = ss.getSheetByName(SHEET_PO_ALT) || ss.getSheetByName(SHEET_PO_DEFAULT);
+  if (masterPoSheet && masterPoSheet.getLastRow() >= 2) {
+    var partitionedResult = partitionPoSheetByDate(masterPoSheet, masterMap);
+    
+    // Gabungkan partisi periode dari sheet master PO jika belum didefinisikan oleh sheet dedicated
+    for (var pId in partitionedResult.periods) {
+      if (!periodMap[pId]) {
+        periodMap[pId] = partitionedResult.periods[pId];
+      }
+    }
+
+    if (!dedicatedPeriodsFound) {
+      aggregatedPoStats = partitionedResult.aggregatedPoStats;
+    }
+  }
+
+  // Compile dan urutkan periodList
+  var periodList = Object.keys(periodMap);
+  periodList.sort(function(a, b) {
+    var pA = periodMap[a];
+    var pB = periodMap[b];
+    if (pA.year !== pB.year) return pB.year - pA.year;
+    if (pA.quarter !== pB.quarter) return pB.quarter - pA.quarter;
+    return a.localeCompare(b);
+  });
 
   // Hitung persentase untuk aggregated stats
   for (var vKey in aggregatedPoStats.vendorMap) {
@@ -423,15 +407,6 @@ function detectAllPeriodSheets(ss, masterVendors) {
     ? Math.round((aggregatedPoStats.totalOnTime / aggregatedPoStats.totalOrders) * 100)
     : 100;
 
-  // Urutkan periodList secara kronologis menurun (terbaru di depan, misal: Q2 2027, Q4 2026, Q3 2026)
-  periodList.sort(function(a, b) {
-    var pA = periodMap[a];
-    var pB = periodMap[b];
-    if (pA.year !== pB.year) return pB.year - pA.year;
-    if (pA.quarter !== pB.quarter) return pB.quarter - pA.quarter;
-    return a.localeCompare(b);
-  });
-
   return {
     periods: periodMap,
     periodList: periodList,
@@ -440,8 +415,236 @@ function detectAllPeriodSheets(ss, masterVendors) {
 }
 
 /**
+ * Mengelompokkan isi sheet PO master secara otomatis ke dalam Kuartal/Tahun berdasarkan tanggal
+ */
+function partitionPoSheetByDate(sheet, masterMap) {
+  var data = sheet.getDataRange().getValues();
+  var headers = data[0].map(function(h) { return h.toString().trim().toLowerCase(); });
+
+  var idxNoPo = getHeaderIndex(headers, ['order reference', 'no po', 'po number', 'po', 'reference', 'number', 'kode po']);
+  var idxDate = getHeaderIndex(headers, ['confirmation date', 'date', 'tanggal po', 'tanggal', 'order date', 'start date']);
+  var idxVendor = getHeaderIndex(headers, ['vendor', 'nama vendor', 'supplier', 'rekanan', 'partner']);
+  var idxNilai = getHeaderIndex(headers, ['grand total', 'total', 'total untaxed amount', 'nilai', 'nilai (rp)', 'harga', 'amount', 'nominal']);
+  var idxExp = getHeaderIndex(headers, ['expected date', 'tanggal diharapkan', 'deadline', 'diharapkan', 'tgl estimasi', 'scheduled date']);
+  var idxEff = getHeaderIndex(headers, ['effective date', 'tanggal diterima', 'diterima', 'realisasi', 'tgl selesai', 'delivery with receipt date']);
+  var idxItem = getHeaderIndex(headers, ['product', 'item', 'deskripsi', 'item/deskripsi', 'display name', 'uraian']);
+
+  var periodGroups = {}; // { 'Q3 2026': { vendorsMap: {}, poStats: {}, rawOrders: [], year: 2026, quarter: 3 } }
+  var aggregatedPoStats = {
+    totalOrders: 0,
+    totalOnTime: 0,
+    totalValue: 0,
+    overallOnTimePct: 0,
+    vendorMap: {}
+  };
+
+  for (var i = 1; i < data.length; i++) {
+    var vendorName = idxVendor !== -1 && data[i][idxVendor] ? data[i][idxVendor].toString().trim() : '';
+    if (!vendorName) continue;
+
+    var noPo = idxNoPo !== -1 && data[i][idxNoPo] ? data[i][idxNoPo].toString().trim() : 'PO-' + i;
+    var rawDate = idxDate !== -1 ? data[i][idxDate] : '';
+    var nilai = idxNilai !== -1 ? parseFloat(data[i][idxNilai]) || 0 : 0;
+    var expDate = idxExp !== -1 ? data[i][idxExp] : '';
+    var effDate = idxEff !== -1 ? data[i][idxEff] : '';
+    var item = idxItem !== -1 && data[i][idxItem] ? data[i][idxItem].toString().trim() : 'Barang/Jasa';
+
+    // Tentukan Kuartal dan Tahun dari Tanggal PO
+    var pInfo = extractQuarterAndYear(rawDate || expDate);
+    var pId = pInfo.id;
+
+    if (!periodGroups[pId]) {
+      periodGroups[pId] = {
+        id: pId,
+        label: pId,
+        sheetName: sheet.getName(),
+        year: pInfo.year,
+        quarter: pInfo.quarter,
+        vendorsMap: {},
+        poStats: {
+          totalOrders: 0,
+          totalOnTime: 0,
+          totalValue: 0,
+          overallOnTimePct: 0,
+          vendorMap: {}
+        },
+        rawOrders: []
+      };
+    }
+
+    var grp = periodGroups[pId];
+    grp.poStats.totalOrders++;
+    grp.poStats.totalValue += nilai;
+    aggregatedPoStats.totalOrders++;
+    aggregatedPoStats.totalValue += nilai;
+
+    // Catat vendor
+    var vKeyLower = vendorName.toLowerCase();
+    if (!grp.vendorsMap[vKeyLower]) {
+      var masterInfo = masterMap[vKeyLower];
+      grp.vendorsMap[vKeyLower] = {
+        nama: masterInfo ? masterInfo.nama : vendorName,
+        kategori: masterInfo ? masterInfo.kategori : 'BARANG_JASA',
+        kontak: masterInfo ? masterInfo.kontak : '-',
+        alamat: masterInfo ? masterInfo.alamat : '-'
+      };
+    }
+
+    if (!grp.poStats.vendorMap[vendorName]) {
+      grp.poStats.vendorMap[vendorName] = {
+        totalPo: 0,
+        onTimePo: 0,
+        latePo: 0,
+        totalValue: 0,
+        onTimeRatePct: 0,
+        recentOrders: []
+      };
+    }
+
+    var vData = grp.poStats.vendorMap[vendorName];
+    vData.totalPo++;
+    vData.totalValue += nilai;
+
+    var isOnTime = false;
+    var status = 'Proses';
+
+    if (effDate && effDate.toString().trim() !== '' && effDate.toString().trim() !== '-') {
+      var dateExp = new Date(expDate);
+      var dateEff = new Date(effDate);
+      if (!isNaN(dateExp.getTime()) && !isNaN(dateEff.getTime())) {
+        if (dateEff <= dateExp || (dateEff - dateExp) <= 86400000) {
+          isOnTime = true;
+          status = 'Selesai (Tepat Waktu)';
+        } else {
+          status = 'Selesai (Terlambat)';
+        }
+      } else {
+        status = 'Selesai';
+      }
+    } else if (expDate) {
+      var now = new Date();
+      var dateExp = new Date(expDate);
+      if (!isNaN(dateExp.getTime())) {
+        if (now <= dateExp) {
+          isOnTime = true;
+          status = 'Proses';
+        } else {
+          status = 'Terlambat (Belum Diterima)';
+        }
+      }
+    }
+
+    if (isOnTime) {
+      vData.onTimePo++;
+      grp.poStats.totalOnTime++;
+      aggregatedPoStats.totalOnTime++;
+    } else {
+      vData.latePo++;
+    }
+
+    var orderObj = {
+      poNum: noPo,
+      vendor: vendorName,
+      product: item,
+      expectedDate: expDate ? formatDate(expDate) : '-',
+      effectiveDate: (effDate && effDate.toString().trim() !== '-') ? formatDate(effDate) : 'Belum Diterima',
+      status: status,
+      isOnTime: isOnTime
+    };
+
+    grp.rawOrders.push(orderObj);
+    if (vData.recentOrders.length < 5) {
+      vData.recentOrders.push(orderObj);
+    }
+  }
+
+  // Finalisasi kelompok periode
+  var finalPeriods = {};
+  for (var k in periodGroups) {
+    var g = periodGroups[k];
+    var vList = [];
+    for (var vk in g.vendorsMap) vList.push(g.vendorsMap[vk]);
+
+    for (var vKey in g.poStats.vendorMap) {
+      var vItem = g.poStats.vendorMap[vKey];
+      vItem.onTimeRatePct = vItem.totalPo > 0 ? Math.round((vItem.onTimePo / vItem.totalPo) * 100) : 100;
+    }
+    g.poStats.overallOnTimePct = g.poStats.totalOrders > 0
+      ? Math.round((g.poStats.totalOnTime / g.poStats.totalOrders) * 100)
+      : 100;
+
+    finalPeriods[k] = {
+      id: g.id,
+      label: g.label,
+      sheetName: g.sheetName,
+      year: g.year,
+      quarter: g.quarter,
+      vendors: vList,
+      poStats: g.poStats,
+      rawOrders: g.rawOrders
+    };
+  }
+
+  return {
+    periods: finalPeriods,
+    aggregatedPoStats: aggregatedPoStats
+  };
+}
+
+/**
+ * Ekstrak Kuartal dan Tahun dari nilai tanggal
+ */
+function extractQuarterAndYear(dateVal) {
+  if (!dateVal) return { id: 'General', year: 2026, quarter: 0 };
+
+  try {
+    var d = new Date(dateVal);
+    if (!isNaN(d.getTime())) {
+      var year = d.getFullYear();
+      var month = d.getMonth() + 1; // 1-12
+      var quarter = Math.floor((month - 1) / 3) + 1;
+      return {
+        id: 'Q' + quarter + ' ' + year,
+        year: year,
+        quarter: quarter
+      };
+    }
+  } catch(e) {}
+
+  var str = dateVal.toString();
+  var yMatch = str.match(/(20\d{2})/);
+  var year = yMatch ? parseInt(yMatch[1], 10) : 2026;
+  return { id: 'Tahun ' + year, year: year, quarter: 0 };
+}
+
+function mergePoStats(target, source) {
+  target.totalOrders += source.totalOrders;
+  target.totalOnTime += source.totalOnTime;
+  target.totalValue += source.totalValue;
+
+  for (var vName in source.vendorMap) {
+    var sData = source.vendorMap[vName];
+    if (!target.vendorMap[vName]) {
+      target.vendorMap[vName] = {
+        totalPo: 0,
+        onTimePo: 0,
+        latePo: 0,
+        totalValue: 0,
+        onTimeRatePct: 0,
+        recentOrders: []
+      };
+    }
+    var tData = target.vendorMap[vName];
+    tData.totalPo += sData.totalPo;
+    tData.onTimePo += sData.onTimePo;
+    tData.latePo += sData.latePo;
+    tData.totalValue += sData.totalValue;
+    tData.recentOrders = tData.recentOrders.concat(sData.recentOrders).slice(0, 5);
+  }
+}
+
+/**
  * Helper untuk mem-parsing Quarter & Tahun dari nama sheet
- * Contoh input: "Quartal 2 2026", "Quartal 2, 2027", "PO Q2 2026", "Q3 2026", "Kuartal 1 2027"
  */
 function parsePeriodName(sheetName) {
   var raw = sheetName.trim();
@@ -502,14 +705,13 @@ function parsePoFromSheet(sheet, masterMap) {
   var data = sheet.getDataRange().getValues();
   var headers = data[0].map(function(h) { return h.toString().trim().toLowerCase(); });
 
-  var idxNoPo = getHeaderIndex(headers, ['no po', 'po', 'reference', 'number', 'kode po']);
-  var idxVendor = getHeaderIndex(headers, ['vendor', 'nama vendor', 'supplier', 'rekanan']);
-  var idxNilai = getHeaderIndex(headers, ['nilai', 'nilai (rp)', 'harga', 'amount', 'total', 'nominal']);
-  var idxExp = getHeaderIndex(headers, ['tanggal diharapkan', 'expected date', 'deadline', 'diharapkan', 'tgl estimasi']);
-  var idxEff = getHeaderIndex(headers, ['tanggal diterima', 'effective date', 'diterima', 'realisasi', 'tgl selesai']);
-  var idxItem = getHeaderIndex(headers, ['item', 'deskripsi', 'item/deskripsi', 'product', 'uraian', 'pekerjaan']);
+  var idxNoPo = getHeaderIndex(headers, ['order reference', 'no po', 'po number', 'po', 'reference', 'number', 'kode po']);
+  var idxVendor = getHeaderIndex(headers, ['vendor', 'nama vendor', 'supplier', 'rekanan', 'partner']);
+  var idxNilai = getHeaderIndex(headers, ['grand total', 'total', 'total untaxed amount', 'nilai', 'nilai (rp)', 'harga', 'amount', 'nominal']);
+  var idxExp = getHeaderIndex(headers, ['expected date', 'tanggal diharapkan', 'deadline', 'diharapkan', 'tgl estimasi', 'scheduled date']);
+  var idxEff = getHeaderIndex(headers, ['effective date', 'tanggal diterima', 'diterima', 'realisasi', 'tgl selesai', 'delivery with receipt date']);
+  var idxItem = getHeaderIndex(headers, ['product', 'item', 'deskripsi', 'item/deskripsi', 'display name', 'uraian']);
 
-  // Jika tidak ditemukan kolom Vendor, anggap bukan sheet PO
   if (idxVendor === -1) {
     return { hasData: false, poStats: stats, vendors: [], rawOrders: [] };
   }
@@ -527,7 +729,6 @@ function parsePoFromSheet(sheet, masterMap) {
     stats.totalOrders++;
     stats.totalValue += nilai;
 
-    // Catat vendor ke daftar vendor unik sheet ini
     var vKeyLower = vendorName.toLowerCase();
     if (!vendorMapInside[vKeyLower]) {
       var masterInfo = masterMap[vKeyLower];
@@ -606,7 +807,6 @@ function parsePoFromSheet(sheet, masterMap) {
     }
   }
 
-  // Hitung persentase ketepatan waktu
   for (var vk in stats.vendorMap) {
     var vItem = stats.vendorMap[vk];
     vItem.onTimeRatePct = vItem.totalPo > 0 ? Math.round((vItem.onTimePo / vItem.totalPo) * 100) : 100;
@@ -658,7 +858,7 @@ function getAllVendors(ss) {
       var kategori = data[i][1] ? data[i][1].toString().trim() : '';
       var kontak = data[i][2] ? data[i][2].toString().trim() : '-';
       var alamat = data[i][3] ? data[i][3].toString().trim() : '-';
-      if (nama) {
+      if (nama && nama.toLowerCase() !== 'nama vendor') {
         list.push({ nama: nama, kategori: kategori, kontak: kontak, alamat: alamat });
       }
     }
@@ -676,7 +876,7 @@ function getKriteriaPenilaian(ss) {
       var kriteria = data[i][1] ? data[i][1].toString().trim() : '';
       var deskripsi = data[i][2] ? data[i][2].toString().trim() : '';
 
-      if (kriteria) {
+      if (kriteria && kriteria.toLowerCase() !== 'kriteria') {
         var id = generateQuestionId(kriteria);
         list.push({
           id: id,
@@ -697,7 +897,7 @@ function getPurchaseRequests(ss) {
     var data = sheet.getDataRange().getValues();
     for (var i = 1; i < data.length; i++) {
       var noPr = data[i][0] ? data[i][0].toString().trim() : '';
-      if (noPr) {
+      if (noPr && noPr.toLowerCase() !== 'no pr') {
         list.push({
           noPr: noPr,
           tanggal: data[i][1] ? formatDate(data[i][1]) : '-',
@@ -807,7 +1007,7 @@ function getContractCompliance(ss) {
     var status = idxStatus !== -1 && data[i][idxStatus] ? data[i][idxStatus].toString().trim() : 'Comply';
     var keterangan = idxKeterangan !== -1 && data[i][idxKeterangan] ? data[i][idxKeterangan].toString().trim() : '';
 
-    if (noKontrak && vendor) {
+    if (noKontrak && vendor && noKontrak.toLowerCase() !== 'no kontrak') {
       stats.totalContracts++;
       var isComply = status.toLowerCase() === 'comply';
       if (isComply) stats.totalCompliantContracts++;
@@ -903,15 +1103,15 @@ function createJsonResponse(data) {
 }
 
 /**
- * Inisialisasi Seluruh Sheet Database secara Otomatis
+ * Inisialisasi Seluruh Sheet Database secara Otomatis jika belum ada
  */
 function initAllDatabaseSheets(ss) {
-  // 1. Kategori Vendor
-  var sheet = ss.getSheetByName(SHEET_KATEGORI_VENDOR);
-  if (!sheet) {
-    sheet = ss.insertSheet(SHEET_KATEGORI_VENDOR);
+  // Hanya inisialisasi jika sheet esensial belum ada sama sekali
+  var sheetKategori = ss.getSheetByName(SHEET_KATEGORI_VENDOR);
+  if (!sheetKategori) {
+    sheetKategori = ss.insertSheet(SHEET_KATEGORI_VENDOR);
     var h = ['Kode', 'Nama Kategori', 'Ikon'];
-    sheet.appendRow(h);
+    sheetKategori.appendRow(h);
     var rows = [
       ['IT', 'Teknologi Informasi', '💻'],
       ['EKSPEDISI', 'Ekspedisi & Logistik', '🚚'],
@@ -920,135 +1120,20 @@ function initAllDatabaseSheets(ss) {
       ['KONSULTAN', 'Konsultan & Services', '💼'],
       ['BARANG_JASA', 'Barang & Jasa Umum', '📦']
     ];
-    for (var i = 0; i < rows.length; i++) sheet.appendRow(rows[i]);
-    styleHeaders(sheet, h.length);
-    sheet.setColumnWidth(1, 120);
-    sheet.setColumnWidth(2, 220);
-    sheet.setColumnWidth(3, 80);
+    for (var i = 0; i < rows.length; i++) sheetKategori.appendRow(rows[i]);
+    styleHeaders(sheetKategori, h.length);
   }
 
-  // 2. Daftar Vendor (Master Data Rekanan)
-  sheet = ss.getSheetByName(SHEET_DAFTAR_VENDOR);
-  if (!sheet) {
-    sheet = ss.insertSheet(SHEET_DAFTAR_VENDOR);
-    var h = ['Nama Vendor', 'Kategori', 'Kontak', 'Alamat'];
-    sheet.appendRow(h);
-    var rows = [
-      ['CHIPSET COMPUTER - EKI', 'IT', '08123456789', 'Purwokerto'],
-      ['PT BIZNET GIO NUSANTARA', 'IT', '021-39700000', 'Jakarta'],
-      ['PT.GLOBAL JET EXPRESS', 'EKSPEDISI', '08112233445', 'Bandung'],
-      ['MULTINDO MEDIA KREASI UTAMA, PT (Kreasi)', 'BRANDING', '0855667788', 'Yogyakarta'],
-      ['Toko HERO', 'BARANG_JASA', '0282-531000', 'Cilacap']
-    ];
-    for (var i = 0; i < rows.length; i++) sheet.appendRow(rows[i]);
-    styleHeaders(sheet, h.length);
-    sheet.setColumnWidth(1, 350);
-    sheet.setColumnWidth(2, 140);
-    sheet.setColumnWidth(3, 160);
-    sheet.setColumnWidth(4, 250);
+  var sheetAkses = ss.getSheetByName(SHEET_AKSES_PENILAI);
+  if (!sheetAkses) {
+    sheetAkses = ss.insertSheet(SHEET_AKSES_PENILAI);
+    setupSheetAksesHeaders(sheetAkses);
   }
 
-  // 3. Kriteria Penilaian
-  sheet = ss.getSheetByName(SHEET_KRITERIA_PENILAIAN);
-  if (!sheet) {
-    sheet = ss.insertSheet(SHEET_KRITERIA_PENILAIAN);
-    var h = ['Kategori', 'Kriteria', 'Deskripsi'];
-    sheet.appendRow(h);
-    var rows = [
-      ['UMUM', 'Harga', 'Kewajaran dan kesesuaian harga dibanding pasar'],
-      ['UMUM', 'Pelayanan', 'Responsivitas, etika komunikasi, dan profesionalisme'],
-      ['UMUM', 'Ketepatan Waktu', 'Kecepatan pengiriman sesuai dengan kesepakatan'],
-      ['IT', 'Kualitas Produk IT', 'Stabilitas, performa perangkat keras/lunak yang diberikan'],
-      ['IT', 'Dukungan Teknis', 'Resolusi troubleshooting, kecepatan tanggapan error/after-sales'],
-      ['EKSPEDISI', 'Keamanan Pengiriman', 'Kondisi fisik barang aman, tidak rusak/penyok saat diterima'],
-      ['EKSPEDISI', 'Kecepatan Tracking', 'Akurasi resi/manifest dan ketersediaan tracking online'],
-      ['BRANDING', 'Kreativitas Konsep', 'Originalitas ide kreatif, estetika desain, dan relevansi visual'],
-      ['PERCETAKAN', 'Kualitas Cetak', 'Ketajaman warna, bahan kertas/media cetak sesuai spesifikasi'],
-      ['KONSULTAN', 'Kompetensi Ahli', 'Kedalaman keahlian konsultan dan hasil analisa komprehensif'],
-      ['BARANG_JASA', 'Kualitas Barang', 'Kesesuaian detail spesifikasi fisik barang yang dipesan']
-    ];
-    for (var i = 0; i < rows.length; i++) sheet.appendRow(rows[i]);
-    styleHeaders(sheet, h.length);
-    sheet.setColumnWidth(1, 140);
-    sheet.setColumnWidth(2, 220);
-    sheet.setColumnWidth(3, 380);
-  }
-
-  // 4. Akses Penilai
-  sheet = ss.getSheetByName(SHEET_AKSES_PENILAI);
-  if (!sheet) {
-    sheet = ss.insertSheet(SHEET_AKSES_PENILAI);
-    setupSheetAksesHeaders(sheet);
-  }
-
-  // 5. Template Contoh Sheet Periode: Quartal 2 2026
-  var sheetQ2 = ss.getSheetByName('Quartal 2 2026') || ss.getSheetByName('Q2 2026') || ss.getSheetByName(SHEET_PO_DEFAULT);
-  if (!sheetQ2) {
-    sheetQ2 = ss.insertSheet('Quartal 2 2026');
-    var h = ['No PO', 'Tanggal PO', 'Vendor', 'Item/Deskripsi', 'Qty', 'Nilai (Rp)', 'Tanggal Diharapkan', 'Tanggal Diterima', 'Status'];
-    sheetQ2.appendRow(h);
-    var rows = [
-      ['PO-2026-001', '2026-04-15', 'CHIPSET COMPUTER - EKI', 'Laptop Dell Latitude 3440 Core i5', 10, 150000000, '2026-04-30', '2026-04-28', 'Selesai (Tepat Waktu)'],
-      ['PO-2026-002', '2026-05-01', 'Toko HERO', 'ATK Kantor Bulanan (Kertas, Pena, Map)', 1, 5000000, '2026-05-10', '2026-05-15', 'Selesai (Terlambat)'],
-      ['PO-2026-003', '2026-06-01', 'PT.GLOBAL JET EXPRESS', 'Distribusi Paket Dokumen & Produk Ethos', 150, 4500000, '2026-06-05', '2026-06-04', 'Selesai (Tepat Waktu)'],
-      ['PO-2026-004', '2026-06-10', 'PT BIZNET GIO NUSANTARA', 'Sewa Cloud Server & Layanan Backup Server', 1, 12000000, '2026-06-25', '', 'Proses']
-    ];
-    for (var i = 0; i < rows.length; i++) sheetQ2.appendRow(rows[i]);
-    styleHeaders(sheetQ2, h.length);
-    sheetQ2.setColumnWidth(1, 130);
-    sheetQ2.setColumnWidth(2, 110);
-    sheetQ2.setColumnWidth(3, 260);
-    sheetQ2.setColumnWidth(4, 300);
-    sheetQ2.setColumnWidth(5, 60);
-    sheetQ2.setColumnWidth(6, 120);
-    sheetQ2.setColumnWidth(7, 140);
-    sheetQ2.setColumnWidth(8, 140);
-    sheetQ2.setColumnWidth(9, 150);
-  }
-
-  // 6. Purchase Request
-  sheet = ss.getSheetByName(SHEET_PR);
-  if (!sheet) {
-    sheet = ss.insertSheet(SHEET_PR);
-    var h = ['No PR', 'Tanggal PR', 'Pemohon', 'Departemen', 'Item/Deskripsi', 'Estimasi Nilai (Rp)', 'Vendor Ditunjuk', 'Status', 'No PO Terkait'];
-    sheet.appendRow(h);
-    var rows = [
-      ['PR-2026-001', '2026-04-10', 'Andi', 'IT Support', 'Kebutuhan Laptop Baru Dev Team', 150000000, 'CHIPSET COMPUTER - EKI', 'Approved → PO', 'PO-2026-001'],
-      ['PR-2026-002', '2026-04-28', 'Budi', 'General Affair', 'Belanja ATK Rutin Awal Tahun', 5000000, 'Toko HERO', 'Approved → PO', 'PO-2026-002']
-    ];
-    for (var i = 0; i < rows.length; i++) sheet.appendRow(rows[i]);
-    styleHeaders(sheet, h.length);
-  }
-
-  // 7. Penilaian Vendor Output
-  sheet = ss.getSheetByName(SHEET_PENILAIAN_VENDOR);
-  if (!sheet) {
-    sheet = ss.insertSheet(SHEET_PENILAIAN_VENDOR);
-    setupSheetPenilaianHeaders(sheet);
-  }
-
-  // 8. Kontrak Vendor (KPI Point 4: Contract Compliance)
-  sheet = ss.getSheetByName(SHEET_KONTRAK);
-  if (!sheet) {
-    sheet = ss.insertSheet(SHEET_KONTRAK);
-    var h = ['No Kontrak', 'Vendor', 'Jenis Pekerjaan', 'Tanggal Mulai', 'Tanggal Selesai', 'Kelengkapan Dokumen', 'Nilai Kontrak', 'Status Kepatuhan', 'Keterangan'];
-    sheet.appendRow(h);
-    var rows = [
-      ['KTR/2026/IT/001', 'CHIPSET COMPUTER - EKI', 'Pengadaan & Maintenance Perangkat IT', '2026-01-01', '2026-12-31', 'Lengkap (NPWP, NIB, SLA, NDA)', 150000000, 'Comply', 'Klaim garansi hardware & SLA respon 24 jam terpenuhi baik'],
-      ['KTR/2026/IT/002', 'PT BIZNET GIO NUSANTARA', 'Layanan Cloud Server & Infrastructure Hosting', '2026-02-01', '2026-08-01', 'Lengkap (NPWP, NIB, ISO 27001, SLA)', 75000000, 'Comply', 'Uptime server 99.95% sesuai ketentuan kontrak'],
-      ['KTR/2026/LOG/001', 'PT.GLOBAL JET EXPRESS', 'Jasa Ekspedisi Logistik Distribusi Nasional', '2026-01-01', '2026-06-30', 'Kurang (Klaim Asuransi Pending)', 45000000, 'Not Comply', 'Keterlambatan ganti rugi barang rusak melebihi batas 14 hari kerja']
-    ];
-    for (var i = 0; i < rows.length; i++) sheet.appendRow(rows[i]);
-    styleHeaders(sheet, h.length);
-    sheet.setColumnWidth(1, 140);
-    sheet.setColumnWidth(2, 260);
-    sheet.setColumnWidth(3, 260);
-    sheet.setColumnWidth(4, 120);
-    sheet.setColumnWidth(5, 120);
-    sheet.setColumnWidth(6, 220);
-    sheet.setColumnWidth(7, 140);
-    sheet.setColumnWidth(8, 130);
-    sheet.setColumnWidth(9, 320);
+  var sheetPenilaian = ss.getSheetByName(SHEET_PENILAIAN_VENDOR);
+  if (!sheetPenilaian) {
+    sheetPenilaian = ss.insertSheet(SHEET_PENILAIAN_VENDOR);
+    setupSheetPenilaianHeaders(sheetPenilaian);
   }
 }
 
@@ -1065,9 +1150,6 @@ function setupSheetAksesHeaders(sheet) {
   sheet.appendRow(['1002', 'Budi', 'PT BIZNET GIO NUSANTARA, PT.GLOBAL JET EXPRESS']);
   sheet.appendRow(['1003', 'Cici', 'Toko HERO']);
   styleHeaders(sheet, headers.length);
-  sheet.setColumnWidth(1, 100);
-  sheet.setColumnWidth(2, 180);
-  sheet.setColumnWidth(3, 500);
 }
 
 function setupSheetPenilaianHeaders(sheet) {
@@ -1077,11 +1159,4 @@ function setupSheetPenilaianHeaders(sheet) {
   ];
   sheet.appendRow(headers);
   styleHeaders(sheet, headers.length);
-  sheet.setColumnWidth(1, 180);
-  sheet.setColumnWidth(2, 150);
-  sheet.setColumnWidth(3, 250);
-  sheet.setColumnWidth(4, 150);
-  sheet.setColumnWidth(5, 120);
-  sheet.setColumnWidth(6, 120);
-  sheet.setColumnWidth(7, 300);
 }
