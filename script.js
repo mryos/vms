@@ -881,32 +881,64 @@ function renderDynamicForm(vendorName) {
     const container = document.getElementById('questionsContainer');
     if (!container) return;
 
-    const vendorCat = getVendorCategory(vendorName);
-    
-    const activeKriteria = kriteriaList.filter(k => {
-        if (k.vendorSpesifik) {
+    const rawVendorCat = getVendorCategory(vendorName) || 'general';
+    const normVendorCat = rawVendorCat.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+    // Gunakan kriteriaList dari server atau fallback ke DEFAULT_KRITERIA
+    const activePool = (kriteriaList && kriteriaList.length > 0) ? kriteriaList : DEFAULT_KRITERIA;
+
+    // Filter kriteria:
+    // 1. Pertanyaan UMUM (berlaku untuk semua vendor)
+    // 2. Pertanyaan kategori yang cocok dengan vendor (IT, EKSPEDISI, BRANDING, PERCETAKAN, KONSULTAN, BARANG_JASA, dll.)
+    // 3. Pertanyaan vendor spesifik jika nama cocok
+    let matchedKriteria = activePool.filter(k => {
+        if (k.vendorSpesifik && k.vendorSpesifik.trim() !== '') {
             return k.vendorSpesifik.toLowerCase().trim() === vendorName.toLowerCase().trim();
         }
-        const kCat = (k.kategori || '').toLowerCase().trim();
-        return kCat === '' || kCat === 'all' || kCat === 'semua' || kCat === vendorCat;
+
+        const kCat = (k.kategori || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (kCat === 'umum' || kCat === 'all' || kCat === 'semua' || kCat === '') {
+            return true;
+        }
+
+        if (normVendorCat && (normVendorCat === kCat || normVendorCat.includes(kCat) || kCat.includes(normVendorCat))) {
+            return true;
+        }
+
+        return false;
     });
 
-    ratings = {};
-    
-    if (activeKriteria.length === 0) {
-        container.innerHTML = `<div style="text-align:center; padding:2rem; color:var(--text3);">Tidak ada kriteria penilaian yang aktif untuk kategori vendor ini.</div>`;
-        return;
+    // Fallback: Jika hanya pertanyaan umum (<= 3 pertanyaan), tambahkan pertanyaan spesifik BARANG JASA / General
+    // agar penilai memiliki minimal 5-6 kriteria evaluasi lengkap
+    if (matchedKriteria.length <= 3) {
+        const generalExtras = activePool.filter(k => {
+            const kCat = (k.kategori || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            return kCat === 'barangjasa' || kCat === 'general' || kCat === 'barang';
+        });
+        generalExtras.forEach(ge => {
+            if (!matchedKriteria.some(m => m.id === ge.id)) {
+                matchedKriteria.push(ge);
+            }
+        });
     }
 
-    container.innerHTML = activeKriteria.map((k, idx) => {
+    // Jika masih kosong, gunakan DEFAULT_KRITERIA
+    if (matchedKriteria.length === 0) {
+        matchedKriteria = DEFAULT_KRITERIA.filter(k => k.kategori === 'all' || k.kategori === 'general');
+    }
+
+    ratings = {};
+
+    container.innerHTML = matchedKriteria.map((k, idx) => {
         ratings[k.id] = 0;
+        const desc = k.deskripsi || ('Penilaian ' + k.kriteria);
         return `
         <div class="q-card">
             <div class="q-label">
                 <span class="q-num">${idx + 1}</span>
                 ${esc(k.kriteria)}
             </div>
-            <div class="q-desc">${esc(k.deskripsi)}</div>
+            <div class="q-desc">${esc(desc)}</div>
             <div class="stars" data-name="${esc(k.id)}">
                 <span class="star" data-v="1">&#9733;</span>
                 <span class="star" data-v="2">&#9733;</span>

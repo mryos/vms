@@ -869,8 +869,37 @@ function getAllVendors(ss) {
 function getKriteriaPenilaian(ss) {
   var sheet = ss.getSheetByName(SHEET_KRITERIA_PENILAIAN);
   var list = [];
-  if (sheet && sheet.getLastRow() >= 2) {
-    var data = sheet.getDataRange().getValues();
+  if (!sheet || sheet.getLastRow() < 2) return list;
+
+  var data = sheet.getDataRange().getValues();
+  var header = data[0].map(function(h) { return h.toString().trim().toLowerCase(); });
+
+  // Cek apakah format horizontal (ada kolom 'pertanyaan 1' atau 'nama vendor')
+  var isHorizontal = header.some(function(h) { return h.indexOf('pertanyaan') !== -1; }) || (header[1] && header[1].indexOf('vendor') !== -1);
+
+  if (isHorizontal) {
+    for (var i = 1; i < data.length; i++) {
+      var kategori = data[i][0] ? data[i][0].toString().trim() : 'UMUM';
+      var vendorSpesifik = data[i][1] ? data[i][1].toString().trim() : '';
+      if (vendorSpesifik.toLowerCase() === 'semua') vendorSpesifik = '';
+
+      for (var col = 2; col < data[i].length; col++) {
+        var qVal = data[i][col];
+        if (qVal && qVal.toString().trim() !== '' && qVal.toString().trim().toLowerCase() !== 'null') {
+          var qText = qVal.toString().trim();
+          var id = generateQuestionId(qText);
+          list.push({
+            id: id,
+            kriteria: qText,
+            deskripsi: getQuestionDescription(qText),
+            kategori: kategori,
+            vendorSpesifik: vendorSpesifik
+          });
+        }
+      }
+    }
+  } else {
+    // Format vertikal standard (Kategori, Kriteria, Deskripsi)
     for (var i = 1; i < data.length; i++) {
       var kategori = data[i][0] ? data[i][0].toString().trim() : '';
       var kriteria = data[i][1] ? data[i][1].toString().trim() : '';
@@ -881,13 +910,44 @@ function getKriteriaPenilaian(ss) {
         list.push({
           id: id,
           kriteria: kriteria,
-          deskripsi: deskripsi || ('Penilaian ' + kriteria),
-          kategori: kategori
+          deskripsi: deskripsi || getQuestionDescription(kriteria),
+          kategori: kategori,
+          vendorSpesifik: ''
         });
       }
     }
   }
+
   return list;
+}
+
+function getQuestionDescription(qText) {
+  var map = {
+    'harga': 'Kewajaran, daya saing, dan kesesuaian harga terhadap penawaran/pasar',
+    'pelayanan': 'Responsivitas, etika komunikasi, dan profesionalisme layanan',
+    'ketepatan waktu': 'Kecepatan dan ketepatan pengiriman/penyelesaian sesuai jadwal PO',
+    'kualitas produk it': 'Stabilitas, keaslian, dan performa hardware/software',
+    'dukungan teknis': 'Kecepatan tanggapan troubleshooting, klaim garansi & after-sales',
+    'garansi & pemeliharaan': 'Cakupan garansi resmi dan kemudahan layanan pemeliharaan',
+    'keamanan pengiriman': 'Kondisi fisik barang aman, tidak rusak/hilang saat diterima',
+    'jangkauan area': 'Kemampuan menjangkau area pengiriman yang dibutuhkan',
+    'ketepatan estimasi': 'Akurasi resi/manifest dan ketersediaan tracking online',
+    'kreativitas desain': 'Originalitas ide konsep, estetika desain, dan relevansi visual',
+    'kesesuaian brief': 'Kemampuan memahami dan mengeksekusi brief klien dengan tepat',
+    'revisi & fleksibilitas': 'Kesediaan dan kecepatan dalam mengakomodasi revisi',
+    'kualitas cetak': 'Ketajaman warna, presisi ukuran, dan mutu material cetak',
+    'kesesuaian spesifikasi': 'Hasil produksi sesuai spesifikasi teknis dan mock-up',
+    'kapasitas progres': 'Kapasitas produksi dan konsistensi kecepatan pesanan',
+    'keahlian & kompetensi': 'Tingkat keahlian, pengalaman, dan kompetensi konsultan',
+    'kualitas laporan': 'Kelengkapan analisa, kejelasan rekomendasi dan deliverable',
+    'dampak & hasil': 'Efektivitas rekomendasi dan dampak nyata bagi operasional',
+    'kualitas barang': 'Kesesuaian fisik dan fungsi produk dengan standar spesifikasi',
+    'kelengkapan pesanan': 'Ketepatan jumlah dan kelengkapan barang yang dikirim',
+    'ketersediaan stok': 'Kemampuan menyediakan barang yang dibutuhkan secara kontinyu'
+  };
+
+  var key = qText.toLowerCase().trim();
+  return map[key] || ('Penilaian ' + qText);
 }
 
 function getPurchaseRequests(ss) {
