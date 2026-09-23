@@ -1,7 +1,7 @@
 // =====================================================
 // KONFIGURASI
 // Ganti URL di bawah dengan URL Web App Google Apps Script Anda
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbySjL6G3zAUKQhWUK8qhBYQdGjx9MUPtYoeXJkZm1DrIAwPN_S-i9ygymgU3exNDe37Sw/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwm4TIToh0exOZfCADZZkEsSm9fHe94veFRXNAZ9U7ljDKvMdNiyaJ1MNqraZgizydflg/exec';
 
 // =====================================================
 // STATE & INIT
