@@ -600,17 +600,18 @@ function renderPeriodChips(periodList) {
         });
     }
 
-    container.innerHTML = combinedList.map(p =>
-        `<button class="chip${p === selectedPeriode ? ' active' : ''}" data-value="${esc(p)}">${esc(p)}</button>`
-    ).join('');
+    container.innerHTML = `
+        <select id="periodeSelect" class="tremor-select font-semibold text-sm text-blue-900 bg-blue-50/60 border-blue-200 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-sm py-2 px-3.5 pr-8 rounded-lg transition" title="Pilih Periode Penilaian">
+            ${combinedList.map(p => `<option value="${esc(p)}"${p === selectedPeriode ? ' selected' : ''}>📅 ${esc(p)}</option>`).join('')}
+        </select>
+    `;
 
-    container.querySelectorAll('.chip').forEach(chip => {
-        chip.addEventListener('click', () => {
-            container.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-            chip.classList.add('active');
-            switchPeriod(chip.dataset.value);
+    const selectEl = document.getElementById('periodeSelect');
+    if (selectEl) {
+        selectEl.addEventListener('change', (e) => {
+            switchPeriod(e.target.value);
         });
-    });
+    }
 }
 
 /**
@@ -618,6 +619,11 @@ function renderPeriodChips(periodList) {
  */
 function switchPeriod(periodId) {
     selectedPeriode = periodId;
+
+    const selectEl = document.getElementById('periodeSelect');
+    if (selectEl && selectEl.value !== periodId) {
+        selectEl.value = periodId;
+    }
 
     if (serverPeriods && serverPeriods[periodId]) {
         const pData = serverPeriods[periodId];
