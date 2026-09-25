@@ -72,12 +72,28 @@ function applyTabFilter(tab) {
     }
 }
 
+const TARGET_PERIODS = [
+    'Q2 2026',
+    'Q3 2026',
+    'Q4 2026',
+    'Q1 2027',
+    'Q2 2027',
+    'Q3 2027',
+    'Q4 2027'
+];
+
 function initSlicers(kategoriList, periodList) {
-    // 1. Inisialisasi Period Select Options secara dinamis dari database multi-sheet
+    // 1. Inisialisasi Period Select Options (Q2 2026 s/d Q4 2027)
     const periodSelect = document.getElementById('slicerPeriodSelect');
-    if (periodSelect && periodList && periodList.length > 0) {
+    if (periodSelect) {
+        const combinedPeriods = [...TARGET_PERIODS];
+        if (Array.isArray(periodList)) {
+            periodList.forEach(p => {
+                if (!combinedPeriods.includes(p)) combinedPeriods.push(p);
+            });
+        }
         periodSelect.innerHTML = `<option value="all">📅 Semua Periode</option>` +
-            periodList.map(p => `<option value="${esc(p)}">📅 ${esc(p)}</option>`).join('');
+            combinedPeriods.map(p => `<option value="${esc(p)}">📅 ${esc(p)}</option>`).join('');
     }
 
     // 2. Inisialisasi Category Select Options secara dinamis dari database
@@ -182,13 +198,18 @@ function filterAndRenderDashboard() {
     const categories = dashboardData.kategori || [];
 
     // Jika filter periode dipilih secara spesifik
-    if (slicerState.period !== 'all' && dashboardData.periods && dashboardData.periods[slicerState.period]) {
-        const selectedPeriodData = dashboardData.periods[slicerState.period];
-        if (selectedPeriodData.vendors && selectedPeriodData.vendors.length > 0) {
-            rawVendors = selectedPeriodData.vendors;
-        }
-        if (selectedPeriodData.poStats) {
-            rawPO = selectedPeriodData.poStats;
+    if (slicerState.period !== 'all') {
+        const selectedPeriodData = (dashboardData.periods && dashboardData.periods[slicerState.period]) ? dashboardData.periods[slicerState.period] : null;
+        if (selectedPeriodData) {
+            if (selectedPeriodData.vendors && selectedPeriodData.vendors.length > 0) {
+                rawVendors = selectedPeriodData.vendors;
+            }
+            if (selectedPeriodData.poStats) {
+                rawPO = selectedPeriodData.poStats;
+            }
+        } else {
+            rawVendors = dashboardData.allVendors || dashboardData.vendors || [];
+            rawPO = { totalOrders: 0, totalOnTime: 0, overallOnTimePct: 0, totalValue: 0, vendorMap: {} };
         }
 
         // Filter skor evaluasi hanya yang dinilai pada periode tersebut

@@ -108,11 +108,16 @@ let currentAssessorName = '';
 let vendors = []; // Array of string (nama vendor) yang BERHAK dinilai pada periode aktif
 let allMasterVendors = [...DEFAULT_VENDORS];
 let selectedVendor = null;
-let selectedPeriode = (() => {
-    const now = new Date();
-    const q = Math.floor(now.getMonth() / 3) + 1;
-    return `Q${q} ${now.getFullYear()}`;
-})();
+const TARGET_PERIODS = [
+    'Q2 2026',
+    'Q3 2026',
+    'Q4 2026',
+    'Q1 2027',
+    'Q2 2027',
+    'Q3 2027',
+    'Q4 2027'
+];
+let selectedPeriode = 'Q2 2026';
 
 let serverPeriods = {}; // { 'Q2 2026': { vendors: [], poStats: {} }, ... }
 let serverPeriodList = []; // ['Q2 2027', 'Q4 2026', 'Q3 2026', 'Q2 2026']
@@ -346,8 +351,9 @@ async function processPinLogin(pin) {
                 if (data.periods && data.periodList && data.periodList.length > 0) {
                     serverPeriods = data.periods;
                     serverPeriodList = data.periodList;
-                    selectedPeriode = data.defaultPeriod || serverPeriodList[0];
-                    renderPeriodChips(serverPeriodList);
+                    if (!selectedPeriode) selectedPeriode = 'Q2 2026';
+                    renderPeriodChips(TARGET_PERIODS);
+                    switchPeriod(selectedPeriode);
                 }
 
                 processVendorData(data.vendors || []);
@@ -579,28 +585,22 @@ function initSearch() {
 // PERIODE CHIPS (DINAMIS DARI MULTI-SHEET PO SPREADSHEET)
 // =====================================================
 function initPeriodeChips() {
-    // Fallback awal sebelum data server tiba
-    const now = new Date();
-    const year = now.getFullYear();
-    const quarter = Math.floor(now.getMonth() / 3) + 1;
-
-    const quarters = [];
-    for (let offset = -1; offset <= 1; offset++) {
-        let q = quarter + offset;
-        let y = year;
-        if (q < 1) { q = 4; y--; }
-        if (q > 4) { q = 1; y++; }
-        quarters.push(`Q${q} ${y}`);
-    }
-
-    renderPeriodChips(quarters);
+    renderPeriodChips(TARGET_PERIODS);
 }
 
 function renderPeriodChips(periodList) {
     const container = document.getElementById('periodeChips');
-    if (!container || !periodList || periodList.length === 0) return;
+    if (!container) return;
 
-    container.innerHTML = periodList.map(p =>
+    // Pastikan urutan selalu dimulai dari Q2 2026 hingga Q4 2027
+    const combinedList = [...TARGET_PERIODS];
+    if (Array.isArray(periodList)) {
+        periodList.forEach(p => {
+            if (!combinedList.includes(p)) combinedList.push(p);
+        });
+    }
+
+    container.innerHTML = combinedList.map(p =>
         `<button class="chip${p === selectedPeriode ? ' active' : ''}" data-value="${esc(p)}">${esc(p)}</button>`
     ).join('');
 
@@ -623,10 +623,13 @@ function switchPeriod(periodId) {
         const pData = serverPeriods[periodId];
         if (pData.vendors && pData.vendors.length > 0) {
             processVendorData(pData.vendors);
+        } else {
+            processVendorData(allMasterVendors.length > 0 ? allMasterVendors : DEFAULT_VENDORS);
         }
-        if (pData.poStats) {
-            poStats = pData.poStats;
-        }
+        poStats = pData.poStats || { totalOrders: 0, totalOnTime: 0, overallOnTimePct: 0, vendorMap: {} };
+    } else {
+        processVendorData(allMasterVendors.length > 0 ? allMasterVendors : DEFAULT_VENDORS);
+        poStats = { totalOrders: 0, totalOnTime: 0, overallOnTimePct: 0, vendorMap: {} };
     }
 
     updatePoInsightsBanner();
