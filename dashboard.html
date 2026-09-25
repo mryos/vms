@@ -1,281 +1,454 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="scroll-smooth">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="Vendor & Contract Lifecycle Management - PT Ethos Kreatif Indonesia">
-<title>Vendor & Contract Lifecycle Management - PT Ethos Kreatif Indonesia</title>
+<title>Dashboard VMS - PT Ethos Kreatif Indonesia</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
-</head>
-<body>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+      colors: {
+        tremor: {
+          brand:   { faint: '#eff6ff', muted: '#bfdbfe', DEFAULT: '#3b82f6', emphasis: '#1d4ed8', inverted: '#ffffff' },
+          bg:      { muted: '#f9fafb', subtle: '#f3f4f6', DEFAULT: '#ffffff', emphasis: '#374151' },
+          border:  { DEFAULT: '#e5e7eb' },
+          ring:    { DEFAULT: '#e5e7eb' },
+          content: { subtle: '#9ca3af', DEFAULT: '#6b7280', emphasis: '#374151', strong: '#111827', inverted: '#ffffff' }
+        }
+      },
+      boxShadow: {
+        'tremor-input':  '0 1px 2px 0 rgb(0 0 0 / 0.05)',
+        'tremor-card':   '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
+        'tremor-dropdown': '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)'
+      },
+      borderRadius: { 'tremor-small': '0.375rem', 'tremor-default': '0.5rem', 'tremor-full': '9999px' },
+      fontSize: { 'tremor-label': ['0.75rem', { lineHeight: '1rem' }], 'tremor-default': ['0.875rem', { lineHeight: '1.25rem' }], 'tremor-title': ['1.125rem', { lineHeight: '1.75rem' }], 'tremor-metric': ['1.875rem', { lineHeight: '2.25rem' }] }
+    }
+  }
+}
+</script>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: 'Inter', system-ui, sans-serif; background: #f9fafb; color: #111827; margin: 0; }
 
-    <!-- Header -->
-    <header class="header">
-        <div class="header-inner">
-            <div class="header-left">
-                <a href="index.html" class="header-logo-link" style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 0.6rem;">
-                    <div class="header-logo" style="background: linear-gradient(135deg, #0284c7, #0a2e5c);">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+  /* Tremor-style scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+  /* Tremor card */
+  .tremor-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  }
+
+  /* Tremor table */
+  .tremor-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  .tremor-table thead th {
+    text-align: left; padding: 0.75rem 1rem; font-weight: 500; color: #6b7280;
+    border-bottom: 1px solid #e5e7eb; font-size: 0.75rem; text-transform: uppercase;
+    letter-spacing: 0.05em; white-space: nowrap;
+  }
+  .tremor-table tbody td {
+    padding: 0.75rem 1rem; border-bottom: 1px solid #f3f4f6; color: #374151;
+    vertical-align: middle;
+  }
+  .tremor-table tbody tr:last-child td { border-bottom: none; }
+  .tremor-table tbody tr:hover { background: #f9fafb; }
+
+  /* Tremor Badge */
+  .tremor-badge {
+    display: inline-flex; align-items: center; gap: 0.25rem;
+    padding: 0.125rem 0.625rem; border-radius: 9999px;
+    font-size: 0.75rem; font-weight: 500; line-height: 1.25rem;
+  }
+  .tremor-badge-emerald { background: #ecfdf5; color: #065f46; }
+  .tremor-badge-red { background: #fef2f2; color: #991b1b; }
+  .tremor-badge-amber { background: #fffbeb; color: #92400e; }
+  .tremor-badge-blue { background: #eff6ff; color: #1e40af; }
+  .tremor-badge-purple { background: #f5f3ff; color: #5b21b6; }
+  .tremor-badge-gray { background: #f3f4f6; color: #374151; }
+
+  /* Predikat Badge & Progress Bar Helpers */
+  .predikat-badge {
+    display: inline-flex; align-items: center; gap: 0.25rem;
+    padding: 0.15rem 0.65rem; border-radius: 9999px;
+    font-size: 0.75rem; font-weight: 600; line-height: 1.25rem;
+  }
+  .progress-bar-container {
+    background: #e5e7eb; height: 6px; border-radius: 9999px; overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%; border-radius: 9999px; transition: width 0.4s ease;
+  }
+
+  /* Tremor progress bar */
+  .tremor-progress-bar {
+    width: 100%; height: 0.5rem; border-radius: 9999px;
+    background: #e5e7eb; overflow: hidden;
+  }
+  .tremor-progress-fill {
+    height: 100%; border-radius: 9999px;
+    transition: width 0.6s ease;
+  }
+
+  /* Tremor select */
+  .tremor-select {
+    appearance: none; background: #fff; border: 1px solid #e5e7eb;
+    border-radius: 0.5rem; padding: 0.5rem 2rem 0.5rem 0.75rem;
+    font-size: 0.875rem; color: #374151; cursor: pointer;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
+    background-position: right 0.5rem center; background-repeat: no-repeat; background-size: 1.25rem;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .tremor-select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 1px #3b82f6; }
+
+  /* Tremor tabs */
+  .tremor-tab {
+    padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 500;
+    color: #6b7280; border-bottom: 2px solid transparent;
+    cursor: pointer; transition: all 0.15s; background: none; border-top: none; border-left: none; border-right: none;
+    white-space: nowrap;
+  }
+  .tremor-tab:hover { color: #374151; }
+  .tremor-tab.active { color: #3b82f6; border-bottom-color: #3b82f6; }
+
+  /* Toast */
+  .toast-box { position: fixed; bottom: 1rem; right: 1rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.5rem; }
+  .toast {
+    display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem;
+    border-radius: 0.5rem; font-size: 0.875rem; font-weight: 500;
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); transform: translateX(100%);
+    opacity: 0; transition: all 0.3s ease;
+  }
+  .toast.show { transform: translateX(0); opacity: 1; }
+  .toast.success { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+  .toast.error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+  .toast.info { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .kpi-grid { grid-template-columns: 1fr !important; }
+    .chart-grid { grid-template-columns: 1fr !important; }
+    .perf-grid { grid-template-columns: 1fr !important; }
+    .filter-bar { flex-direction: column; align-items: stretch !important; }
+    .tremor-card { padding: 1rem; }
+  }
+
+  /* Subtle animations */
+  @keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .animate-in { animation: fadeInUp 0.4s ease both; }
+  .animate-in-1 { animation-delay: 0.05s; }
+  .animate-in-2 { animation-delay: 0.1s; }
+  .animate-in-3 { animation-delay: 0.15s; }
+  .animate-in-4 { animation-delay: 0.2s; }
+  .animate-in-5 { animation-delay: 0.25s; }
+</style>
+</head>
+<body class="min-h-screen">
+
+    <!-- ========== HEADER ========== -->
+    <header class="sticky top-0 z-30 border-b border-gray-200 bg-white/90 backdrop-blur-lg">
+        <div class="mx-auto max-w-7xl px-4 lg:px-8">
+            <div class="flex h-16 items-center justify-between">
+                <a href="index.html" class="flex items-center gap-3 no-underline">
+                    <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 text-white">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
                     </div>
                     <div>
-                        <span class="header-title" style="font-size: 1.05rem; font-weight: 800;">Vendor &amp; Contract Lifecycle Management</span>
-                        <span class="header-company" style="font-size: 0.75rem;">PT Ethos Kreatif Indonesia &bull; Enterprise VMS</span>
+                        <div class="text-sm font-bold text-gray-900 leading-tight">Vendor & Contract Lifecycle</div>
+                        <div class="text-xs text-gray-500">PT Ethos Kreatif Indonesia</div>
                     </div>
                 </a>
-            </div>
-            <div class="header-right" style="display: flex; align-items: center; gap: 1.25rem;">
-                <a href="index.html" class="nav-link" style="text-decoration: none; color: var(--primary); font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 0.35rem; background:#f1f5f9; padding:0.4rem 0.85rem; border-radius:8px;">
-                    <span>📝</span> Form Penilaian
-                </a>
-                <span class="header-user" id="headerUser">👤 Guest</span>
+                <div class="flex items-center gap-4">
+                    <a href="index.html" class="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        Form Penilaian
+                    </a>
+                    <span class="text-sm text-gray-500" id="headerUser">👤 Guest</span>
+                </div>
             </div>
         </div>
     </header>
 
-    <main class="main-content dashboard-content">
-        <!-- Gatekeeper-Style Subnav & Compact Filter Bar -->
-        <div class="dashboard-subnav">
-            <div class="db-tabs" id="dashboardTabs">
-                <button class="db-tab-btn active" data-tab="all">🏢 Semua Ringkasan</button>
-                <button class="db-tab-btn" data-tab="clm">📜 Contract Lifecycle (CLM)</button>
-                <button class="db-tab-btn" data-tab="performance">⭐ Kinerja &amp; Evaluasi</button>
-                <button class="db-tab-btn" data-tab="orders">🚚 PO &amp; Delivery</button>
+    <!-- ========== MAIN CONTENT ========== -->
+    <main class="mx-auto max-w-7xl px-4 lg:px-8 py-6">
+
+        <!-- Page Title -->
+        <div class="mb-6">
+            <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Dashboard Overview</h1>
+            <p class="mt-1 text-sm text-gray-500">Monitoring kinerja vendor, kontrak, dan purchase order secara real-time.</p>
+        </div>
+
+        <!-- ========== TAB NAVIGATION ========== -->
+        <div class="mb-6 flex items-start justify-between gap-4 flex-wrap border-b border-gray-200">
+            <div class="flex gap-0 -mb-px overflow-x-auto" id="dashboardTabs">
+                <button class="tremor-tab active" data-tab="all">Semua Ringkasan</button>
+                <button class="tremor-tab" data-tab="clm">Contract Lifecycle</button>
+                <button class="tremor-tab" data-tab="performance">Kinerja & Evaluasi</button>
+                <button class="tremor-tab" data-tab="orders">PO & Delivery</button>
             </div>
-            <div class="db-filter-action" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                <select id="slicerPeriodSelect" class="db-select" title="Filter Periode PO & Evaluasi">
-                    <option value="all">📅 Semua Periode</option>
-                </select>
-                <select id="slicerCategorySelect" class="db-select" title="Filter Bidang Vendor">
-                    <option value="all">📁 Semua Bidang</option>
-                </select>
-                <select id="slicerComplianceSelect" class="db-select" title="Filter Status Kontrak">
-                    <option value="all">📜 Semua Kontrak</option>
-                    <option value="comply">🟢 Comply Saja</option>
-                    <option value="not-comply">🔴 Not Comply Saja</option>
-                </select>
-                <select id="slicerTierSelect" class="db-select" title="Filter Rating Skor">
-                    <option value="all">⭐ Semua Rating</option>
-                    <option value="high">⭐ Sangat Baik (&ge; 4.5)</option>
-                    <option value="good">👍 Baik (3.5 - 4.4)</option>
-                    <option value="poor">⚠️ Perlu Perhatian (&lt; 2.5)</option>
-                </select>
-                <button class="slicer-reset-btn" id="slicerResetBtn" onclick="resetAllSlicers()" title="Reset Filter">
-                    <span>🔄</span> Reset
+        </div>
+
+        <!-- ========== FILTER BAR ========== -->
+        <div class="mb-6 flex items-center gap-3 flex-wrap filter-bar">
+            <select id="slicerPeriodSelect" class="tremor-select" title="Filter Periode">
+                <option value="all">📅 Semua Periode</option>
+            </select>
+            <select id="slicerCategorySelect" class="tremor-select" title="Filter Bidang Vendor">
+                <option value="all">📁 Semua Bidang</option>
+            </select>
+            <select id="slicerComplianceSelect" class="tremor-select" title="Filter Status Kontrak">
+                <option value="all">📜 Semua Kontrak</option>
+                <option value="comply">✅ Comply</option>
+                <option value="not-comply">❌ Not Comply</option>
+            </select>
+            <select id="slicerTierSelect" class="tremor-select" title="Filter Rating">
+                <option value="all">⭐ Semua Rating</option>
+                <option value="high">⭐ Sangat Baik (≥ 4.5)</option>
+                <option value="good">👍 Baik (3.5 - 4.4)</option>
+                <option value="poor">⚠️ Perlu Perhatian (< 2.5)</option>
+            </select>
+            <button id="slicerResetBtn" onclick="resetAllSlicers()" class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-600 shadow-sm hover:bg-gray-50 transition">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+                Reset
+            </button>
+        </div>
+
+        <!-- ========== ALERT BANNER ========== -->
+        <div class="tremor-card mb-6 border-l-4 border-l-amber-400 bg-amber-50" id="expiringContractsBanner" style="display: none;">
+            <div class="flex items-start justify-between gap-4 flex-wrap">
+                <div class="flex items-start gap-3">
+                    <div class="mt-0.5 text-amber-500">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm-1-7v2h2v-2h-2zm0-8v6h2V7h-2z"/></svg>
+                    </div>
+                    <div>
+                        <h5 class="text-sm font-semibold text-amber-800" id="alertBannerTitle">Peringatan Masa Berlaku Kontrak</h5>
+                        <p class="text-sm text-amber-700 mt-0.5" id="alertBannerDesc">Terdapat kontrak vendor yang akan segera berakhir dalam 90 hari.</p>
+                    </div>
+                </div>
+                <button onclick="document.getElementById('sectionContracts').scrollIntoView({behavior: 'smooth'})" class="text-sm font-medium text-amber-700 hover:text-amber-900 whitespace-nowrap">
+                    Lihat Detail →
                 </button>
             </div>
         </div>
 
-        <!-- Gatekeeper Expiring Contracts Alert Banner -->
-        <div class="clm-alert-card" id="expiringContractsBanner" style="display: none;">
-            <div class="clm-alert-left">
-                <div class="clm-alert-icon">⚠️</div>
-                <div class="clm-alert-text">
-                    <h5 id="alertBannerTitle">Peringatan Masa Berlaku Kontrak</h5>
-                    <p id="alertBannerDesc">Terdapat kontrak vendor yang akan segera berakhir dalam 90 hari ke depan.</p>
+        <!-- ========== KPI CARDS GRID ========== -->
+        <div class="kpi-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+            <!-- 1. Total Nilai Kontrak -->
+            <div class="tremor-card animate-in animate-in-1">
+                <div class="flex items-center justify-between mb-2">
+                    <p class="text-tremor-default text-tremor-content font-medium">Total Nilai Kontrak</p>
+                    <span class="text-blue-500">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 100 4h4a2 2 0 110 4H8"/><path d="M12 18V6"/></svg>
+                    </span>
                 </div>
-            </div>
-            <button class="clm-alert-btn" onclick="document.getElementById('sectionContracts').scrollIntoView({behavior: 'smooth'})">Lihat Rincian Kontrak &rsaquo;</button>
-        </div>
-
-        <!-- Gatekeeper 5-Card Key Metric Summary Grid -->
-        <div class="clm-summary-grid">
-            <!-- 1. Total Contract Value (CLM) -->
-            <div class="clm-stat-card card-accent-blue">
-                <div class="clm-stat-top">
-                    <span class="clm-stat-label">Total Nilai Kontrak</span>
-                    <span class="clm-stat-icon">💰</span>
-                </div>
-                <h3 id="statTotalContractValue">Rp 0</h3>
-                <div class="clm-stat-meta" id="statTotalContractsCount">0 kontrak terdaftar</div>
+                <p class="text-tremor-metric font-bold text-tremor-content-strong truncate" id="statTotalContractValue">Rp 0</p>
+                <p class="text-tremor-label text-tremor-content mt-1" id="statTotalContractsCount">0 kontrak terdaftar</p>
             </div>
 
-            <!-- 2. KPI 4: Contract Compliance Rate -->
-            <div class="clm-stat-card card-accent-amber">
-                <div class="clm-stat-top">
-                    <span class="clm-stat-label">KPI 4: Contract Compliance</span>
-                    <span class="clm-stat-icon">📜</span>
+            <!-- 2. Contract Compliance -->
+            <div class="tremor-card animate-in animate-in-2">
+                <div class="flex items-center justify-between mb-2">
+                    <p class="text-tremor-default text-tremor-content font-medium">Contract Compliance</p>
+                    <span class="text-amber-500">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                    </span>
                 </div>
-                <h3 id="statContractCompliance">0%</h3>
-                <div class="clm-stat-meta" id="statContractRatio">0 / 0 vendor comply</div>
-                <div class="stat-mini-progress">
-                    <div class="stat-mini-progress-fill" id="progressCompliance" style="width: 0%; background: #f59e0b;"></div>
+                <p class="text-tremor-metric font-bold text-tremor-content-strong" id="statContractCompliance">0%</p>
+                <p class="text-tremor-label text-tremor-content mt-1" id="statContractRatio">0 / 0 vendor comply</p>
+                <div class="tremor-progress-bar mt-3">
+                    <div class="tremor-progress-fill bg-amber-500" id="progressCompliance" style="width: 0%;"></div>
                 </div>
             </div>
 
-            <!-- 3. KPI 1: Vendor Performance Score -->
-            <div class="clm-stat-card card-accent-emerald">
-                <div class="clm-stat-top">
-                    <span class="clm-stat-label">KPI 1: Performance Score</span>
-                    <span class="clm-stat-icon">⭐</span>
+            <!-- 3. Performance Score -->
+            <div class="tremor-card animate-in animate-in-3">
+                <div class="flex items-center justify-between mb-2">
+                    <p class="text-tremor-default text-tremor-content font-medium">Performance Score</p>
+                    <span class="text-emerald-500">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .587l3.668 7.568 8.332 1.151-6.064 5.828 1.48 8.279L12 19.771l-7.416 3.642 1.48-8.279-6.064-5.828 8.332-1.151z"/></svg>
+                    </span>
                 </div>
-                <h3 id="statAvgScore">0.0</h3>
-                <div class="clm-stat-meta" id="statEvalCount">0 vendor dinilai</div>
-                <div class="stat-mini-progress">
-                    <div class="stat-mini-progress-fill" id="progressScore" style="width: 0%; background: #10b981;"></div>
-                </div>
-            </div>
-
-            <!-- 4. KPI 2: Evaluation Completion Rate -->
-            <div class="clm-stat-card card-accent-purple">
-                <div class="clm-stat-top">
-                    <span class="clm-stat-label">KPI 2: Eval Completion</span>
-                    <span class="clm-stat-icon">📊</span>
-                </div>
-                <h3 id="statEvalCompletion">0%</h3>
-                <div class="clm-stat-meta" id="statEvalRatio">0 / 0 vendor aktif</div>
-                <div class="stat-mini-progress">
-                    <div class="stat-mini-progress-fill" id="progressCompletion" style="width: 0%; background: #8b5cf6;"></div>
+                <p class="text-tremor-metric font-bold text-tremor-content-strong" id="statAvgScore">0.0</p>
+                <p class="text-tremor-label text-tremor-content mt-1" id="statEvalCount">0 vendor dinilai</p>
+                <div class="tremor-progress-bar mt-3">
+                    <div class="tremor-progress-fill bg-emerald-500" id="progressScore" style="width: 0%;"></div>
                 </div>
             </div>
 
-            <!-- 5. On-Time Delivery Rate -->
-            <div class="clm-stat-card card-accent-indigo">
-                <div class="clm-stat-top">
-                    <span class="clm-stat-label">On-Time PO Delivery</span>
-                    <span class="clm-stat-icon">🚚</span>
+            <!-- 4. Eval Completion -->
+            <div class="tremor-card animate-in animate-in-4">
+                <div class="flex items-center justify-between mb-2">
+                    <p class="text-tremor-default text-tremor-content font-medium">Eval Completion</p>
+                    <span class="text-violet-500">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                    </span>
                 </div>
-                <h3 id="statOnTimePct">0%</h3>
-                <div class="clm-stat-meta" id="statTotalPoMeta">0 total pesanan PO</div>
-                <div class="stat-mini-progress">
-                    <div class="stat-mini-progress-fill" id="progressOnTime" style="width: 0%; background: #4f46e5;"></div>
+                <p class="text-tremor-metric font-bold text-tremor-content-strong" id="statEvalCompletion">0%</p>
+                <p class="text-tremor-label text-tremor-content mt-1" id="statEvalRatio">0 / 0 vendor selesai</p>
+                <div class="tremor-progress-bar mt-3">
+                    <div class="tremor-progress-fill bg-violet-500" id="progressCompletion" style="width: 0%;"></div>
+                </div>
+            </div>
+
+            <!-- 5. On-Time Delivery -->
+            <div class="tremor-card animate-in animate-in-5">
+                <div class="flex items-center justify-between mb-2">
+                    <p class="text-tremor-default text-tremor-content font-medium">On-Time Delivery</p>
+                    <span class="text-indigo-500">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5a2 2 0 01-2 2h-1"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                    </span>
+                </div>
+                <p class="text-tremor-metric font-bold text-tremor-content-strong" id="statOnTimePct">0%</p>
+                <p class="text-tremor-label text-tremor-content mt-1" id="statTotalPoMeta">0 total pesanan PO</p>
+                <div class="tremor-progress-bar mt-3">
+                    <div class="tremor-progress-fill bg-indigo-500" id="progressOnTime" style="width: 0%;"></div>
                 </div>
             </div>
         </div>
 
-        <!-- Enterprise CLM & Vendor Analytics Chart Grid -->
-        <div class="clm-chart-grid" id="chartsSection">
-            <!-- Chart 1: Contract Compliance & Status Breakdown (Donut) -->
-            <div class="db-card">
-                <div class="db-card-header">
-                    <h4>📜 Kepatuhan &amp; Lifecycle Kontrak (KPI 4)</h4>
-                    <span class="badge" style="background:#f59e0b15; color:#f59e0b; border:1px solid #f59e0b30;">Status Compliance</span>
+        <!-- ========== CHARTS GRID ========== -->
+        <div class="chart-grid grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6" id="chartsSection">
+            <!-- Donut: Compliance -->
+            <div class="tremor-card">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-tremor-title font-semibold text-tremor-content-strong">Kepatuhan Kontrak</h3>
+                    <span class="tremor-badge tremor-badge-amber">Compliance</span>
                 </div>
-                <div style="padding: 1rem; display:flex; justify-content:center; align-items:center; min-height:280px; position:relative;">
-                    <canvas id="complianceChart" style="max-width:280px; max-height:280px;"></canvas>
+                <div class="flex justify-center items-center" style="min-height:260px;">
+                    <canvas id="complianceChart" style="max-width:250px; max-height:250px;"></canvas>
                 </div>
             </div>
 
-            <!-- Position 2: TOP 5 Vendor Terbaik (Table) -->
-            <div class="db-card">
-                <div class="db-card-header">
-                    <h4>🏆 TOP 5 Vendor Terbaik</h4>
-                    <span class="badge badge-success">Skor Tertinggi</span>
+            <!-- TOP 5 Vendor -->
+            <div class="tremor-card">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-tremor-title font-semibold text-tremor-content-strong">Top 5 Vendor Terbaik</h3>
+                    <span class="tremor-badge tremor-badge-emerald">Skor Tertinggi</span>
                 </div>
-                <div class="table-responsive">
-                    <table class="db-table">
+                <div class="overflow-x-auto -mx-1.5">
+                    <table class="tremor-table">
                         <thead>
                             <tr>
-                                <th style="width: 35px;">No</th>
-                                <th>Nama Vendor</th>
+                                <th style="width:32px">#</th>
+                                <th>Vendor</th>
                                 <th>Kategori</th>
-                                <th style="text-align: right;">Skor</th>
-                                <th style="text-align: center;">Predikat</th>
+                                <th class="text-right">Skor</th>
+                                <th class="text-center">Predikat</th>
                             </tr>
                         </thead>
                         <tbody id="topVendorsTable">
-                            <tr>
-                                <td colspan="5" style="text-align: center; color: var(--text3); padding: 2rem;">Memuat data ranking...</td>
-                            </tr>
+                            <tr><td colspan="5" class="text-center text-gray-400 py-8">Memuat data ranking...</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- Chart 3: Skor Rata-rata per Kategori (Radar Chart) -->
-            <div class="db-card">
-                <div class="db-card-header">
-                    <h4>📈 Skor Kinerja per Bidang</h4>
-                    <span class="badge" style="background:#10b98115; color:#10b981; border:1px solid #10b98130;">Radar Mutu</span>
+            <!-- Radar: Skor per Kategori -->
+            <div class="tremor-card">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-tremor-title font-semibold text-tremor-content-strong">Skor per Bidang</h3>
+                    <span class="tremor-badge tremor-badge-blue">Radar</span>
                 </div>
-                <div style="padding: 1rem; display:flex; justify-content:center; align-items:center; min-height:280px;">
-                    <canvas id="radarChart" style="max-width:100%; max-height:280px;"></canvas>
+                <div class="flex justify-center items-center" style="min-height:260px;">
+                    <canvas id="radarChart" style="max-width:100%; max-height:260px;"></canvas>
                 </div>
             </div>
         </div>
 
-        <!-- Section 1: Gatekeeper Contract Repository & Compliance Log (Full Width) -->
-        <div class="db-card" id="sectionContracts" style="margin-bottom: 1.5rem;">
-            <div class="db-card-header">
+        <!-- ========== CONTRACT TABLE ========== -->
+        <div class="tremor-card mb-6" id="sectionContracts">
+            <div class="flex items-start justify-between gap-4 mb-4 flex-wrap">
                 <div>
-                    <h4>📜 Contract Repository &amp; Compliance Matrix (KPI 4)</h4>
-                    <p style="font-size:0.8rem; color:var(--text3); margin:0.2rem 0 0 0;">Monitoring kelengkapan dokumen legalitas dan kepatuhan klausul SLA kontrak vendor</p>
+                    <h3 class="text-tremor-title font-semibold text-tremor-content-strong">Contract Repository & Compliance</h3>
+                    <p class="text-tremor-default text-tremor-content mt-0.5">Monitoring kelengkapan dan kepatuhan kontrak vendor</p>
                 </div>
-                <span class="badge" style="background:#f59e0b15; color:#f59e0b; border:1px solid #f59e0b30;">Sheet 'Kontrak Vendor'</span>
+                <span class="tremor-badge tremor-badge-gray">Sheet: Kontrak Vendor</span>
             </div>
-            <div class="table-responsive">
-                <table class="db-table">
+            <div class="overflow-x-auto -mx-1.5">
+                <table class="tremor-table">
                     <thead>
                         <tr>
                             <th>No Kontrak</th>
                             <th>Vendor</th>
-                            <th>Ruang Lingkup Pekerjaan</th>
+                            <th>Ruang Lingkup</th>
                             <th>Masa Berlaku</th>
-                            <th>Kelengkapan Dokumen</th>
-                            <th style="text-align: right;">Nilai Kontrak</th>
-                            <th style="text-align: center;">Status Kepatuhan</th>
-                            <th>Catatan Kepatuhan</th>
+                            <th>Dokumen</th>
+                            <th class="text-right">Nilai Kontrak</th>
+                            <th class="text-center">Status</th>
+                            <th>Catatan</th>
                         </tr>
                     </thead>
                     <tbody id="contractTableBody">
-                        <tr>
-                            <td colspan="8" style="text-align: center; color: var(--text3); padding: 2rem;">Memuat data kontrak vendor...</td>
-                        </tr>
+                        <tr><td colspan="8" class="text-center text-gray-400 py-8">Memuat data kontrak vendor...</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <!-- Section 2: Vendor Performance & Operations Grid (Vendor Perlu Perhatian vs PO Delivery) -->
-        <div class="db-main-grid" id="sectionPerformance" style="margin-bottom: 1.5rem;">
-            <!-- Left Column: Attention Vendors -->
-            <div class="db-col">
-                <div class="db-card" style="height: 100%;">
-                    <div class="db-card-header">
-                        <h4>⚠️ Vendor Perlu Perhatian</h4>
-                        <span class="badge badge-danger">Skor &lt; 2.5</span>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="db-table">
-                            <thead>
-                                <tr>
-                                    <th>Nama Vendor</th>
-                                    <th>Kategori</th>
-                                    <th style="text-align: right;">Skor</th>
-                                    <th style="text-align: center;">Predikat</th>
-                                </tr>
-                            </thead>
-                            <tbody id="attentionVendorsTable">
-                                <tr>
-                                    <td colspan="4" style="text-align: center; color: var(--text3); padding: 2rem;">Memuat data...</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+        <!-- ========== PERFORMANCE GRID ========== -->
+        <div class="perf-grid grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6" id="sectionPerformance">
+            <!-- Attention Vendors -->
+            <div class="tremor-card" style="height:100%;">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-tremor-title font-semibold text-tremor-content-strong">Vendor Perlu Perhatian</h3>
+                    <span class="tremor-badge tremor-badge-red">Skor &lt; 2.5</span>
+                </div>
+                <div class="overflow-x-auto -mx-1.5">
+                    <table class="tremor-table">
+                        <thead>
+                            <tr>
+                                <th>Vendor</th>
+                                <th>Kategori</th>
+                                <th class="text-right">Skor</th>
+                                <th class="text-center">Predikat</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attentionVendorsTable">
+                            <tr><td colspan="4" class="text-center text-gray-400 py-8">Memuat data...</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
-            <!-- Right Column: Delivery Performance (PO) -->
-            <div class="db-col" id="sectionOrders">
-                <div class="db-card" style="height: 100%;">
-                    <div class="db-card-header">
-                        <h4>🚚 Kinerja Ketepatan Waktu Pengiriman PO</h4>
-                        <span id="overallOnTimeBadge" class="badge">0% On-Time</span>
-                    </div>
-                    <div class="po-performance-list" id="poPerformanceList" style="max-height: 420px;">
-                        <div style="text-align: center; color: var(--text3); padding: 2rem;">Memuat data pengiriman...</div>
-                    </div>
+            <!-- PO Delivery -->
+            <div id="sectionOrders" class="tremor-card" style="height:100%;">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-tremor-title font-semibold text-tremor-content-strong">Kinerja Pengiriman PO</h3>
+                    <span id="overallOnTimeBadge" class="tremor-badge tremor-badge-blue">0% On-Time</span>
+                </div>
+                <div class="po-performance-list overflow-y-auto" id="poPerformanceList" style="max-height: 420px;">
+                    <div class="text-center text-gray-400 py-8">Memuat data pengiriman...</div>
                 </div>
             </div>
         </div>
+
     </main>
 
-    <!-- Success Overlay -->
-    <div class="success-bg" id="successBg"></div>
+    <!-- Footer -->
+    <footer class="border-t border-gray-200 bg-white mt-8">
+        <div class="mx-auto max-w-7xl px-4 lg:px-8 py-6 text-center">
+            <p class="text-sm text-gray-400">© 2026 PT Ethos Kreatif Indonesia · Vendor Management System</p>
+        </div>
+    </footer>
+
     <!-- Toast -->
     <div class="toast-box" id="toastBox"></div>
+    <!-- Success Overlay -->
+    <div class="success-bg" id="successBg"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script src="dashboard.js"></script>

@@ -32,7 +32,7 @@ function initHeader() {
 }
 
 function initTabs() {
-    const tabs = document.querySelectorAll('.db-tab-btn');
+    const tabs = document.querySelectorAll('.tremor-tab');
     tabs.forEach(btn => {
         btn.addEventListener('click', () => {
             tabs.forEach(b => b.classList.remove('active'));
