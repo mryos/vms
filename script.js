@@ -105,7 +105,8 @@ const DEFAULT_PINS = {
 // =====================================================
 let currentPin = '';
 let currentAssessorName = '';
-let vendors = []; // Array of string (nama vendor) yang BERHAK dinilai pada periode aktif
+let userAssignedVendors = []; // Daftar vendor yang ditugaskan khusus untuk penilai ini
+let vendors = []; // Array of string (nama vendor) yang ditampilkan saat ini
 let allMasterVendors = [...DEFAULT_VENDORS];
 let selectedVendor = null;
 const TARGET_PERIODS = [
@@ -220,7 +221,13 @@ function checkWelcome() {
     if (savedPin && savedName && savedVendors) {
         currentPin = savedPin;
         currentAssessorName = savedName;
-        try { vendors = JSON.parse(savedVendors); } catch { vendors = [...DEFAULT_VENDORS]; }
+        try {
+            userAssignedVendors = JSON.parse(savedVendors);
+            vendors = (currentPin === '9999' || currentPin === 'admin') ? [...allMasterVendors] : [...userAssignedVendors];
+        } catch {
+            userAssignedVendors = [];
+            vendors = [];
+        }
         updateHeaderUser(savedName, savedPin);
         renderVendorList();
 
@@ -242,6 +249,20 @@ async function refreshPoStatsFromServer(pin) {
         const res = await fetch(url);
         const data = await res.json();
         if (data.status === 'success') {
+            if (data.allVendors && data.allVendors.length > 0) {
+                allMasterVendors = data.allVendors.map(v => typeof v === 'object' ? v.nama : v);
+            }
+
+            // Update userAssignedVendors jika bukan admin
+            if (pin !== '9999' && pin !== 'admin') {
+                if (data.vendors && data.vendors.length > 0) {
+                    userAssignedVendors = data.vendors.map(v => typeof v === 'object' ? v.nama : v.toString());
+                    localStorage.setItem('ethos_user_vendors', JSON.stringify(userAssignedVendors));
+                }
+            } else {
+                userAssignedVendors = [...allMasterVendors];
+            }
+
             // 1. Simpan Score Summary dari server
             if (data.scoreSummary) {
                 scoreSummary = data.scoreSummary;
@@ -251,22 +272,11 @@ async function refreshPoStatsFromServer(pin) {
             if (data.periods && data.periodList && data.periodList.length > 0) {
                 serverPeriods = data.periods;
                 serverPeriodList = data.periodList;
-                
-                // Jika selectedPeriode belum ada di list server, set ke periode pertama (terbaru)
-                if (!serverPeriodList.includes(selectedPeriode)) {
-                    selectedPeriode = data.defaultPeriod || serverPeriodList[0];
-                }
 
-                renderPeriodChips(serverPeriodList);
+                renderPeriodChips(TARGET_PERIODS);
                 switchPeriod(selectedPeriode);
-            } else if (data.poStats) {
-                poStats = data.poStats;
-                if (data.vendors && data.vendors.length > 0) {
-                    processVendorData(data.vendors);
-                    localStorage.setItem('ethos_user_vendors', JSON.stringify(vendors));
-                    localStorage.setItem('ethos_vendor_categories', JSON.stringify(vendorCategoryMap));
-                }
-                renderVendorList();
+            } else {
+                switchPeriod(selectedPeriode);
             }
 
             // 3. Update kriteria dari server
@@ -335,6 +345,19 @@ async function processPinLogin(pin) {
             const res = await fetch(`${SCRIPT_URL}?pin=${encodeURIComponent(pin)}`);
             const data = await res.json();
             if (data.status === 'success') {
+                if (data.allVendors && data.allVendors.length > 0) {
+                    allMasterVendors = data.allVendors.map(v => typeof v === 'object' ? v.nama : v);
+                }
+
+                currentPin = pin;
+                currentAssessorName = data.namaPenilai || 'Penilai';
+
+                if (pin === '9999' || pin === 'admin') {
+                    userAssignedVendors = [...allMasterVendors];
+                } else {
+                    userAssignedVendors = (data.vendors || []).map(v => typeof v === 'object' ? v.nama : v);
+                }
+
                 if (data.scoreSummary) scoreSummary = data.scoreSummary;
 
                 if (data.kriteria && data.kriteria.length > 0) {
@@ -351,18 +374,15 @@ async function processPinLogin(pin) {
                 if (data.periods && data.periodList && data.periodList.length > 0) {
                     serverPeriods = data.periods;
                     serverPeriodList = data.periodList;
-                    if (!selectedPeriode) selectedPeriode = 'Q2 2026';
-                    renderPeriodChips(TARGET_PERIODS);
-                    switchPeriod(selectedPeriode);
                 }
 
-                processVendorData(data.vendors || []);
-                localStorage.setItem('ethos_vendor_categories', JSON.stringify(vendorCategoryMap));
+                if (!selectedPeriode) selectedPeriode = 'Q2 2026';
+                renderPeriodChips(TARGET_PERIODS);
 
                 verifiedData = {
                     pin: pin,
-                    nama: data.namaPenilai || 'Penilai',
-                    vendors: vendors
+                    nama: currentAssessorName,
+                    vendors: userAssignedVendors
                 };
             } else if (data.status === 'error') {
                 if (pin !== 'admin' && pin !== '9999') {
@@ -396,22 +416,16 @@ async function processPinLogin(pin) {
     if (verifiedData) {
         currentPin = verifiedData.pin;
         currentAssessorName = verifiedData.nama;
-        vendors = verifiedData.vendors;
+        userAssignedVendors = verifiedData.vendors;
 
         localStorage.setItem('ethos_pin', currentPin);
         localStorage.setItem('ethos_nama', currentAssessorName);
-        localStorage.setItem('ethos_user_vendors', JSON.stringify(vendors));
+        localStorage.setItem('ethos_user_vendors', JSON.stringify(userAssignedVendors));
 
         updateHeaderUser(currentAssessorName, currentPin);
         overlay.classList.remove('show');
 
-        // Jika ada data periode dari server, aktifkan periode default
-        if (serverPeriodList.length > 0) {
-            switchPeriod(selectedPeriode);
-        } else {
-            updatePoInsightsBanner();
-            renderVendorList();
-        }
+        switchPeriod(selectedPeriode);
     } else {
         showPinError(`PIN "${pin}" tidak terdaftar. Masukkan PIN yang valid (Contoh PIN Demo: 1001, 1002, 1003).`);
     }
@@ -441,6 +455,11 @@ function resetPinBtn(btn, text, spinner) {
 function updateHeaderUser(name, pin) {
     const el = document.getElementById('headerUser');
     if (el) el.textContent = `👤 ${name} (PIN: ${pin || '–'})`;
+
+    const dashLink = document.getElementById('dashboardNavLink');
+    if (dashLink) {
+        dashLink.style.display = (pin === '9999' || pin === 'admin') ? 'inline-flex' : 'none';
+    }
 }
 
 function initHeaderUser() {
@@ -625,17 +644,20 @@ function switchPeriod(periodId) {
         selectEl.value = periodId;
     }
 
-    if (serverPeriods && serverPeriods[periodId]) {
-        const pData = serverPeriods[periodId];
-        if (pData.vendors && pData.vendors.length > 0) {
-            processVendorData(pData.vendors);
-        } else {
-            processVendorData(allMasterVendors.length > 0 ? allMasterVendors : DEFAULT_VENDORS);
-        }
-        poStats = pData.poStats || { totalOrders: 0, totalOnTime: 0, overallOnTimePct: 0, vendorMap: {} };
+    if (serverPeriods && serverPeriods[periodId] && serverPeriods[periodId].poStats) {
+        poStats = serverPeriods[periodId].poStats;
     } else {
-        processVendorData(allMasterVendors.length > 0 ? allMasterVendors : DEFAULT_VENDORS);
         poStats = { totalOrders: 0, totalOnTime: 0, overallOnTimePct: 0, vendorMap: {} };
+    }
+
+    if (currentPin === '9999' || currentPin === 'admin') {
+        const pVendors = (serverPeriods && serverPeriods[periodId] && serverPeriods[periodId].vendors && serverPeriods[periodId].vendors.length > 0)
+            ? serverPeriods[periodId].vendors
+            : (allMasterVendors.length > 0 ? allMasterVendors : DEFAULT_VENDORS);
+        processVendorData(pVendors);
+    } else {
+        // Penilai biasa HANYA melihat vendor yang ditugaskan kepada mereka!
+        processVendorData(userAssignedVendors);
     }
 
     updatePoInsightsBanner();
@@ -683,14 +705,15 @@ function renderVendorList(overrideList = null) {
     }
 
     if (displayVendors.length === 0) {
+        const isAdm = currentPin === '9999' || currentPin === 'admin';
         list.innerHTML = `
-        <div style="grid-column: 1 / -1; text-align:center; padding:3rem 1.5rem; background:#fff; border:1px dashed var(--border); border-radius:var(--radius); color:var(--text2);">
-            <div style="font-size:2rem; margin-bottom:0.5rem;">📌</div>
-            <div style="font-weight:700; color:var(--text); margin-bottom:0.25rem;">Tidak Ada Vendor pada Periode "${esc(selectedPeriode)}"</div>
-            <div style="font-size:0.85rem; color:var(--text3);">
-                ${viewMode === 'pinned' ? 'Anda belum menyematkan vendor favorit.' : 'Tidak ada catatan PO untuk vendor pada sheet periode ini, atau belum cocok dengan filter.'}
+        <div style="grid-column: 1 / -1; text-align:center; padding:3rem 1.5rem; background:#fff; border:1px dashed #e5e7eb; border-radius:0.75rem; color:#6b7280;">
+            <div style="font-size:2rem; margin-bottom:0.5rem;">📋</div>
+            <div style="font-weight:700; color:#111827; margin-bottom:0.25rem;">${isAdm ? 'Tidak Ada Vendor pada Periode "' + esc(selectedPeriode) + '"' : 'Belum Ada Vendor Ditugaskan'}</div>
+            <div style="font-size:0.85rem; color:#6b7280;">
+                ${viewMode === 'pinned' ? 'Anda belum menyematkan vendor favorit.' : (isAdm ? 'Tidak ada catatan PO untuk vendor pada periode ini, atau belum cocok dengan filter pencarian.' : 'Belum ada vendor yang ditugaskan untuk PIN Penilai Anda di sheet "Akses Penilai", atau belum cocok dengan filter.')}
             </div>
-            ${viewMode === 'pinned' ? '<button class="btn btn-ghost btn-sm" style="margin-top:1rem;" onclick="document.getElementById(\'btnFilterAll\').click()">🌐 Lihat Semua Vendor</button>' : ''}
+            ${viewMode === 'pinned' ? '<button class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 shadow-sm mt-3" onclick="document.getElementById(\'btnFilterAll\').click()">🌐 Lihat Semua Vendorku</button>' : ''}
         </div>`;
         return;
     }

@@ -16,10 +16,62 @@ let slicerState = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-    initHeader();
-    initTabs();
-    loadDashboardData();
+    checkAdminAccess();
 });
+
+function checkAdminAccess() {
+    const savedPin = localStorage.getItem('ethos_pin');
+    const authOverlay = document.getElementById('adminAuthOverlay');
+    
+    // Hanya PIN 9999 yang boleh mengakses Dashboard
+    if (savedPin === '9999') {
+        if (authOverlay) authOverlay.style.display = 'none';
+        initHeader();
+        initTabs();
+        loadDashboardData();
+    } else {
+        if (authOverlay) authOverlay.style.display = 'flex';
+        initAdminAuth();
+    }
+}
+
+function initAdminAuth() {
+    const input = document.getElementById('adminPinInput');
+    const btn = document.getElementById('adminSubmitBtn');
+    const errEl = document.getElementById('adminPinError');
+    const authOverlay = document.getElementById('adminAuthOverlay');
+
+    function verify() {
+        const pin = (input ? input.value : '').trim();
+        if (pin === '9999') {
+            localStorage.setItem('ethos_pin', '9999');
+            localStorage.setItem('ethos_nama', 'Administrator');
+            if (errEl) errEl.style.display = 'none';
+            if (authOverlay) authOverlay.style.display = 'none';
+            initHeader();
+            initTabs();
+            loadDashboardData();
+        } else {
+            if (errEl) {
+                errEl.textContent = '❌ PIN salah. Akses Dashboard hanya untuk Administrator (PIN: 9999).';
+                errEl.style.display = 'block';
+            }
+            if (input) {
+                input.value = '';
+                input.focus();
+            }
+        }
+    }
+
+    if (btn) btn.onclick = verify;
+    if (input) {
+        input.onkeydown = (e) => {
+            if (e.key === 'Enter') verify();
+            if (errEl) errEl.style.display = 'none';
+        };
+        setTimeout(() => input.focus(), 150);
+    }
+}
 
 function initHeader() {
     const savedPin = localStorage.getItem('ethos_pin');

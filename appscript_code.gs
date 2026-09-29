@@ -92,25 +92,19 @@ function doGet(e) {
         if (rowPin === pin) {
           var namaPenilai = dataAkses[i][1] ? dataAkses[i][1].toString().trim() : 'Penilai';
           var rawVendors = dataAkses[i][2] ? dataAkses[i][2].toString() : '';
-          var allowedNames = rawVendors.split(/[,;]+/).map(function(v) { return v.trim().toLowerCase(); }).filter(Boolean);
 
-          // Filter baseVendors sesuai PIN
-          var filteredVendors = baseVendors.filter(function(v) {
-            return allowedNames.indexOf(v.nama.toLowerCase().trim()) !== -1;
-          });
+          // Ekstraksi vendor yang ditugaskan kepada penilai ini
+          var assignedVendors = parseAssignedVendors(rawVendors, allMasterVendors);
 
-          // Filter juga list vendor per periode sesuai hak akses PIN
+          // Buat filteredPeriods khusus penilai ini (selalu menampilkan vendor yang ditugaskan)
           var filteredPeriods = {};
           for (var pKey in periods) {
             var pObj = periods[pKey];
-            var pFilteredVendors = pObj.vendors.filter(function(v) {
-              return allowedNames.indexOf(v.nama.toLowerCase().trim()) !== -1;
-            });
             filteredPeriods[pKey] = {
               id: pObj.id,
               label: pObj.label,
               sheetName: pObj.sheetName,
-              vendors: pFilteredVendors,
+              vendors: assignedVendors,
               poStats: pObj.poStats
             };
           }
@@ -119,7 +113,7 @@ function doGet(e) {
             status: 'success',
             pin: pin,
             namaPenilai: namaPenilai,
-            vendors: filteredVendors,
+            vendors: assignedVendors,
             allVendors: allMasterVendors,
             kategori: kategoriList,
             kriteria: kriteriaList,
@@ -445,6 +439,83 @@ function detectAllPeriodSheets(ss, masterVendors) {
     periodList: periodList,
     aggregatedPoStats: aggregatedPoStats
   };
+}
+
+/**
+ * Ekstraksi daftar vendor dari teks kolom Akses Penilai secara cerdas & fleksibel
+ * Mendukung pemisah baris baru (\n), titik-koma (;), atau koma (,),
+ * serta toleran terhadap tanda kurung, variasi PT/CV, dan spasi.
+ */
+function parseAssignedVendors(rawVendorsText, allMasterVendors) {
+  if (!rawVendorsText) return [];
+  var text = rawVendorsText.toString().trim();
+  if (!text) return [];
+
+  var assigned = [];
+  var assignedSet = {};
+
+  // 1. Cek apakah ada nama dari allMasterVendors yang termuat dalam teks kolom Akses Penilai
+  if (Array.isArray(allMasterVendors)) {
+    allMasterVendors.forEach(function(mv) {
+      var vName = typeof mv === 'object' ? mv.nama : mv.toString();
+      if (!vName) return;
+
+      var cleanV = vName.toLowerCase().trim();
+      var cleanText = text.toLowerCase();
+
+      // Cocokkan secara substring langsung
+      if (cleanText.indexOf(cleanV) !== -1) {
+        if (!assignedSet[vName.toLowerCase()]) {
+          assignedSet[vName.toLowerCase()] = true;
+          assigned.push(typeof mv === 'object' ? mv : { nama: vName, kategori: 'general' });
+        }
+      }
+    });
+  }
+
+  // 2. Pecah teks berdasarkan baris baru, titik-koma, atau koma
+  var rawTokens = text.split(/[\r\n;]+/).map(function(s) { return s.trim(); }).filter(Boolean);
+  if (rawTokens.length <= 1 && text.indexOf(',') !== -1) {
+    var commaTokens = text.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+    if (commaTokens.length > 1) {
+      rawTokens = commaTokens;
+    }
+  }
+
+  rawTokens.forEach(function(token) {
+    var normToken = token.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (!normToken) return;
+
+    var matchedMaster = null;
+    if (Array.isArray(allMasterVendors)) {
+      for (var j = 0; j < allMasterVendors.length; j++) {
+        var mv = allMasterVendors[j];
+        var vName = typeof mv === 'object' ? mv.nama : mv.toString();
+        var normV = vName.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+        if (normV === normToken || (normToken.length > 4 && (normV.indexOf(normToken) !== -1 || normToken.indexOf(normV) !== -1))) {
+          matchedMaster = mv;
+          break;
+        }
+      }
+    }
+
+    if (matchedMaster) {
+      var mName = typeof matchedMaster === 'object' ? matchedMaster.nama : matchedMaster.toString();
+      if (!assignedSet[mName.toLowerCase()]) {
+        assignedSet[mName.toLowerCase()] = true;
+        assigned.push(typeof matchedMaster === 'object' ? matchedMaster : { nama: mName, kategori: 'general' });
+      }
+    } else {
+      // Jika vendor baru ditambahkan dan belum ada di master vendor, tetap tampilkan!
+      if (!assignedSet[token.toLowerCase()]) {
+        assignedSet[token.toLowerCase()] = true;
+        assigned.push({ nama: token, kategori: 'general' });
+      }
+    }
+  });
+
+  return assigned;
 }
 
 /**

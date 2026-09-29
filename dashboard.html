@@ -445,6 +445,32 @@ tailwind.config = {
         </div>
     </footer>
 
+    <!-- Admin Authentication Overlay (PIN 9999 Only) -->
+    <div id="adminAuthOverlay" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-md p-4" style="display: none;">
+        <div class="w-full max-w-md bg-white rounded-2xl border border-gray-200 shadow-2xl p-6 sm:p-8 text-center animate-in">
+            <div class="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center mx-auto mb-4 shadow-sm">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <h2 class="text-xl font-bold text-gray-900 mb-1">Akses Terbatas: Administrator</h2>
+            <p class="text-sm text-gray-500 mb-5">Halaman Dashboard Kinerja hanya dapat diakses oleh Administrator dengan <strong>PIN 9999</strong>.</p>
+            
+            <div class="mb-4">
+                <input type="password" id="adminPinInput" class="w-full text-center tracking-widest text-xl font-mono px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm" placeholder="Masukkan PIN 9999" autofocus autocomplete="off">
+            </div>
+
+            <div id="adminPinError" class="text-red-600 text-xs font-semibold mb-4" style="display: none;"></div>
+
+            <button id="adminSubmitBtn" class="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm transition shadow-sm hover:shadow flex items-center justify-center gap-2 mb-3">
+                <span>Buka Dashboard</span>
+            </button>
+
+            <a href="index.html" class="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-800 transition">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+                Kembali ke Form Penilaian
+            </a>
+        </div>
+    </div>
+
     <!-- Toast -->
     <div class="toast-box" id="toastBox"></div>
     <!-- Success Overlay -->
