@@ -31,6 +31,106 @@ var SHEET_KONTRAK = 'Kontrak Vendor';
 var SHEET_PO_DEFAULT = 'Purchase Order';
 var SHEET_PO_ALT = 'PO';
 
+// GID sheet Akses Penilai (dari URL spreadsheet: gid=1971078762)
+var GID_AKSES_PENILAI = 1971078762;
+
+/**
+ * Mencari sheet Akses Penilai secara fleksibel:
+ * 1. Pertama cari berdasarkan GID (paling akurat, tidak terpengaruh rename)
+ * 2. Fallback: cari berdasarkan nama sheet (case-insensitive)
+ */
+function getAksesPenilaiSheet(ss) {
+  var sheets = ss.getSheets();
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].getSheetId() === GID_AKSES_PENILAI) {
+      return sheets[i];
+    }
+  }
+  var possibleNames = ['akses penilai', 'penilai', 'daftar penilai', 'assessor', 'user access'];
+  for (var i = 0; i < sheets.length; i++) {
+    var sName = sheets[i].getName().trim().toLowerCase();
+    for (var j = 0; j < possibleNames.length; j++) {
+      if (sName === possibleNames[j] || sName.indexOf(possibleNames[j]) !== -1) {
+        return sheets[i];
+      }
+    }
+  }
+  return ss.getSheetByName(SHEET_AKSES_PENILAI);
+}
+
+/**
+ * Mencari data assessor berdasarkan PIN secara fleksibel:
+ * - Dynamic header: otomatis cari kolom PIN, Nama, Vendor dari header
+ * - Multi-row aggregation: jika PIN muncul di beberapa baris, gabungkan semua vendor
+ * - Support ALL/SEMUA: jika kolom vendor berisi ALL/SEMUA, berikan semua master vendor
+ */
+function getAssessorByPin(ss, pin, allMasterVendors) {
+  var sheet = getAksesPenilaiSheet(ss);
+  if (!sheet || sheet.getLastRow() < 2) return null;
+
+  var data = sheet.getDataRange().getValues();
+  var headers = data[0];
+
+  // Deteksi kolom secara dinamis berdasarkan nama header
+  var colPin = -1, colNama = -1, colVendor = -1;
+  for (var c = 0; c < headers.length; c++) {
+    var h = headers[c].toString().trim().toLowerCase();
+    if (colPin === -1 && (h === 'pin' || h === 'kode' || h === 'kode pin' || h === 'code')) {
+      colPin = c;
+    } else if (colNama === -1 && (h === 'nama' || h === 'nama penilai' || h === 'name' || h === 'assessor')) {
+      colNama = c;
+    } else if (colVendor === -1 && (h.indexOf('vendor') !== -1 || h.indexOf('akses') !== -1 || h.indexOf('assigned') !== -1)) {
+      colVendor = c;
+    }
+  }
+
+  // Jika header tidak ditemukan, gunakan default kolom 0, 1, 2
+  if (colPin === -1) colPin = 0;
+  if (colNama === -1) colNama = 1;
+  if (colVendor === -1) colVendor = 2;
+
+  // Agregasi: kumpulkan semua baris yang cocok dengan PIN ini
+  var namaPenilai = '';
+  var allRawVendors = [];
+  var found = false;
+
+  for (var i = 1; i < data.length; i++) {
+    var rowPin = data[i][colPin] !== undefined && data[i][colPin] !== null
+      ? data[i][colPin].toString().trim() : '';
+    
+    if (rowPin === pin) {
+      found = true;
+      if (!namaPenilai && colNama < data[i].length && data[i][colNama]) {
+        namaPenilai = data[i][colNama].toString().trim();
+      }
+      if (colVendor < data[i].length && data[i][colVendor]) {
+        allRawVendors.push(data[i][colVendor].toString());
+      }
+    }
+  }
+
+  if (!found) return null;
+
+  // Gabungkan semua vendor text dari multi-row
+  var combinedVendorText = allRawVendors.join('\n');
+
+  // Cek keyword ALL / SEMUA
+  var textUpper = combinedVendorText.toUpperCase().trim();
+  if (textUpper === 'ALL' || textUpper === 'SEMUA' || textUpper === 'ALL VENDOR' || textUpper === 'SEMUA VENDOR') {
+    return {
+      namaPenilai: namaPenilai || 'Penilai',
+      assignedVendors: allMasterVendors.slice()
+    };
+  }
+
+  var assignedVendors = parseAssignedVendors(combinedVendorText, allMasterVendors);
+
+  return {
+    namaPenilai: namaPenilai || 'Penilai',
+    assignedVendors: assignedVendors
+  };
+}
+
 /**
  * GET Request
  * Mengembalikan seluruh data database untuk halaman Penilaian dan Dashboard
@@ -84,48 +184,41 @@ function doGet(e) {
         });
       }
 
-      // Cari PIN di sheet Akses Penilai
-      var sheetAkses = ss.getSheetByName(SHEET_AKSES_PENILAI);
-      var dataAkses = sheetAkses ? sheetAkses.getDataRange().getValues() : [];
-      for (var i = 1; i < dataAkses.length; i++) {
-        var rowPin = dataAkses[i][0] !== undefined && dataAkses[i][0] !== null ? dataAkses[i][0].toString().trim() : '';
-        if (rowPin === pin) {
-          var namaPenilai = dataAkses[i][1] ? dataAkses[i][1].toString().trim() : 'Penilai';
-          var rawVendors = dataAkses[i][2] ? dataAkses[i][2].toString() : '';
+      // Cari PIN di sheet Akses Penilai (fleksibel: dynamic header, multi-row, ALL/SEMUA)
+      var assessorResult = getAssessorByPin(ss, pin, allMasterVendors);
+      if (assessorResult) {
+        var namaPenilai = assessorResult.namaPenilai;
+        var assignedVendors = assessorResult.assignedVendors;
 
-          // Ekstraksi vendor yang ditugaskan kepada penilai ini
-          var assignedVendors = parseAssignedVendors(rawVendors, allMasterVendors);
-
-          // Buat filteredPeriods khusus penilai ini (selalu menampilkan vendor yang ditugaskan)
-          var filteredPeriods = {};
-          for (var pKey in periods) {
-            var pObj = periods[pKey];
-            filteredPeriods[pKey] = {
-              id: pObj.id,
-              label: pObj.label,
-              sheetName: pObj.sheetName,
-              vendors: assignedVendors,
-              poStats: pObj.poStats
-            };
-          }
-
-          return createJsonResponse({
-            status: 'success',
-            pin: pin,
-            namaPenilai: namaPenilai,
+        // Buat filteredPeriods khusus penilai ini (selalu menampilkan vendor yang ditugaskan)
+        var filteredPeriods = {};
+        for (var pKey in periods) {
+          var pObj = periods[pKey];
+          filteredPeriods[pKey] = {
+            id: pObj.id,
+            label: pObj.label,
+            sheetName: pObj.sheetName,
             vendors: assignedVendors,
-            allVendors: allMasterVendors,
-            kategori: kategoriList,
-            kriteria: kriteriaList,
-            poStats: aggregatedPoStats,
-            periods: filteredPeriods,
-            periodList: periodList,
-            defaultPeriod: defaultPeriodId,
-            prList: prList,
-            scoreSummary: scoreSummary,
-            contractCompliance: contractCompliance
-          });
+            poStats: pObj.poStats
+          };
         }
+
+        return createJsonResponse({
+          status: 'success',
+          pin: pin,
+          namaPenilai: namaPenilai,
+          vendors: assignedVendors,
+          allVendors: allMasterVendors,
+          kategori: kategoriList,
+          kriteria: kriteriaList,
+          poStats: aggregatedPoStats,
+          periods: filteredPeriods,
+          periodList: periodList,
+          defaultPeriod: defaultPeriodId,
+          prList: prList,
+          scoreSummary: scoreSummary,
+          contractCompliance: contractCompliance
+        });
       }
 
       return createJsonResponse({
