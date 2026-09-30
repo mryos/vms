@@ -592,7 +592,7 @@ function partitionPoSheetByDate(sheet, masterMap) {
   var idxItem = getHeaderIndex(headers, ['barangjasa', 'barang jasa', 'barang/jasa', 'product', 'item', 'deskripsi', 'item/deskripsi', 'display name', 'uraian']);
   var idxNilai = getHeaderIndex(headers, ['total', 'grand total', 'total untaxed amount', 'nilai', 'nilai (rp)', 'harga', 'amount', 'nominal']);
   var idxExp = getHeaderIndex(headers, ['expected date', 'tanggal diharapkan', 'deadline', 'diharapkan', 'tgl estimasi', 'scheduled date']);
-  var idxEff = getHeaderIndex(headers, ['effective date / tanggal diterima', 'effective date', 'tanggal diterima', 'diterima', 'realisasi', 'tgl selesai', 'delivery with receipt date']);
+  var idxEff = getHeaderIndex(headers, ['tanggal diterima', 'effective date', 'effective date / tanggal diterima', 'diterima', 'realisasi', 'tgl selesai', 'delivery with receipt date']);
 
   var periodGroups = {}; // { 'Q3 2026': { vendorsMap: {}, poStats: {}, rawOrders: [], year: 2026, quarter: 3 } }
   var aggregatedPoStats = {
@@ -875,7 +875,7 @@ function parsePoFromSheet(sheet, masterMap) {
   var idxItem = getHeaderIndex(headers, ['barangjasa', 'barang jasa', 'barang/jasa', 'product', 'item', 'deskripsi', 'item/deskripsi', 'display name', 'uraian']);
   var idxNilai = getHeaderIndex(headers, ['total', 'grand total', 'total untaxed amount', 'nilai', 'nilai (rp)', 'harga', 'amount', 'nominal']);
   var idxExp = getHeaderIndex(headers, ['expected date', 'tanggal diharapkan', 'deadline', 'diharapkan', 'tgl estimasi', 'scheduled date']);
-  var idxEff = getHeaderIndex(headers, ['effective date / tanggal diterima', 'effective date', 'tanggal diterima', 'diterima', 'realisasi', 'tgl selesai', 'delivery with receipt date']);
+  var idxEff = getHeaderIndex(headers, ['tanggal diterima', 'effective date', 'effective date / tanggal diterima', 'diterima', 'realisasi', 'tgl selesai', 'delivery with receipt date']);
 
   if (idxVendor === -1) {
     return { hasData: false, poStats: stats, vendors: [], rawOrders: [] };
