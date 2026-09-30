@@ -586,13 +586,13 @@ function partitionPoSheetByDate(sheet, masterMap) {
   var data = sheet.getDataRange().getValues();
   var headers = data[0].map(function(h) { return h.toString().trim().toLowerCase(); });
 
-  var idxNoPo = getHeaderIndex(headers, ['order reference', 'no po', 'po number', 'po', 'reference', 'number', 'kode po']);
+  var idxNoPo = getHeaderIndex(headers, ['no po', 'nopo', 'order reference', 'po number', 'po', 'reference', 'number', 'kode po']);
   var idxDate = getHeaderIndex(headers, ['confirmation date', 'date', 'tanggal po', 'tanggal', 'order date', 'start date']);
   var idxVendor = getHeaderIndex(headers, ['vendor', 'nama vendor', 'supplier', 'rekanan', 'partner']);
-  var idxNilai = getHeaderIndex(headers, ['grand total', 'total', 'total untaxed amount', 'nilai', 'nilai (rp)', 'harga', 'amount', 'nominal']);
+  var idxItem = getHeaderIndex(headers, ['barangjasa', 'barang jasa', 'barang/jasa', 'product', 'item', 'deskripsi', 'item/deskripsi', 'display name', 'uraian']);
+  var idxNilai = getHeaderIndex(headers, ['total', 'grand total', 'total untaxed amount', 'nilai', 'nilai (rp)', 'harga', 'amount', 'nominal']);
   var idxExp = getHeaderIndex(headers, ['expected date', 'tanggal diharapkan', 'deadline', 'diharapkan', 'tgl estimasi', 'scheduled date']);
-  var idxEff = getHeaderIndex(headers, ['effective date', 'tanggal diterima', 'diterima', 'realisasi', 'tgl selesai', 'delivery with receipt date']);
-  var idxItem = getHeaderIndex(headers, ['product', 'item', 'deskripsi', 'item/deskripsi', 'display name', 'uraian']);
+  var idxEff = getHeaderIndex(headers, ['effective date / tanggal diterima', 'effective date', 'tanggal diterima', 'diterima', 'realisasi', 'tgl selesai', 'delivery with receipt date']);
 
   var periodGroups = {}; // { 'Q3 2026': { vendorsMap: {}, poStats: {}, rawOrders: [], year: 2026, quarter: 3 } }
   var aggregatedPoStats = {
@@ -870,12 +870,12 @@ function parsePoFromSheet(sheet, masterMap) {
   var data = sheet.getDataRange().getValues();
   var headers = data[0].map(function(h) { return h.toString().trim().toLowerCase(); });
 
-  var idxNoPo = getHeaderIndex(headers, ['order reference', 'no po', 'po number', 'po', 'reference', 'number', 'kode po']);
+  var idxNoPo = getHeaderIndex(headers, ['no po', 'nopo', 'order reference', 'po number', 'po', 'reference', 'number', 'kode po']);
   var idxVendor = getHeaderIndex(headers, ['vendor', 'nama vendor', 'supplier', 'rekanan', 'partner']);
-  var idxNilai = getHeaderIndex(headers, ['grand total', 'total', 'total untaxed amount', 'nilai', 'nilai (rp)', 'harga', 'amount', 'nominal']);
+  var idxItem = getHeaderIndex(headers, ['barangjasa', 'barang jasa', 'barang/jasa', 'product', 'item', 'deskripsi', 'item/deskripsi', 'display name', 'uraian']);
+  var idxNilai = getHeaderIndex(headers, ['total', 'grand total', 'total untaxed amount', 'nilai', 'nilai (rp)', 'harga', 'amount', 'nominal']);
   var idxExp = getHeaderIndex(headers, ['expected date', 'tanggal diharapkan', 'deadline', 'diharapkan', 'tgl estimasi', 'scheduled date']);
-  var idxEff = getHeaderIndex(headers, ['effective date', 'tanggal diterima', 'diterima', 'realisasi', 'tgl selesai', 'delivery with receipt date']);
-  var idxItem = getHeaderIndex(headers, ['product', 'item', 'deskripsi', 'item/deskripsi', 'display name', 'uraian']);
+  var idxEff = getHeaderIndex(headers, ['effective date / tanggal diterima', 'effective date', 'tanggal diterima', 'diterima', 'realisasi', 'tgl selesai', 'delivery with receipt date']);
 
   if (idxVendor === -1) {
     return { hasData: false, poStats: stats, vendors: [], rawOrders: [] };
@@ -1292,9 +1292,22 @@ function generateQuestionId(text) {
 }
 
 function getHeaderIndex(headers, keys) {
+  // 1. Coba pencocokan tepat (exact match)
   for (var i = 0; i < keys.length; i++) {
-    var idx = headers.indexOf(keys[i].toLowerCase());
+    var key = keys[i].toLowerCase().trim();
+    var idx = headers.indexOf(key);
     if (idx !== -1) return idx;
+  }
+  // 2. Coba pencocokan normalisasi (mengabaikan spasi, garis miring, strip, simbol)
+  for (var i = 0; i < keys.length; i++) {
+    var keyNorm = keys[i].toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (!keyNorm) continue;
+    for (var h = 0; h < headers.length; h++) {
+      var hNorm = headers[h].toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (hNorm === keyNorm || (keyNorm.length >= 4 && (hNorm.indexOf(keyNorm) !== -1 || keyNorm.indexOf(hNorm) !== -1))) {
+        return h;
+      }
+    }
   }
   return -1;
 }
