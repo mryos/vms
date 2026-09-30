@@ -666,6 +666,19 @@ function switchPeriod(periodId) {
 }
 
 // =====================================================
+// PO STATS HELPER
+// =====================================================
+function getVendorPoStats(vName) {
+    if (!poStats || !poStats.vendorMap || !vName) return null;
+    if (poStats.vendorMap[vName]) return poStats.vendorMap[vName];
+    const target = vName.toLowerCase().trim();
+    for (let k in poStats.vendorMap) {
+        if (k.toLowerCase().trim() === target) return poStats.vendorMap[k];
+    }
+    return null;
+}
+
+// =====================================================
 // RENDER VENDOR LIST
 // =====================================================
 function renderVendorList(overrideList = null) {
@@ -718,16 +731,6 @@ function renderVendorList(overrideList = null) {
         </div>`;
         return;
     }
-
-function getVendorPoStats(vName) {
-    if (!poStats || !poStats.vendorMap || !vName) return null;
-    if (poStats.vendorMap[vName]) return poStats.vendorMap[vName];
-    const target = vName.toLowerCase().trim();
-    for (let k in poStats.vendorMap) {
-        if (k.toLowerCase().trim() === target) return poStats.vendorMap[k];
-    }
-    return null;
-}
 
     const assessed = getAssessedVendorsForPeriod(selectedPeriode);
     const pinned = getPinnedVendors();
@@ -865,32 +868,52 @@ function esc(str) {
 // MODAL & PO INSIGHTS INTEGRATION
 // =====================================================
 function openModal(vendorName) {
-    const nama = localStorage.getItem('ethos_nama');
-    if (!nama) {
-        showWelcome();
+    if (!vendorName) return;
+
+    selectedVendor = vendorName;
+
+    const modalEl = document.getElementById('modalBg');
+    if (!modalEl) {
+        console.error('modalBg element not found!');
         return;
     }
 
-    selectedVendor = vendorName;
-    resetForm();
-
-    document.getElementById('modalVendorName').textContent = vendorName;
-
-    // Render form dinamis berdasarkan kriteria & kategori vendor
-    renderDynamicForm(vendorName);
-
-    // Auto-suggest rating ketepatan waktu jika vendor memiliki PO stats dan kriterianya aktif
-    const vStats = getVendorPoStats(vendorName);
-    if (vStats && vStats.totalPo > 0 && 'ketepatanWaktu' in ratings) {
-        let suggestVal = 2;
-        if (vStats.onTimeRatePct >= 90) suggestVal = 5;
-        else if (vStats.onTimeRatePct >= 75) suggestVal = 4;
-        else if (vStats.onTimeRatePct >= 50) suggestVal = 3;
-        
-        autoSuggestRating('ketepatanWaktu', suggestVal);
+    try {
+        resetForm();
+    } catch (e) {
+        console.warn('resetForm error:', e);
     }
 
-    document.getElementById('modalBg').classList.add('show');
+    const titleEl = document.getElementById('modalVendorName');
+    if (titleEl) titleEl.textContent = vendorName;
+
+    // Render form dinamis berdasarkan kriteria & kategori vendor
+    try {
+        renderDynamicForm(vendorName);
+    } catch (e) {
+        console.error('renderDynamicForm error:', e);
+    }
+
+    // Auto-suggest rating ketepatan waktu jika vendor memiliki PO stats dan kriterianya aktif
+    try {
+        const vStats = getVendorPoStats(vendorName);
+        if (vStats && vStats.totalPo > 0 && ratings && 'ketepatanWaktu' in ratings) {
+            let suggestVal = 2;
+            if (vStats.onTimeRatePct >= 90) suggestVal = 5;
+            else if (vStats.onTimeRatePct >= 75) suggestVal = 4;
+            else if (vStats.onTimeRatePct >= 50) suggestVal = 3;
+            autoSuggestRating('ketepatanWaktu', suggestVal);
+        }
+    } catch (e) {
+        console.warn('autoSuggest error:', e);
+    }
+
+    // Tampilkan modal
+    modalEl.classList.add('show');
+    modalEl.style.display = 'flex';
+    modalEl.style.opacity = '1';
+    modalEl.style.visibility = 'visible';
+    modalEl.style.pointerEvents = 'auto';
     document.body.style.overflow = 'hidden';
 }
 
@@ -1039,7 +1062,14 @@ function autoSuggestRating(categoryName, value) {
 }
 
 function closeModal() {
-    document.getElementById('modalBg').classList.remove('show');
+    const modalBg = document.getElementById('modalBg');
+    if (modalBg) {
+        modalBg.classList.remove('show');
+        modalBg.style.display = 'none';
+        modalBg.style.opacity = '0';
+        modalBg.style.visibility = 'hidden';
+        modalBg.style.pointerEvents = 'none';
+    }
     document.body.style.overflow = '';
 }
 

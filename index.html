@@ -274,8 +274,10 @@
             transition: opacity 0.2s ease;
         }
         .modal-bg.show {
-            display: flex;
-            opacity: 1;
+            display: flex !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            pointer-events: auto !important;
         }
         .modal {
             background: #ffffff;
