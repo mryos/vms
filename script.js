@@ -2,7 +2,7 @@
 // KONFIGURASI
 // =====================================================
 // Ganti URL di bawah dengan URL Web App Google Apps Script Anda
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw9riOYUYkY1zPBnFBENZ4AOrfG-2d2xbmeRr7TPh0kvcBZ1erZl7SetT6H96YtBdq8EQ/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzbFzPJ4bX0Bw4ZrJD9NSVfCDjsQyfaELGGIS-Oer_lr626UdqAGWilAZ5bLE8wVe_YKQ/exec';
 
 // Daftar vendor default (fallback offline)
 const DEFAULT_VENDORS = [
@@ -719,6 +719,16 @@ function renderVendorList(overrideList = null) {
         return;
     }
 
+function getVendorPoStats(vName) {
+    if (!poStats || !poStats.vendorMap || !vName) return null;
+    if (poStats.vendorMap[vName]) return poStats.vendorMap[vName];
+    const target = vName.toLowerCase().trim();
+    for (let k in poStats.vendorMap) {
+        if (k.toLowerCase().trim() === target) return poStats.vendorMap[k];
+    }
+    return null;
+}
+
     const assessed = getAssessedVendorsForPeriod(selectedPeriode);
     const pinned = getPinnedVendors();
     const isAdmin = currentPin === '9999' || currentPin === 'admin';
@@ -729,7 +739,7 @@ function renderVendorList(overrideList = null) {
         const isPinned = pinned.includes(v);
         const color = AVATAR_COLORS[(originalIndex >= 0 ? originalIndex : i) % AVATAR_COLORS.length];
         const initials = v.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-        const vPo = poStats.vendorMap ? poStats.vendorMap[v] : null;
+        const vPo = getVendorPoStats(v);
 
         const rowStyle = done && !isAdmin ? 'style="opacity: 0.65; cursor: not-allowed;"' : '';
 
@@ -870,7 +880,7 @@ function openModal(vendorName) {
     renderDynamicForm(vendorName);
 
     // Auto-suggest rating ketepatan waktu jika vendor memiliki PO stats dan kriterianya aktif
-    const vStats = poStats.vendorMap ? poStats.vendorMap[vendorName] : null;
+    const vStats = getVendorPoStats(vendorName);
     if (vStats && vStats.totalPo > 0 && 'ketepatanWaktu' in ratings) {
         let suggestVal = 2;
         if (vStats.onTimeRatePct >= 90) suggestVal = 5;

@@ -868,10 +868,34 @@ function parsePoFromSheet(sheet, masterMap) {
   }
 
   var data = sheet.getDataRange().getValues();
-  var headers = data[0].map(function(h) { return h.toString().trim().toLowerCase(); });
+  if (data.length < 2) {
+    return { hasData: false, poStats: stats, vendors: [], rawOrders: [] };
+  }
+
+  // Cari baris header di 5 baris pertama (jika ada baris judul/kosong di atas tabel)
+  var headerRowIdx = 0;
+  var headers = [];
+  var idxVendor = -1;
+
+  for (var r = 0; r < Math.min(data.length, 5); r++) {
+    var candidateHeaders = data[r].map(function(h) { return h ? h.toString().trim().toLowerCase() : ''; });
+    var foundV = getHeaderIndex(candidateHeaders, ['vendor', 'nama vendor', 'supplier', 'rekanan', 'partner']);
+    if (foundV !== -1) {
+      headerRowIdx = r;
+      headers = candidateHeaders;
+      idxVendor = foundV;
+      break;
+    }
+  }
+
+  // Jika tidak ditemukan kata 'vendor', ambil baris pertama sebagai header default
+  if (idxVendor === -1) {
+    headerRowIdx = 0;
+    headers = data[0].map(function(h) { return h ? h.toString().trim().toLowerCase() : ''; });
+    idxVendor = getHeaderIndex(headers, ['vendor', 'nama vendor', 'supplier', 'rekanan', 'partner']);
+  }
 
   var idxNoPo = getHeaderIndex(headers, ['no po', 'nopo', 'order reference', 'po number', 'po', 'reference', 'number', 'kode po']);
-  var idxVendor = getHeaderIndex(headers, ['vendor', 'nama vendor', 'supplier', 'rekanan', 'partner']);
   var idxItem = getHeaderIndex(headers, ['barangjasa', 'barang jasa', 'barang/jasa', 'product', 'item', 'deskripsi', 'item/deskripsi', 'display name', 'uraian']);
   var idxNilai = getHeaderIndex(headers, ['total', 'grand total', 'total untaxed amount', 'nilai', 'nilai (rp)', 'harga', 'amount', 'nominal']);
   var idxExp = getHeaderIndex(headers, ['expected date', 'tanggal diharapkan', 'deadline', 'diharapkan', 'tgl estimasi', 'scheduled date']);
@@ -881,8 +905,8 @@ function parsePoFromSheet(sheet, masterMap) {
     return { hasData: false, poStats: stats, vendors: [], rawOrders: [] };
   }
 
-  for (var i = 1; i < data.length; i++) {
-    var vendorName = data[i][idxVendor] ? data[i][idxVendor].toString().trim() : '';
+  for (var i = headerRowIdx + 1; i < data.length; i++) {
+    var vendorName = data[i][idxVendor] ? data[i][idxVendor].toString().replace(/[\r\n]+/g, ' ').trim() : '';
     if (!vendorName) continue;
 
     var noPo = idxNoPo !== -1 && data[i][idxNoPo] ? data[i][idxNoPo].toString().trim() : 'PO-' + i;
