@@ -1,7 +1,7 @@
 // =====================================================
 // KONFIGURASI
 // Ganti URL di bawah dengan URL Web App Google Apps Script Anda
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwG9gBE-r7IyhB5I-EA9agQZS7joGjJpt7nwUJDhetRXb0opXao1YlM6gIY4MMwLPyjIQ/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyzaCksI_9MvydKQArA5ZRrGP5pUPLTXpadreVtvm00Wzwj3IkrCsexKRB0ZLc0bgjriA/exec';
 
 // =====================================================
 // STATE & INIT
@@ -124,28 +124,13 @@ function applyTabFilter(tab) {
     }
 }
 
-const TARGET_PERIODS = [
-    'Q2 2026',
-    'Q3 2026',
-    'Q4 2026',
-    'Q1 2027',
-    'Q2 2027',
-    'Q3 2027',
-    'Q4 2027'
-];
-
 function initSlicers(kategoriList, periodList) {
-    // 1. Inisialisasi Period Select Options (Q2 2026 s/d Q4 2027)
+    // 1. Inisialisasi Period Select Options (Dinamis dari Sheet Spreadsheet)
     const periodSelect = document.getElementById('slicerPeriodSelect');
     if (periodSelect) {
-        const combinedPeriods = [...TARGET_PERIODS];
-        if (Array.isArray(periodList)) {
-            periodList.forEach(p => {
-                if (!combinedPeriods.includes(p)) combinedPeriods.push(p);
-            });
-        }
+        const list = Array.isArray(periodList) ? periodList : [];
         periodSelect.innerHTML = `<option value="all">📅 Semua Periode</option>` +
-            combinedPeriods.map(p => `<option value="${esc(p)}">📅 ${esc(p)}</option>`).join('');
+            list.map(p => `<option value="${esc(p)}">📅 ${esc(p)}</option>`).join('');
     }
 
     // 2. Inisialisasi Category Select Options secara dinamis dari database

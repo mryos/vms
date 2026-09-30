@@ -157,8 +157,8 @@ function doGet(e) {
     var periodList = periodDataResult.periodList;
     var aggregatedPoStats = periodDataResult.aggregatedPoStats;
 
-    // Tentukan vendor default berdasarkan periode awal Q2 2026 (atau periode pertama)
-    var defaultPeriodId = periodList.indexOf('Q2 2026') !== -1 ? 'Q2 2026' : (periodList.length > 0 ? periodList[0] : 'Q2 2026');
+    // Tentukan periode default: periode pertama dari daftar sheet yang ada
+    var defaultPeriodId = periodList.length > 0 ? periodList[0] : '';
     var baseVendors = (defaultPeriodId && periods[defaultPeriodId] && periods[defaultPeriodId].vendors.length > 0)
       ? periods[defaultPeriodId].vendors
       : allMasterVendors;
@@ -447,7 +447,7 @@ function detectAllPeriodSheets(ss, masterVendors) {
         sheetName: sheetName,
         year: periodInfo.year || 0,
         quarter: periodInfo.quarter || 0,
-        vendors: parsedPo.vendors,
+        vendors: (parsedPo.vendors && parsedPo.vendors.length > 0) ? parsedPo.vendors : masterVendors,
         poStats: parsedPo.poStats,
         rawOrders: parsedPo.rawOrders
       };
@@ -475,40 +475,8 @@ function detectAllPeriodSheets(ss, masterVendors) {
     }
   }
 
-  // Pastikan target periode (dimulai Q2 2026 hingga Q4 2027) selalu ada
-  var targetPeriods = [
-    { id: 'Q2 2026', label: 'Q2 2026', year: 2026, quarter: 2 },
-    { id: 'Q3 2026', label: 'Q3 2026', year: 2026, quarter: 3 },
-    { id: 'Q4 2026', label: 'Q4 2026', year: 2026, quarter: 4 },
-    { id: 'Q1 2027', label: 'Q1 2027', year: 2027, quarter: 1 },
-    { id: 'Q2 2027', label: 'Q2 2027', year: 2027, quarter: 2 },
-    { id: 'Q3 2027', label: 'Q3 2027', year: 2027, quarter: 3 },
-    { id: 'Q4 2027', label: 'Q4 2027', year: 2027, quarter: 4 }
-  ];
 
-  for (var tp = 0; tp < targetPeriods.length; tp++) {
-    var itemTp = targetPeriods[tp];
-    if (!periodMap[itemTp.id]) {
-      periodMap[itemTp.id] = {
-        id: itemTp.id,
-        label: itemTp.label,
-        sheetName: itemTp.id,
-        year: itemTp.year,
-        quarter: itemTp.quarter,
-        vendors: masterVendors,
-        poStats: {
-          totalOrders: 0,
-          totalOnTime: 0,
-          totalValue: 0,
-          overallOnTimePct: 0,
-          vendorMap: {}
-        },
-        rawOrders: []
-      };
-    }
-  }
-
-  // Compile dan urutkan periodList: dimulai dari Q2 2026 hingga Q4 2027
+  // Compile dan urutkan periodList: murni dari sheet yang ada di spreadsheet
   var periodList = Object.keys(periodMap);
   periodList.sort(function(a, b) {
     var pA = periodMap[a];

@@ -2,7 +2,7 @@
 // KONFIGURASI
 // =====================================================
 // Ganti URL di bawah dengan URL Web App Google Apps Script Anda
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwG9gBE-r7IyhB5I-EA9agQZS7joGjJpt7nwUJDhetRXb0opXao1YlM6gIY4MMwLPyjIQ/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyzaCksI_9MvydKQArA5ZRrGP5pUPLTXpadreVtvm00Wzwj3IkrCsexKRB0ZLc0bgjriA/exec';
 
 // Daftar vendor default (fallback offline)
 const DEFAULT_VENDORS = [
@@ -109,16 +109,7 @@ let userAssignedVendors = []; // Daftar vendor yang ditugaskan khusus untuk peni
 let vendors = []; // Array of string (nama vendor) yang ditampilkan saat ini
 let allMasterVendors = [...DEFAULT_VENDORS];
 let selectedVendor = null;
-const TARGET_PERIODS = [
-    'Q2 2026',
-    'Q3 2026',
-    'Q4 2026',
-    'Q1 2027',
-    'Q2 2027',
-    'Q3 2027',
-    'Q4 2027'
-];
-let selectedPeriode = 'Q2 2026';
+let selectedPeriode = ''; // Akan diisi dari data server (nama sheet di spreadsheet)
 
 let serverPeriods = {}; // { 'Q2 2026': { vendors: [], poStats: {} }, ... }
 let serverPeriodList = []; // ['Q2 2027', 'Q4 2026', 'Q3 2026', 'Q2 2026']
@@ -273,7 +264,7 @@ async function refreshPoStatsFromServer(pin) {
                 serverPeriods = data.periods;
                 serverPeriodList = data.periodList;
 
-                renderPeriodChips(TARGET_PERIODS);
+                renderPeriodChips(serverPeriodList);
                 switchPeriod(selectedPeriode);
             } else {
                 switchPeriod(selectedPeriode);
@@ -376,8 +367,10 @@ async function processPinLogin(pin) {
                     serverPeriodList = data.periodList;
                 }
 
-                if (!selectedPeriode) selectedPeriode = 'Q2 2026';
-                renderPeriodChips(TARGET_PERIODS);
+                if (!selectedPeriode && serverPeriodList.length > 0) {
+                    selectedPeriode = serverPeriodList[0];
+                }
+                renderPeriodChips(serverPeriodList);
 
                 verifiedData = {
                     pin: pin,
@@ -601,27 +594,35 @@ function initSearch() {
 }
 
 // =====================================================
-// PERIODE CHIPS (DINAMIS DARI MULTI-SHEET PO SPREADSHEET)
+// PERIODE CHIPS (DINAMIS DARI SHEET DI SPREADSHEET)
 // =====================================================
 function initPeriodeChips() {
-    renderPeriodChips(TARGET_PERIODS);
+    // Awalnya tampilkan loading, akan di-render ulang setelah data server masuk
+    const container = document.getElementById('periodeChips');
+    if (!container) return;
+    container.innerHTML = `<span style="color:#6b7280; font-size:0.85rem;">⏳ Memuat periode...</span>`;
 }
 
 function renderPeriodChips(periodList) {
     const container = document.getElementById('periodeChips');
     if (!container) return;
 
-    // Pastikan urutan selalu dimulai dari Q2 2026 hingga Q4 2027
-    const combinedList = [...TARGET_PERIODS];
-    if (Array.isArray(periodList)) {
-        periodList.forEach(p => {
-            if (!combinedList.includes(p)) combinedList.push(p);
-        });
+    // Gunakan langsung periodList dari server (nama sheet di spreadsheet)
+    const list = Array.isArray(periodList) ? periodList : [];
+
+    if (list.length === 0) {
+        container.innerHTML = `<span style="color:#ef4444; font-size:0.85rem;">⚠️ Tidak ada sheet periode di spreadsheet</span>`;
+        return;
+    }
+
+    // Jika selectedPeriode belum di-set atau tidak ada di list, gunakan yang pertama
+    if (!selectedPeriode || !list.includes(selectedPeriode)) {
+        selectedPeriode = list[0];
     }
 
     container.innerHTML = `
         <select id="periodeSelect" class="tremor-select font-semibold text-sm text-blue-900 bg-blue-50/60 border-blue-200 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-sm py-2 px-3.5 pr-8 rounded-lg transition" title="Pilih Periode Penilaian">
-            ${combinedList.map(p => `<option value="${esc(p)}"${p === selectedPeriode ? ' selected' : ''}>📅 ${esc(p)}</option>`).join('')}
+            ${list.map(p => `<option value="${esc(p)}"${p === selectedPeriode ? ' selected' : ''}>📅 ${esc(p)}</option>`).join('')}
         </select>
     `;
 
