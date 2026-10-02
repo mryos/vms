@@ -86,6 +86,37 @@ function getKontrakVendorSheet(ss) {
 }
 
 /**
+ * Mencari sheet Penilaian Vendor secara fleksibel:
+ * 1. Cari berdasarkan nama sheet standar
+ * 2. Fallback: pencarian case-insensitive & partial match
+ */
+function getPenilaianVendorSheet(ss) {
+  var candidates = [
+    SHEET_PENILAIAN_VENDOR,
+    'penilaian vendor',
+    'penilaian',
+    'evaluasi vendor',
+    'evaluasi',
+    'hasil penilaian',
+    'assessment'
+  ];
+  for (var c = 0; c < candidates.length; c++) {
+    var s = ss.getSheetByName(candidates[c]);
+    if (s) return s;
+  }
+  var sheets = ss.getSheets();
+  for (var i = 0; i < sheets.length; i++) {
+    var sName = sheets[i].getName().trim().toLowerCase();
+    for (var j = 0; j < candidates.length; j++) {
+      if (sName === candidates[j] || sName.indexOf(candidates[j]) !== -1) {
+        return sheets[i];
+      }
+    }
+  }
+  return null;
+}
+
+/**
  * Mencari data assessor berdasarkan PIN secara fleksibel:
  * - Dynamic header: otomatis cari kolom PIN, Nama, Vendor dari header
  * - Multi-row aggregation: jika PIN muncul di beberapa baris, gabungkan semua vendor
@@ -175,7 +206,9 @@ function doGet(e) {
     var kriteriaList = getKriteriaPenilaian(ss);
     var allMasterVendors = getAllVendors(ss);
     var prList = getPurchaseRequests(ss);
-    var scoreSummary = getVendorScoreSummary(ss);
+    var scoreData = getVendorScoreSummary(ss);
+    var scoreSummary = scoreData.summary;
+    var evaluationsList = scoreData.evaluationsList;
     var contractCompliance = getContractCompliance(ss);
 
     // Deteksi seluruh sheet & data periode PO yang ada di spreadsheet
@@ -207,6 +240,7 @@ function doGet(e) {
           defaultPeriod: defaultPeriodId,
           prList: prList,
           scoreSummary: scoreSummary,
+          evaluationsList: evaluationsList,
           contractCompliance: contractCompliance
         });
       }
@@ -244,6 +278,7 @@ function doGet(e) {
           defaultPeriod: defaultPeriodId,
           prList: prList,
           scoreSummary: scoreSummary,
+          evaluationsList: evaluationsList,
           contractCompliance: contractCompliance
         });
       }
@@ -267,6 +302,7 @@ function doGet(e) {
       defaultPeriod: defaultPeriodId,
       prList: prList,
       scoreSummary: scoreSummary,
+      evaluationsList: evaluationsList,
       contractCompliance: contractCompliance
     });
 
@@ -310,7 +346,7 @@ function doPost(e) {
     }
 
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName(SHEET_PENILAIAN_VENDOR);
+    var sheet = getPenilaianVendorSheet(ss);
 
     if (!sheet) {
       sheet = ss.insertSheet(SHEET_PENILAIAN_VENDOR);
@@ -321,7 +357,14 @@ function doPost(e) {
     var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return h.toString().trim(); });
 
     // Pastikan kolom Rata-rata Skor ada
-    var idxRataRata = headers.indexOf('Rata-rata Skor');
+    var idxRataRata = -1;
+    for (var h = 0; h < headers.length; h++) {
+      var hL = headers[h].toLowerCase();
+      if (hL.indexOf('rata') !== -1 || hL === 'skor' || hL.indexOf('avg') !== -1) {
+        idxRataRata = h;
+        break;
+      }
+    }
     if (idxRataRata === -1) {
       sheet.insertColumnAfter(lastCol);
       sheet.getRange(1, lastCol + 1).setValue('Rata-rata Skor');
@@ -381,19 +424,19 @@ function doPost(e) {
     for (var h = 0; h < headers.length; h++) {
       var hNameLower = headers[h].toLowerCase();
 
-      if (hNameLower === 'timestamp') {
+      if (hNameLower.indexOf('timestamp') !== -1 || hNameLower.indexOf('tanggal') !== -1 || hNameLower === 'waktu') {
         newRow.push(timestamp);
-      } else if (hNameLower === 'nama penilai') {
+      } else if (hNameLower.indexOf('penilai') !== -1 || hNameLower.indexOf('assessor') !== -1) {
         newRow.push(namaPenilai);
-      } else if (hNameLower === 'nama vendor') {
+      } else if (hNameLower.indexOf('vendor') !== -1 || hNameLower.indexOf('rekanan') !== -1) {
         newRow.push(namaVendor);
-      } else if (hNameLower === 'periode penilaian') {
+      } else if (hNameLower.indexOf('periode') !== -1 || hNameLower.indexOf('kuartal') !== -1) {
         newRow.push(periodePenilaian);
-      } else if (hNameLower === 'rata-rata skor') {
+      } else if (hNameLower.indexOf('rata') !== -1 || hNameLower === 'skor' || hNameLower === 'nilai akhir' || hNameLower.indexOf('avg') !== -1) {
         newRow.push(avgSkor);
-      } else if (hNameLower === 'predikat') {
+      } else if (hNameLower.indexOf('predikat') !== -1 || hNameLower === 'status') {
         newRow.push(predikat);
-      } else if (hNameLower === 'catatan') {
+      } else if (hNameLower.indexOf('catatan') !== -1 || hNameLower.indexOf('keterangan') !== -1 || hNameLower.indexOf('notes') !== -1) {
         newRow.push(catatan);
       } else {
         // Ambil nilai skor yang sesuai
@@ -1192,30 +1235,95 @@ function getPurchaseRequests(ss) {
 }
 
 function getVendorScoreSummary(ss) {
-  var sheet = ss.getSheetByName(SHEET_PENILAIAN_VENDOR);
-  var summary = {};
+  var sheet = getPenilaianVendorSheet(ss);
+  var result = {
+    summary: {},
+    evaluationsList: []
+  };
 
-  if (!sheet || sheet.getLastRow() < 2) return summary;
+  if (!sheet || sheet.getLastRow() < 2) return result;
 
   var data = sheet.getDataRange().getValues();
-  var headers = data[0].map(function(h) { return h.toString().trim().toLowerCase(); });
+  if (data.length < 2) return result;
 
-  var idxVendor = headers.indexOf('nama vendor');
-  var idxAvg = headers.indexOf('rata-rata skor');
-  var idxPred = headers.indexOf('predikat');
-  var idxPeriode = headers.indexOf('periode penilaian');
+  // Scan 5 baris pertama untuk mencari baris header
+  var headerRowIdx = 0;
+  var headers = [];
+  var idxVendor = -1;
 
-  if (idxVendor === -1 || idxAvg === -1) return summary;
+  for (var r = 0; r < Math.min(data.length, 5); r++) {
+    var candidateHeaders = data[r].map(function(h) { return h ? h.toString().trim().toLowerCase() : ''; });
+    var foundVendor = getHeaderIndex(candidateHeaders, ['nama vendor', 'vendor', 'rekanan', 'supplier', 'nama rekanan']);
+    if (foundVendor !== -1) {
+      headerRowIdx = r;
+      headers = candidateHeaders;
+      idxVendor = foundVendor;
+      break;
+    }
+  }
 
-  for (var i = 1; i < data.length; i++) {
-    var vendor = data[i][idxVendor] ? data[i][idxVendor].toString().trim() : '';
-    var score = parseFloat(data[i][idxAvg]) || 0;
-    var predikat = idxPred !== -1 ? data[i][idxPred].toString().trim() : '';
-    var periode = idxPeriode !== -1 ? data[i][idxPeriode].toString().trim() : 'General';
+  if (idxVendor === -1) {
+    headers = data[0].map(function(h) { return h ? h.toString().trim().toLowerCase() : ''; });
+    idxVendor = getHeaderIndex(headers, ['nama vendor', 'vendor', 'rekanan', 'supplier', 'nama rekanan']);
+  }
 
-    if (vendor && score > 0) {
-      if (!summary[vendor]) {
-        summary[vendor] = {
+  if (idxVendor === -1) return result;
+
+  var idxAvg = getHeaderIndex(headers, ['rata-rata skor', 'rata-rata', 'ratarata', 'skor rata-rata', 'skor', 'nilai akhir', 'average', 'avg']);
+  var idxPred = getHeaderIndex(headers, ['predikat', 'kategori predikat', 'status']);
+  var idxPeriode = getHeaderIndex(headers, ['periode penilaian', 'periode', 'kuartal', 'quarter']);
+  var idxPenilai = getHeaderIndex(headers, ['nama penilai', 'penilai', 'assessor', 'user']);
+  var idxTimestamp = getHeaderIndex(headers, ['timestamp', 'tanggal', 'waktu', 'date']);
+  var idxCatatan = getHeaderIndex(headers, ['catatan', 'keterangan', 'notes', 'remarks']);
+
+  for (var i = headerRowIdx + 1; i < data.length; i++) {
+    var vendor = idxVendor !== -1 && data[i][idxVendor] ? data[i][idxVendor].toString().trim() : '';
+    if (!vendor || vendor.toLowerCase() === 'nama vendor' || vendor.toLowerCase() === 'vendor') continue;
+
+    var score = 0;
+    if (idxAvg !== -1 && data[i][idxAvg] !== '' && data[i][idxAvg] !== null && data[i][idxAvg] !== undefined) {
+      var rawScore = data[i][idxAvg];
+      if (typeof rawScore === 'number') {
+        score = rawScore;
+      } else if (rawScore) {
+        var cleanedScore = rawScore.toString().replace(',', '.').replace(/[^0-9.]/g, '');
+        score = parseFloat(cleanedScore) || 0;
+      }
+    }
+
+    // Jika idxAvg tidak ada atau kosong, hitung rata-rata dari kolom kriteria (1-5)
+    if (score === 0) {
+      var sumCrit = 0;
+      var countCrit = 0;
+      for (var c = 0; c < headers.length; c++) {
+        if (c !== idxVendor && c !== idxPeriode && c !== idxPenilai && c !== idxTimestamp && c !== idxPred && c !== idxCatatan && c !== idxAvg) {
+          var val = data[i][c];
+          var numVal = 0;
+          if (typeof val === 'number') {
+            numVal = val;
+          } else if (val) {
+            numVal = parseFloat(val.toString().replace(',', '.')) || 0;
+          }
+          if (numVal >= 1 && numVal <= 5) {
+            sumCrit += numVal;
+            countCrit++;
+          }
+        }
+      }
+      if (countCrit > 0) {
+        score = Math.round((sumCrit / countCrit) * 100) / 100;
+      }
+    }
+
+    if (score > 0) {
+      var predikat = idxPred !== -1 && data[i][idxPred] ? data[i][idxPred].toString().trim() : getPredikat(score);
+      var periode = idxPeriode !== -1 && data[i][idxPeriode] ? data[i][idxPeriode].toString().trim() : 'General';
+      var penilai = idxPenilai !== -1 && data[i][idxPenilai] ? data[i][idxPenilai].toString().trim() : '-';
+      var timestampStr = idxTimestamp !== -1 && data[i][idxTimestamp] ? formatDate(data[i][idxTimestamp]) : '-';
+      var catatan = idxCatatan !== -1 && data[i][idxCatatan] ? data[i][idxCatatan].toString().trim() : '';
+
+      if (!result.summary[vendor]) {
+        result.summary[vendor] = {
           totalScore: 0,
           count: 0,
           avgScore: 0,
@@ -1224,20 +1332,30 @@ function getVendorScoreSummary(ss) {
         };
       }
 
-      var vSum = summary[vendor];
+      var vSum = result.summary[vendor];
       vSum.totalScore += score;
       vSum.count++;
       vSum.periodeScores.push({ periode: periode, score: score, predikat: predikat });
+
+      result.evaluationsList.push({
+        timestamp: timestampStr,
+        penilai: penilai,
+        vendor: vendor,
+        periode: periode,
+        score: score,
+        predikat: predikat,
+        catatan: catatan
+      });
     }
   }
 
-  for (var vKey in summary) {
-    var v = summary[vKey];
+  for (var vKey in result.summary) {
+    var v = result.summary[vKey];
     v.avgScore = Math.round((v.totalScore / v.count) * 100) / 100;
     v.predikat = getPredikat(v.avgScore);
   }
 
-  return summary;
+  return result;
 }
 
 /**

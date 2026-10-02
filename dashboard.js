@@ -98,27 +98,32 @@ function initTabs() {
 function applyTabFilter(tab) {
     const chartsSec = document.getElementById('chartsSection');
     const contractsSec = document.getElementById('sectionContracts');
+    const evalSec = document.getElementById('sectionEvaluations');
     const perfSec = document.getElementById('sectionPerformance');
     const ordersCol = document.getElementById('sectionOrders');
 
     if (tab === 'all') {
         if (chartsSec) chartsSec.style.display = 'grid';
         if (contractsSec) contractsSec.style.display = 'block';
+        if (evalSec) evalSec.style.display = 'block';
         if (perfSec) perfSec.style.display = 'grid';
         if (ordersCol) ordersCol.style.display = 'flex';
     } else if (tab === 'clm') {
         if (chartsSec) chartsSec.style.display = 'grid';
         if (contractsSec) contractsSec.style.display = 'block';
+        if (evalSec) evalSec.style.display = 'block';
         if (perfSec) perfSec.style.display = 'none';
         if (ordersCol) ordersCol.style.display = 'none';
     } else if (tab === 'performance') {
         if (chartsSec) chartsSec.style.display = 'grid';
         if (contractsSec) contractsSec.style.display = 'none';
+        if (evalSec) evalSec.style.display = 'block';
         if (perfSec) perfSec.style.display = 'grid';
         if (ordersCol) ordersCol.style.display = 'none';
     } else if (tab === 'orders') {
         if (chartsSec) chartsSec.style.display = 'none';
         if (contractsSec) contractsSec.style.display = 'none';
+        if (evalSec) evalSec.style.display = 'none';
         if (perfSec) perfSec.style.display = 'grid';
         if (ordersCol) ordersCol.style.display = 'flex';
     }
@@ -176,6 +181,14 @@ function initSlicers(kategoriList, periodList) {
     if (contractSearchEl && !contractSearchEl.dataset.bound) {
         contractSearchEl.dataset.bound = 'true';
         contractSearchEl.addEventListener('input', () => {
+            filterAndRenderDashboard();
+        });
+    }
+
+    const evalSearchEl = document.getElementById('evalSearchInput');
+    if (evalSearchEl && !evalSearchEl.dataset.bound) {
+        evalSearchEl.dataset.bound = 'true';
+        evalSearchEl.addEventListener('input', () => {
             filterAndRenderDashboard();
         });
     }
@@ -400,14 +413,44 @@ function filterAndRenderDashboard() {
         vendorMap: filteredVendorMap
     };
 
+    // Filter Evaluations List (dari sheet Penilaian Vendor)
+    let filteredEvals = dashboardData.evaluationsList ? [...dashboardData.evaluationsList] : [];
+
+    // Filter by periode
+    if (slicerState.period !== 'all') {
+        filteredEvals = filteredEvals.filter(ev => ev.periode === slicerState.period);
+    }
+
+    // Filter by kategori vendor
+    if (slicerState.category !== 'all') {
+        const catVendorNames = new Set();
+        (dashboardData.allVendors || dashboardData.vendors || []).forEach(v => {
+            if (v.kategori === slicerState.category) {
+                catVendorNames.add(v.nama.toLowerCase().trim());
+            }
+        });
+        filteredEvals = filteredEvals.filter(ev => catVendorNames.has(ev.vendor.toLowerCase().trim()));
+    }
+
+    // Filter by search input
+    const evalSearchQuery = document.getElementById('evalSearchInput')?.value.trim().toLowerCase();
+    if (evalSearchQuery) {
+        filteredEvals = filteredEvals.filter(ev => {
+            return (ev.vendor && ev.vendor.toLowerCase().includes(evalSearchQuery)) ||
+                   (ev.penilai && ev.penilai.toLowerCase().includes(evalSearchQuery)) ||
+                   (ev.periode && ev.periode.toLowerCase().includes(evalSearchQuery)) ||
+                   (ev.catatan && ev.catatan.toLowerCase().includes(evalSearchQuery));
+        });
+    }
+
     // Render All Components with Sliced Data
-    renderDashboard(filteredVendors, filteredScore, filteredCC, filteredPO, categories);
+    renderDashboard(filteredVendors, filteredScore, filteredCC, filteredPO, categories, filteredEvals);
 }
 
 // =====================================================
 // RENDERING FUNCTIONS
 // =====================================================
-function renderDashboard(vendors, scoreSummary, cc, poStats, kategori) {
+function renderDashboard(vendors, scoreSummary, cc, poStats, kategori, evaluations) {
     // 1. Render 5-Card Key Metrics
     renderSummaryCards(vendors, scoreSummary, cc, poStats);
 
@@ -420,6 +463,7 @@ function renderDashboard(vendors, scoreSummary, cc, poStats, kategori) {
 
     // 4. Render Tables
     renderContractTable(cc);
+    renderEvaluationsTable(evaluations);
     renderTopVendors(scoreSummary, vendors, kategori);
     renderAttentionVendors(scoreSummary, vendors, kategori);
     renderPoPerformance(poStats);
@@ -687,6 +731,52 @@ function renderContractTable(cc) {
                 </span>
             </td>
             <td style="font-size:0.8rem; color:var(--text3); max-width:220px;">${esc(c.keterangan)}</td>
+        </tr>`;
+    }).join('');
+}
+
+function renderEvaluationsTable(evaluations) {
+    const tableBody = document.getElementById('evalTableBody');
+    if (!tableBody) return;
+
+    const badgeCount = document.getElementById('evalBadgeCount');
+    if (badgeCount) {
+        badgeCount.textContent = evaluations && evaluations.length > 0
+            ? `${evaluations.length} Evaluasi`
+            : 'Sheet: Penilaian Vendor';
+    }
+
+    if (!evaluations || evaluations.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text3); padding:2rem;">Belum ada data penilaian vendor. Mulai beri penilaian dari halaman utama.</td></tr>`;
+        return;
+    }
+
+    // Urutkan dari terbaru
+    const sorted = [...evaluations].sort((a, b) => {
+        if (a.timestamp && b.timestamp && a.timestamp !== '-' && b.timestamp !== '-') {
+            return new Date(b.timestamp) - new Date(a.timestamp);
+        }
+        return 0;
+    });
+
+    tableBody.innerHTML = sorted.map(ev => {
+        const score = parseFloat(ev.score) || 0;
+        const color = getPredikatColor(score);
+        const pred = ev.predikat || getPredikat(score);
+
+        return `
+        <tr>
+            <td style="font-size:0.8rem; color:var(--text3); white-space:nowrap;">${esc(ev.timestamp)}</td>
+            <td style="font-size:0.85rem; color:var(--text2);">${esc(ev.penilai)}</td>
+            <td style="font-weight:600; color:var(--text); white-space:nowrap;">${esc(ev.vendor)}</td>
+            <td style="font-size:0.8rem; color:var(--text3);">${esc(ev.periode)}</td>
+            <td style="text-align:right; font-weight:700; color:${color}; font-size:1.05rem;">${score.toFixed(2)}</td>
+            <td style="text-align:center;">
+                <span class="predikat-badge" style="background:${color}15; color:${color}; border:1px solid ${color}30; font-size:0.75rem; font-weight:700;">
+                    ${esc(pred)}
+                </span>
+            </td>
+            <td style="font-size:0.8rem; color:var(--text3); max-width:220px;">${esc(ev.catatan)}</td>
         </tr>`;
     }).join('');
 }
