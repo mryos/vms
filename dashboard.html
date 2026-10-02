@@ -376,7 +376,10 @@ tailwind.config = {
                     <h3 class="text-tremor-title font-semibold text-tremor-content-strong">Contract Repository & Compliance</h3>
                     <p class="text-tremor-default text-tremor-content mt-0.5">Monitoring kelengkapan dan kepatuhan kontrak vendor</p>
                 </div>
-                <span class="tremor-badge tremor-badge-gray">Sheet: Kontrak Vendor</span>
+                <div class="flex items-center gap-3">
+                    <input type="text" id="contractSearchInput" placeholder="Cari No. Kontrak / Vendor..." class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm" style="min-width: 220px;">
+                    <span class="tremor-badge tremor-badge-gray" id="contractBadgeCount">Sheet: Kontrak Vendor</span>
+                </div>
             </div>
             <div class="overflow-x-auto -mx-1.5">
                 <table class="tremor-table">

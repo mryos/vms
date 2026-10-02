@@ -34,6 +34,9 @@ var SHEET_PO_ALT = 'PO';
 // GID sheet Akses Penilai (dari URL spreadsheet: gid=1971078762)
 var GID_AKSES_PENILAI = 1971078762;
 
+// GID sheet Kontrak Vendor (dari URL spreadsheet: gid=487575887)
+var GID_KONTRAK_VENDOR = 487575887;
+
 /**
  * Mencari sheet Akses Penilai secara fleksibel:
  * 1. Pertama cari berdasarkan GID (paling akurat, tidak terpengaruh rename)
@@ -56,6 +59,30 @@ function getAksesPenilaiSheet(ss) {
     }
   }
   return ss.getSheetByName(SHEET_AKSES_PENILAI);
+}
+
+/**
+ * Mencari sheet Kontrak Vendor secara fleksibel:
+ * 1. Pertama cari berdasarkan GID 487575887 (paling akurat, tidak terpengaruh rename)
+ * 2. Fallback: cari berdasarkan nama sheet (case-insensitive)
+ */
+function getKontrakVendorSheet(ss) {
+  var sheets = ss.getSheets();
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].getSheetId() === GID_KONTRAK_VENDOR) {
+      return sheets[i];
+    }
+  }
+  var possibleNames = ['kontrak vendor', 'kontrak', 'data kontrak', 'daftar kontrak', 'contract', 'contracts'];
+  for (var i = 0; i < sheets.length; i++) {
+    var sName = sheets[i].getName().trim().toLowerCase();
+    for (var j = 0; j < possibleNames.length; j++) {
+      if (sName === possibleNames[j] || sName.indexOf(possibleNames[j]) !== -1) {
+        return sheets[i];
+      }
+    }
+  }
+  return ss.getSheetByName(SHEET_KONTRAK);
 }
 
 /**
@@ -1217,7 +1244,7 @@ function getVendorScoreSummary(ss) {
  * Mendapatkan data kepatuhan kontrak (KPI Point 4)
  */
 function getContractCompliance(ss) {
-  var sheet = ss.getSheetByName(SHEET_KONTRAK);
+  var sheet = getKontrakVendorSheet(ss);
   var stats = {
     totalContracts: 0,
     totalCompliantContracts: 0,
@@ -1231,28 +1258,61 @@ function getContractCompliance(ss) {
   if (!sheet || sheet.getLastRow() < 2) return stats;
 
   var data = sheet.getDataRange().getValues();
-  var headers = data[0].map(function(h) { return h.toString().toLowerCase().trim(); });
+  if (data.length < 2) return stats;
 
-  var idxNo = getHeaderIndex(headers, ['no kontrak', 'nomor kontrak', 'kode kontrak']);
-  var idxVendor = getHeaderIndex(headers, ['vendor', 'nama vendor', 'rekanan']);
-  var idxPekerjaan = getHeaderIndex(headers, ['jenis pekerjaan', 'pekerjaan', 'ruang lingkup', 'deskripsi']);
+  // Cari baris header di 5 baris pertama (jika ada baris judul/kosong di atas tabel)
+  var headerRowIdx = 0;
+  var headers = [];
+  var idxNo = -1;
+  var idxVendor = -1;
+
+  for (var r = 0; r < Math.min(data.length, 5); r++) {
+    var candidateHeaders = data[r].map(function(h) { return h ? h.toString().trim().toLowerCase() : ''; });
+    var foundNo = getHeaderIndex(candidateHeaders, ['no kontrak', 'nomor kontrak', 'kode kontrak', 'no', 'kontrak']);
+    var foundVendor = getHeaderIndex(candidateHeaders, ['vendor', 'nama vendor', 'rekanan', 'supplier', 'partner']);
+    if (foundNo !== -1 || foundVendor !== -1) {
+      headerRowIdx = r;
+      headers = candidateHeaders;
+      idxNo = foundNo;
+      idxVendor = foundVendor;
+      break;
+    }
+  }
+
+  if (idxVendor === -1 && idxNo === -1) {
+    headerRowIdx = 0;
+    headers = data[0].map(function(h) { return h ? h.toString().trim().toLowerCase() : ''; });
+    idxNo = getHeaderIndex(headers, ['no kontrak', 'nomor kontrak', 'kode kontrak', 'no', 'kontrak']);
+    idxVendor = getHeaderIndex(headers, ['vendor', 'nama vendor', 'rekanan', 'supplier', 'partner']);
+  }
+
+  var idxPekerjaan = getHeaderIndex(headers, ['jenis pekerjaan', 'pekerjaan', 'ruang lingkup', 'deskripsi', 'uraian', 'item']);
   var idxMulai = getHeaderIndex(headers, ['tanggal mulai', 'tgl mulai', 'mulai', 'start date']);
-  var idxSelesai = getHeaderIndex(headers, ['tanggal selesai', 'tanggal berakhir', 'tgl selesai', 'tgl berakhir', 'end date']);
-  var idxKelengkapan = getHeaderIndex(headers, ['kelengkapan dokumen', 'kelengkapan', 'dokumen']);
-  var idxNilai = getHeaderIndex(headers, ['nilai kontrak', 'nilai', 'nominal', 'amount', 'harga']);
+  var idxSelesai = getHeaderIndex(headers, ['tanggal selesai', 'tanggal berakhir', 'tgl selesai', 'tgl berakhir', 'end date', 'deadline']);
+  var idxKelengkapan = getHeaderIndex(headers, ['kelengkapan dokumen', 'kelengkapan', 'dokumen', 'status dokumen']);
+  var idxNilai = getHeaderIndex(headers, ['nilai kontrak', 'nilai', 'nominal', 'amount', 'harga', 'total']);
   var idxStatus = getHeaderIndex(headers, ['status kepatuhan', 'status', 'kepatuhan', 'compliance']);
   var idxKeterangan = getHeaderIndex(headers, ['keterangan', 'catatan', 'remarks', 'note']);
 
   var uniqueVendors = {};
 
-  for (var i = 1; i < data.length; i++) {
+  for (var i = headerRowIdx + 1; i < data.length; i++) {
     var noKontrak = idxNo !== -1 && data[i][idxNo] ? data[i][idxNo].toString().trim() : (data[i][0] ? data[i][0].toString().trim() : '');
     var vendor = idxVendor !== -1 && data[i][idxVendor] ? data[i][idxVendor].toString().trim() : (data[i][1] ? data[i][1].toString().trim() : '');
     var jenisPekerjaan = idxPekerjaan !== -1 && data[i][idxPekerjaan] ? data[i][idxPekerjaan].toString().trim() : '-';
     var tglMulai = idxMulai !== -1 && data[i][idxMulai] ? formatDate(data[i][idxMulai]) : '-';
     var tglSelesai = idxSelesai !== -1 && data[i][idxSelesai] ? formatDate(data[i][idxSelesai]) : '-';
     var kelengkapan = idxKelengkapan !== -1 && data[i][idxKelengkapan] ? data[i][idxKelengkapan].toString().trim() : 'Lengkap';
-    var nilai = idxNilai !== -1 && !isNaN(Number(data[i][idxNilai])) ? Number(data[i][idxNilai]) : 0;
+    
+    var rawNilai = idxNilai !== -1 ? data[i][idxNilai] : 0;
+    var nilai = 0;
+    if (typeof rawNilai === 'number') {
+      nilai = rawNilai;
+    } else if (rawNilai) {
+      var cleaned = rawNilai.toString().replace(/[^0-9.-]/g, '');
+      nilai = parseFloat(cleaned) || 0;
+    }
+
     var status = idxStatus !== -1 && data[i][idxStatus] ? data[i][idxStatus].toString().trim() : 'Comply';
     var keterangan = idxKeterangan !== -1 && data[i][idxKeterangan] ? data[i][idxKeterangan].toString().trim() : '';
 

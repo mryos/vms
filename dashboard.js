@@ -171,6 +171,14 @@ function initSlicers(kategoriList, periodList) {
             filterAndRenderDashboard();
         });
     }
+
+    const contractSearchEl = document.getElementById('contractSearchInput');
+    if (contractSearchEl && !contractSearchEl.dataset.bound) {
+        contractSearchEl.dataset.bound = 'true';
+        contractSearchEl.addEventListener('input', () => {
+            filterAndRenderDashboard();
+        });
+    }
 }
 
 function resetAllSlicers() {
@@ -228,7 +236,7 @@ async function loadDashboardData() {
 function filterAndRenderDashboard() {
     if (!dashboardData) return;
 
-    let rawVendors = dashboardData.vendors || [];
+    let rawVendors = (dashboardData.allVendors && dashboardData.allVendors.length > 0) ? [...dashboardData.allVendors] : (dashboardData.vendors ? [...dashboardData.vendors] : []);
     let rawScore = dashboardData.scoreSummary || {};
     let rawCC = dashboardData.contractCompliance || { list: [] };
     let rawPO = dashboardData.poStats || { vendorMap: {} };
@@ -313,8 +321,41 @@ function filterAndRenderDashboard() {
         }
     }
 
-    // Filter Contract Compliance List & Stats
-    const filteredContractsList = rawCC.list ? rawCC.list.filter(c => activeVendorNames.has(c.vendor)) : [];
+    // Filter Contract Compliance List & Stats (Data murni dari sheet 'Kontrak Vendor')
+    let filteredContractsList = rawCC.list ? [...rawCC.list] : [];
+
+    // Filter Kepatuhan Kontrak jika dipilih di slicer
+    if (slicerState.compliance !== 'all') {
+        filteredContractsList = filteredContractsList.filter(c => {
+            const isComply = c.status && c.status.toLowerCase() === 'comply';
+            return slicerState.compliance === 'comply' ? isComply : !isComply;
+        });
+    }
+
+    // Filter Kategori jika dipilih di slicer
+    if (slicerState.category !== 'all') {
+        const catVendorNames = new Set();
+        (dashboardData.allVendors || dashboardData.vendors || []).forEach(v => {
+            if (v.kategori === slicerState.category) {
+                catVendorNames.add(v.nama.toLowerCase().trim());
+            }
+        });
+        filteredContractsList = filteredContractsList.filter(c => {
+            return catVendorNames.has(c.vendor.toLowerCase().trim());
+        });
+    }
+
+    // Filter Search Kontrak jika admin mengetik pencarian
+    const contractSearchQuery = document.getElementById('contractSearchInput')?.value.trim().toLowerCase();
+    if (contractSearchQuery) {
+        filteredContractsList = filteredContractsList.filter(c => {
+            return (c.noKontrak && c.noKontrak.toLowerCase().includes(contractSearchQuery)) ||
+                   (c.vendor && c.vendor.toLowerCase().includes(contractSearchQuery)) ||
+                   (c.jenisPekerjaan && c.jenisPekerjaan.toLowerCase().includes(contractSearchQuery)) ||
+                   (c.keterangan && c.keterangan.toLowerCase().includes(contractSearchQuery));
+        });
+    }
+
     let uniqueContrVendors = 0;
     let uniqueComplVendors = 0;
     const vendorContrMap = {};
@@ -608,6 +649,11 @@ function renderPoPerformance(poStats) {
 function renderContractTable(cc) {
     const tableBody = document.getElementById('contractTableBody');
     if (!tableBody) return;
+
+    const badgeCount = document.getElementById('contractBadgeCount');
+    if (badgeCount && cc && Array.isArray(cc.list)) {
+        badgeCount.textContent = `${cc.list.length} Kontrak`;
+    }
 
     if (!cc || !cc.list || cc.list.length === 0) {
         tableBody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text3); padding:2rem;">Belum ada data kontrak vendor terdaftar di sheet 'Kontrak Vendor'.</td></tr>`;

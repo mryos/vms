@@ -449,9 +449,30 @@ function updateHeaderUser(name, pin) {
     const el = document.getElementById('headerUser');
     if (el) el.textContent = `👤 ${name} (PIN: ${pin || '–'})`;
 
+    updateRoleBasedView(pin);
+}
+
+/**
+ * Kontrol tampilan berbasis role / PIN:
+ * - Admin (PIN 9999): Tampilkan KPI Cards (poInsightsBanner), Filter Panel (filterControlsCard), dan Link Dashboard
+ * - Penilai Biasa (Selain 9999): Sembunyikan semuanya, hanya tampilkan daftar vendor yang harus dinilai
+ */
+function updateRoleBasedView(pin) {
+    const isAdmin = (pin === '9999' || pin === 'admin');
+
+    const poBanner = document.getElementById('poInsightsBanner');
+    if (poBanner) {
+        poBanner.style.display = isAdmin ? 'grid' : 'none';
+    }
+
+    const filterCard = document.getElementById('filterControlsCard');
+    if (filterCard) {
+        filterCard.style.display = isAdmin ? 'block' : 'none';
+    }
+
     const dashLink = document.getElementById('dashboardNavLink');
     if (dashLink) {
-        dashLink.style.display = (pin === '9999' || pin === 'admin') ? 'inline-flex' : 'none';
+        dashLink.style.display = isAdmin ? 'inline-flex' : 'none';
     }
 }
 
@@ -886,6 +907,11 @@ function openModal(vendorName) {
 
     const titleEl = document.getElementById('modalVendorName');
     if (titleEl) titleEl.textContent = vendorName;
+
+    const badgeEl = document.getElementById('modalPeriodBadge');
+    if (badgeEl && selectedPeriode) {
+        badgeEl.textContent = `• Periode ${selectedPeriode}`;
+    }
 
     // Render form dinamis berdasarkan kriteria & kategori vendor
     try {
