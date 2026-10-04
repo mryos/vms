@@ -2,7 +2,7 @@
 // KONFIGURASI
 // =====================================================
 // Ganti URL di bawah dengan URL Web App Google Apps Script Anda
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby2jgUq7OoHyqL4soBBPPs1pvv-lzWve9skNFChrIw_aTv-yvQU3yRRqbD_ji5TaCxkzg/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwQ5iOR9woaUkUMLodZl-SJ-8YhkXNTU2oEfv6fP4SuC_pliMWb1KWBOJ6SkMtdlAH0RQ/exec';
 
 // Daftar vendor default (fallback offline)
 const DEFAULT_VENDORS = [
@@ -340,6 +340,9 @@ async function processPinLogin(pin) {
 
     let verifiedData = null;
 
+    // Reset selectedPeriode agar periode tidak tersisa dari sesi sebelumnya
+    selectedPeriode = '';
+
     if (SCRIPT_URL !== 'PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE') {
         try {
             const res = await fetch(`${SCRIPT_URL}?pin=${encodeURIComponent(pin)}`);
@@ -381,9 +384,7 @@ async function processPinLogin(pin) {
                 }
 
                 if (pin === '9999' || pin === 'admin') {
-                    if (!selectedPeriode && serverPeriodList.length > 0) {
-                        selectedPeriode = serverPeriodList[0];
-                    }
+                    selectedPeriode = serverPeriodList.length > 0 ? serverPeriodList[0] : '';
                 } else {
                     selectedPeriode = getBestPeriodForUser(userAssignedVendors);
                 }
@@ -498,10 +499,24 @@ function initHeaderUser() {
     if (el) {
         el.addEventListener('click', () => {
             if (confirm('Apakah Anda ingin keluar / mengganti PIN Penilai?')) {
+                // Reset semua state sesi
                 localStorage.removeItem('ethos_pin');
                 localStorage.removeItem('ethos_nama');
                 localStorage.removeItem('ethos_user_vendors');
+
+                // Reset variabel global sesi
+                currentPin = '';
+                currentAssessorName = '';
+                userAssignedVendors = [];
                 vendors = [];
+                scoreSummary = {};
+                allRawOrders = [];
+                serverPeriods = {};
+                serverPeriodList = [];
+                selectedPeriode = '';
+                poStats = { totalOrders: 0, totalOnTime: 0, overallOnTimePct: 0, vendorMap: {} };
+                allMasterVendors = [...DEFAULT_VENDORS];
+
                 showWelcome();
             }
         });
