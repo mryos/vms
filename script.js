@@ -516,8 +516,13 @@ function doLogout() {
     serverPeriods = {};
     serverPeriodList = [];
     selectedPeriode = '';
+    activeCategories = ['all'];
+    viewMode = 'all';
     poStats = { totalOrders: 0, totalOnTime: 0, overallOnTimePct: 0, vendorMap: {} };
     allMasterVendors = [...DEFAULT_VENDORS];
+
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) searchInput.value = '';
 
     // Tampilkan PIN overlay
     const overlay = document.getElementById('welcomeOverlay');
@@ -526,6 +531,7 @@ function doLogout() {
         overlay.style.display = 'flex';
         overlay.style.opacity = '1';
         overlay.style.visibility = 'visible';
+        overlay.style.pointerEvents = 'auto';
     }
 
     // Reset input PIN
@@ -956,6 +962,8 @@ function renderVendorList(overrideList = null) {
         const done = assessed.includes(v);
         const isPinned = pinned.includes(v);
         const color = AVATAR_COLORS[(originalIndex >= 0 ? originalIndex : i) % AVATAR_COLORS.length];
+        const vNameStr = (v || '').toString();
+        const initials = vNameStr.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2) || 'VN';
         const vOrdersInfo = getAllOrdersForVendor(v);
         const vOrders = vOrdersInfo.orders;
         const itemPreview = vOrders.length > 0 ? vOrders.map(o => o.product).filter(Boolean).slice(0, 2).join(', ') : '';

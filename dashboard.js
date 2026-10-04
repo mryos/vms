@@ -83,6 +83,13 @@ function initHeader() {
     }
 }
 
+function adminLogout() {
+    localStorage.removeItem('ethos_pin');
+    localStorage.removeItem('ethos_nama');
+    localStorage.removeItem('ethos_user_vendors');
+    window.location.href = 'index.html';
+}
+
 function initTabs() {
     const tabs = document.querySelectorAll('.tremor-tab');
     tabs.forEach(btn => {
