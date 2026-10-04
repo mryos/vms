@@ -223,6 +223,14 @@ function doGet(e) {
       ? periods[defaultPeriodId].vendors
       : allMasterVendors;
 
+    // Kumpulkan seluruh rawOrders dari semua periode
+    var allRawOrders = [];
+    for (var pk in periods) {
+      if (periods[pk].rawOrders && periods[pk].rawOrders.length > 0) {
+        allRawOrders = allRawOrders.concat(periods[pk].rawOrders);
+      }
+    }
+
     // Jika ada request verifikasi PIN
     if (pin) {
       if (pin === '9999' || pin === 'admin') {
@@ -241,7 +249,8 @@ function doGet(e) {
           prList: prList,
           scoreSummary: scoreSummary,
           evaluationsList: evaluationsList,
-          contractCompliance: contractCompliance
+          contractCompliance: contractCompliance,
+          allRawOrders: allRawOrders
         });
       }
 
@@ -251,7 +260,7 @@ function doGet(e) {
         var namaPenilai = assessorResult.namaPenilai;
         var assignedVendors = assessorResult.assignedVendors;
 
-        // Buat filteredPeriods khusus penilai ini (selalu menampilkan vendor yang ditugaskan)
+        // Buat filteredPeriods khusus penilai ini (selalu menampilkan vendor yang ditugaskan & sertakan rawOrders!)
         var filteredPeriods = {};
         for (var pKey in periods) {
           var pObj = periods[pKey];
@@ -259,8 +268,11 @@ function doGet(e) {
             id: pObj.id,
             label: pObj.label,
             sheetName: pObj.sheetName,
+            year: pObj.year,
+            quarter: pObj.quarter,
             vendors: assignedVendors,
-            poStats: pObj.poStats
+            poStats: pObj.poStats,
+            rawOrders: pObj.rawOrders || []
           };
         }
 
@@ -279,7 +291,8 @@ function doGet(e) {
           prList: prList,
           scoreSummary: scoreSummary,
           evaluationsList: evaluationsList,
-          contractCompliance: contractCompliance
+          contractCompliance: contractCompliance,
+          allRawOrders: allRawOrders
         });
       }
 
@@ -303,7 +316,8 @@ function doGet(e) {
       prList: prList,
       scoreSummary: scoreSummary,
       evaluationsList: evaluationsList,
-      contractCompliance: contractCompliance
+      contractCompliance: contractCompliance,
+      allRawOrders: allRawOrders
     });
 
   } catch (error) {

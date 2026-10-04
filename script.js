@@ -2,7 +2,7 @@
 // KONFIGURASI
 // =====================================================
 // Ganti URL di bawah dengan URL Web App Google Apps Script Anda
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwnpN5Ml0Yctsy9XiKCd7UXZVt_nZHa_xut8FZXxMF-VVv9Mb3V3Uj1pFplMEHtKXX9/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby2jgUq7OoHyqL4soBBPPs1pvv-lzWve9skNFChrIw_aTv-yvQU3yRRqbD_ji5TaCxkzg/exec';
 
 // Daftar vendor default (fallback offline)
 const DEFAULT_VENDORS = [
@@ -114,6 +114,7 @@ let selectedPeriode = ''; // Akan diisi dari data server (nama sheet di spreadsh
 let serverPeriods = {}; // { 'Q2 2026': { vendors: [], poStats: {} }, ... }
 let serverPeriodList = []; // ['Q2 2027', 'Q4 2026', 'Q3 2026', 'Q2 2026']
 let scoreSummary = {}; // Ringkasan evaluasi dari server untuk cek lock per periode
+let allRawOrders = []; // Seluruh daftar PO dari semua periode
 
 let activeCategories = ['all'];
 let viewMode = 'all'; // 'all' | 'pinned'
@@ -264,6 +265,14 @@ async function refreshPoStatsFromServer(pin) {
                 serverPeriods = data.periods;
                 serverPeriodList = data.periodList;
 
+                if (Array.isArray(data.allRawOrders)) {
+                    allRawOrders = data.allRawOrders;
+                }
+
+                if (pin !== '9999' && pin !== 'admin') {
+                    selectedPeriode = getBestPeriodForUser(userAssignedVendors);
+                }
+
                 renderPeriodChips(serverPeriodList);
                 switchPeriod(selectedPeriode);
             } else {
@@ -367,8 +376,16 @@ async function processPinLogin(pin) {
                     serverPeriodList = data.periodList;
                 }
 
-                if (!selectedPeriode && serverPeriodList.length > 0) {
-                    selectedPeriode = serverPeriodList[0];
+                if (Array.isArray(data.allRawOrders)) {
+                    allRawOrders = data.allRawOrders;
+                }
+
+                if (pin === '9999' || pin === 'admin') {
+                    if (!selectedPeriode && serverPeriodList.length > 0) {
+                        selectedPeriode = serverPeriodList[0];
+                    }
+                } else {
+                    selectedPeriode = getBestPeriodForUser(userAssignedVendors);
                 }
                 renderPeriodChips(serverPeriodList);
 
@@ -687,15 +704,154 @@ function switchPeriod(periodId) {
 }
 
 // =====================================================
-// PO STATS HELPER
+// PO STATS & VENDOR RESOLUTION HELPERS
 // =====================================================
-function getVendorPoStats(vName) {
-    if (!poStats || !poStats.vendorMap || !vName) return null;
-    if (poStats.vendorMap[vName]) return poStats.vendorMap[vName];
-    const target = vName.toLowerCase().trim();
-    for (let k in poStats.vendorMap) {
-        if (k.toLowerCase().trim() === target) return poStats.vendorMap[k];
+
+/**
+ * Mencocokkan nama vendor secara cerdas:
+ * Mengabaikan perbedaan variasi PT / PT. / CV / CV. / spasi / kapital / tanda baca
+ */
+function isSameVendor(n1, n2) {
+    if (!n1 || !n2) return false;
+    const s1 = n1.toString().toLowerCase().trim();
+    const s2 = n2.toString().toLowerCase().trim();
+    if (s1 === s2) return true;
+    if (s1.includes(s2) || s2.includes(s1)) return true;
+    const clean = s => s.replace(/^(pt\.|pt|cv\.|cv|ud\.|ud|toko)\s+/i, '').replace(/[^a-z0-9]/g, '');
+    const c1 = clean(s1);
+    const c2 = clean(s2);
+    return c1.length > 2 && c2.length > 2 && (c1 === c2 || c1.includes(c2) || c2.includes(c1));
+}
+
+/**
+ * Mengambil seluruh PO yang dimiliki suatu vendor:
+ * 1. Pertama cek di periode aktif (selectedPeriode)
+ * 2. Jika tidak ada, cari di seluruh periode yang ada (misal Q3 2026, Q2 2026, dll.)
+ * 3. Jika masih tidak ada, cari di allRawOrders & vendorMap
+ */
+function getAllOrdersForVendor(vendorName) {
+    if (!vendorName) return { orders: [], period: selectedPeriode };
+
+    let foundOrders = [];
+    let detectedPeriod = selectedPeriode;
+
+    // 1. Cek periode aktif terlebih dahulu
+    if (serverPeriods && serverPeriods[selectedPeriode]) {
+        const cur = serverPeriods[selectedPeriode];
+        if (cur.rawOrders && cur.rawOrders.length > 0) {
+            foundOrders = cur.rawOrders.filter(o => isSameVendor(o.vendor, vendorName));
+        }
+        if (foundOrders.length === 0 && cur.poStats && cur.poStats.vendorMap) {
+            for (let k in cur.poStats.vendorMap) {
+                if (isSameVendor(k, vendorName)) {
+                    foundOrders = cur.poStats.vendorMap[k].recentOrders || [];
+                    break;
+                }
+            }
+        }
     }
+
+    // 2. Jika tidak ada di periode aktif, cari di seluruh periode lain (seperti Q3 2026, Q4 2026, Q2 2026)
+    if (foundOrders.length === 0 && serverPeriods) {
+        for (let pKey in serverPeriods) {
+            if (pKey === selectedPeriode) continue;
+            const pObj = serverPeriods[pKey];
+            let pOrders = [];
+            if (pObj.rawOrders && pObj.rawOrders.length > 0) {
+                pOrders = pObj.rawOrders.filter(o => isSameVendor(o.vendor, vendorName));
+            }
+            if (pOrders.length === 0 && pObj.poStats && pObj.poStats.vendorMap) {
+                for (let k in pObj.poStats.vendorMap) {
+                    if (isSameVendor(k, vendorName)) {
+                        pOrders = pObj.poStats.vendorMap[k].recentOrders || [];
+                        break;
+                    }
+                }
+            }
+            if (pOrders.length > 0) {
+                foundOrders = pOrders;
+                detectedPeriod = pKey;
+                break;
+            }
+        }
+    }
+
+    // 3. Cek di allRawOrders jika ada
+    if (foundOrders.length === 0 && Array.isArray(allRawOrders) && allRawOrders.length > 0) {
+        foundOrders = allRawOrders.filter(o => isSameVendor(o.vendor, vendorName));
+    }
+
+    // 4. Fallback ke global poStats
+    if (foundOrders.length === 0 && poStats && poStats.vendorMap) {
+        for (let k in poStats.vendorMap) {
+            if (isSameVendor(k, vendorName)) {
+                foundOrders = poStats.vendorMap[k].recentOrders || [];
+                break;
+            }
+        }
+    }
+
+    return { orders: foundOrders, period: detectedPeriod };
+}
+
+/**
+ * Menemukan periode paling relevan untuk daftar vendor yang ditugaskan kepada penilai
+ */
+function getBestPeriodForUser(assignedVendors) {
+    if (!serverPeriods || !assignedVendors || assignedVendors.length === 0) {
+        return (serverPeriodList && serverPeriodList.length > 0) ? serverPeriodList[0] : 'Q3 2026';
+    }
+
+    let bestP = null;
+    let maxMatch = 0;
+
+    for (let pKey of (serverPeriodList || [])) {
+        const pObj = serverPeriods[pKey];
+        if (!pObj) continue;
+
+        let matchCount = 0;
+        if (pObj.rawOrders && pObj.rawOrders.length > 0) {
+            matchCount = pObj.rawOrders.filter(o => assignedVendors.some(v => isSameVendor(v, o.vendor))).length;
+        } else if (pObj.poStats && pObj.poStats.vendorMap) {
+            for (let vKey in pObj.poStats.vendorMap) {
+                if (assignedVendors.some(v => isSameVendor(v, vKey))) {
+                    matchCount += (pObj.poStats.vendorMap[vKey].totalPo || 1);
+                }
+            }
+        }
+
+        if (matchCount > maxMatch) {
+            maxMatch = matchCount;
+            bestP = pKey;
+        }
+    }
+
+    if (maxMatch > 0 && bestP) return bestP;
+    return (serverPeriodList && serverPeriodList.includes('Q3 2026')) ? 'Q3 2026' : (serverPeriodList[0] || 'Q3 2026');
+}
+
+function getVendorPoStats(vName) {
+    if (!vName) return null;
+
+    // 1. Cek poStats periode saat ini
+    if (poStats && poStats.vendorMap) {
+        for (let k in poStats.vendorMap) {
+            if (isSameVendor(k, vName)) return poStats.vendorMap[k];
+        }
+    }
+
+    // 2. Cek di seluruh serverPeriods
+    if (serverPeriods) {
+        for (let pKey in serverPeriods) {
+            const pObj = serverPeriods[pKey];
+            if (pObj && pObj.poStats && pObj.poStats.vendorMap) {
+                for (let k in pObj.poStats.vendorMap) {
+                    if (isSameVendor(k, vName)) return pObj.poStats.vendorMap[k];
+                }
+            }
+        }
+    }
+
     return null;
 }
 
@@ -762,8 +918,9 @@ function renderVendorList(overrideList = null) {
         const done = assessed.includes(v);
         const isPinned = pinned.includes(v);
         const color = AVATAR_COLORS[(originalIndex >= 0 ? originalIndex : i) % AVATAR_COLORS.length];
-        const initials = v.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-        const vPo = getVendorPoStats(v);
+        const vOrdersInfo = getAllOrdersForVendor(v);
+        const vOrders = vOrdersInfo.orders;
+        const itemPreview = vOrders.length > 0 ? vOrders.map(o => o.product).filter(Boolean).slice(0, 2).join(', ') : '';
 
         const rowStyle = done && !isAdmin ? 'style="opacity: 0.65; cursor: not-allowed;"' : '';
 
@@ -773,7 +930,10 @@ function renderVendorList(overrideList = null) {
                 ${isPinned ? '📌' : '📍'}
             </button>
             <div class="vendor-avatar" style="background:${color}12;color:${color};border:1px solid ${color}25;">${initials}</div>
-            <span class="vendor-name">${esc(v)}</span>
+            <div style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+                <span class="vendor-name">${esc(v)}</span>
+                ${itemPreview ? `<span style="font-size: 0.75rem; color: #2563eb; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">📦 ${esc(itemPreview)}${vOrders.length > 2 ? ` (+${vOrders.length - 2} lainnya)` : ''}</span>` : ''}
+            </div>
             ${done ? '<span class="vendor-badge-done" style="background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3);">🔒 Dinilai (Terkunci)</span>' : ''}
             ${done && isAdmin ? `<button class="vendor-unlock-btn" data-unlock="${esc(v)}" title="Buka Kunci Penilaian Periode Ini (Admin Only)" style="background:none; border:none; cursor:pointer; font-size:1.1rem; padding: 4px; margin-left: 8px;">🔓</button>` : ''}
             ${done ? '' : '<span class="vendor-arrow">›</span>'}
@@ -905,6 +1065,12 @@ function openModal(vendorName) {
         console.warn('resetForm error:', e);
     }
 
+    // Deteksi PO dan periode yang cocok untuk vendor ini
+    const poInfo = getAllOrdersForVendor(vendorName);
+    if (poInfo.period && poInfo.period !== selectedPeriode) {
+        selectedPeriode = poInfo.period;
+    }
+
     const titleEl = document.getElementById('modalVendorName');
     if (titleEl) titleEl.textContent = vendorName;
 
@@ -958,35 +1124,24 @@ function renderVendorPoPanel(vendorName) {
     const panel = document.getElementById('vendorPoPanel');
     const body = document.getElementById('vendorPoBody');
     const countEl = document.getElementById('vendorPoCount');
+    const titleEl = document.getElementById('vendorPoTitle');
     if (!panel || !body) return;
 
-    // Ambil semua PO untuk vendor ini dari periode aktif
-    const vStats = getVendorPoStats(vendorName);
-    const orders = (vStats && vStats.recentOrders && vStats.recentOrders.length > 0)
-        ? vStats.recentOrders
-        : null;
+    const poInfo = getAllOrdersForVendor(vendorName);
+    const allOrders = poInfo.orders;
 
-    // Juga cek rawOrders dari serverPeriods jika recentOrders kurang lengkap
-    let allOrders = orders ? [...orders] : [];
-    try {
-        if (serverPeriods && serverPeriods[selectedPeriode] && serverPeriods[selectedPeriode].rawOrders) {
-            const raw = serverPeriods[selectedPeriode].rawOrders.filter(o => {
-                if (!o.vendor) return false;
-                return o.vendor.toLowerCase().trim() === vendorName.toLowerCase().trim();
-            });
-            if (raw.length > allOrders.length) {
-                allOrders = raw;
-            }
-        }
-    } catch (e) {}
-
-    if (allOrders.length === 0) {
+    if (!allOrders || allOrders.length === 0) {
         panel.style.display = 'none';
         return;
     }
 
     panel.style.display = 'block';
-    if (countEl) countEl.textContent = `${allOrders.length} PO`;
+    if (titleEl) {
+        titleEl.textContent = `📦 Riwayat PO (${poInfo.period || selectedPeriode})`;
+    }
+    if (countEl) {
+        countEl.textContent = `${allOrders.length} PO`;
+    }
 
     body.innerHTML = allOrders.map(o => {
         const isOnTime = o.isOnTime;
@@ -995,7 +1150,7 @@ function renderVendorPoPanel(vendorName) {
         return `
         <tr class="border-b border-blue-50 hover:bg-blue-50/50">
             <td class="px-3 py-2 font-mono font-semibold text-blue-700 whitespace-nowrap">${esc(o.poNum || '-')}</td>
-            <td class="px-3 py-2 text-gray-800 font-medium max-w-[180px]">${esc(o.product || 'Barang/Jasa')}</td>
+            <td class="px-3 py-2 text-gray-800 font-medium max-w-[200px]">${esc(o.product || 'Barang/Jasa')}</td>
             <td class="px-3 py-2 text-right text-gray-500 whitespace-nowrap">${esc(o.expectedDate || '-')}</td>
             <td class="px-3 py-2 text-right text-gray-500 whitespace-nowrap">${esc(o.effectiveDate || 'Belum Diterima')}</td>
             <td class="px-3 py-2 text-center">
