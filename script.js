@@ -2,7 +2,7 @@
 // KONFIGURASI
 // =====================================================
 // Ganti URL di bawah dengan URL Web App Google Apps Script Anda
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby1nfyB6Gfamj6f6kn1J_BCxVA9ZXrFZc4Pd18nhlCcCCArke_5FXuYdP6WaS5CrO8iHg/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwnpN5Ml0Yctsy9XiKCd7UXZVt_nZHa_xut8FZXxMF-VVv9Mb3V3Uj1pFplMEHtKXX9/exec';
 
 // Daftar vendor default (fallback offline)
 const DEFAULT_VENDORS = [
@@ -934,6 +934,13 @@ function openModal(vendorName) {
         console.warn('autoSuggest error:', e);
     }
 
+    // Render panel ringkasan PO vendor pada periode ini
+    try {
+        renderVendorPoPanel(vendorName);
+    } catch (e) {
+        console.warn('renderVendorPoPanel error:', e);
+    }
+
     // Tampilkan modal
     modalEl.classList.add('show');
     modalEl.style.display = 'flex';
@@ -941,6 +948,63 @@ function openModal(vendorName) {
     modalEl.style.visibility = 'visible';
     modalEl.style.pointerEvents = 'auto';
     document.body.style.overflow = 'hidden';
+}
+
+/**
+ * Render daftar item PO (BarangJasa) vendor pada periode yang dipilih
+ * di panel atas modal, agar penilai tahu apa yang disuplai vendor.
+ */
+function renderVendorPoPanel(vendorName) {
+    const panel = document.getElementById('vendorPoPanel');
+    const body = document.getElementById('vendorPoBody');
+    const countEl = document.getElementById('vendorPoCount');
+    if (!panel || !body) return;
+
+    // Ambil semua PO untuk vendor ini dari periode aktif
+    const vStats = getVendorPoStats(vendorName);
+    const orders = (vStats && vStats.recentOrders && vStats.recentOrders.length > 0)
+        ? vStats.recentOrders
+        : null;
+
+    // Juga cek rawOrders dari serverPeriods jika recentOrders kurang lengkap
+    let allOrders = orders ? [...orders] : [];
+    try {
+        if (serverPeriods && serverPeriods[selectedPeriode] && serverPeriods[selectedPeriode].rawOrders) {
+            const raw = serverPeriods[selectedPeriode].rawOrders.filter(o => {
+                if (!o.vendor) return false;
+                return o.vendor.toLowerCase().trim() === vendorName.toLowerCase().trim();
+            });
+            if (raw.length > allOrders.length) {
+                allOrders = raw;
+            }
+        }
+    } catch (e) {}
+
+    if (allOrders.length === 0) {
+        panel.style.display = 'none';
+        return;
+    }
+
+    panel.style.display = 'block';
+    if (countEl) countEl.textContent = `${allOrders.length} PO`;
+
+    body.innerHTML = allOrders.map(o => {
+        const isOnTime = o.isOnTime;
+        const statusColor = isOnTime ? '#10b981' : (o.status && o.status.includes('Terlambat') ? '#ef4444' : '#f59e0b');
+        const statusBg = isOnTime ? '#ecfdf5' : (o.status && o.status.includes('Terlambat') ? '#fef2f2' : '#fffbeb');
+        return `
+        <tr class="border-b border-blue-50 hover:bg-blue-50/50">
+            <td class="px-3 py-2 font-mono font-semibold text-blue-700 whitespace-nowrap">${esc(o.poNum || '-')}</td>
+            <td class="px-3 py-2 text-gray-800 font-medium max-w-[180px]">${esc(o.product || 'Barang/Jasa')}</td>
+            <td class="px-3 py-2 text-right text-gray-500 whitespace-nowrap">${esc(o.expectedDate || '-')}</td>
+            <td class="px-3 py-2 text-right text-gray-500 whitespace-nowrap">${esc(o.effectiveDate || 'Belum Diterima')}</td>
+            <td class="px-3 py-2 text-center">
+                <span style="background:${statusBg}; color:${statusColor}; border:1px solid ${statusColor}30; font-size:0.65rem; font-weight:700; padding:2px 7px; border-radius:999px; white-space:nowrap; display:inline-block;">
+                    ${esc(o.status || '-')}
+                </span>
+            </td>
+        </tr>`;
+    }).join('');
 }
 
 function getVendorCategory(vendorName) {

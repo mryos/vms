@@ -788,9 +788,7 @@ function partitionPoSheetByDate(sheet, masterMap) {
     };
 
     grp.rawOrders.push(orderObj);
-    if (vData.recentOrders.length < 5) {
-      vData.recentOrders.push(orderObj);
-    }
+    vData.recentOrders.push(orderObj);
   }
 
   // Finalisasi kelompok periode
@@ -1061,9 +1059,7 @@ function parsePoFromSheet(sheet, masterMap) {
     };
 
     rawOrders.push(orderObj);
-    if (vData.recentOrders.length < 5) {
-      vData.recentOrders.push(orderObj);
-    }
+    vData.recentOrders.push(orderObj);
   }
 
   for (var vk in stats.vendorMap) {

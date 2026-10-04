@@ -522,6 +522,28 @@
             </div>
 
             <form id="assessmentForm" autocomplete="off">
+                <!-- ===== Panel Ringkasan PO Vendor ===== -->
+                <div id="vendorPoPanel" class="mb-4 rounded-xl border border-blue-100 bg-blue-50 overflow-hidden" style="display:none;">
+                    <div class="flex items-center justify-between px-4 py-2.5 bg-blue-100 border-b border-blue-200">
+                        <span class="text-xs font-semibold text-blue-700 uppercase tracking-wider">📦 Riwayat PO pada Periode Ini</span>
+                        <span class="text-xs text-blue-500 font-medium" id="vendorPoCount"></span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs" id="vendorPoTable">
+                            <thead>
+                                <tr class="text-left text-blue-600 border-b border-blue-100">
+                                    <th class="px-3 py-2 font-semibold">No PO</th>
+                                    <th class="px-3 py-2 font-semibold">Barang / Jasa</th>
+                                    <th class="px-3 py-2 font-semibold text-right">Expected</th>
+                                    <th class="px-3 py-2 font-semibold text-right">Diterima</th>
+                                    <th class="px-3 py-2 font-semibold text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="vendorPoBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <!-- Pertanyaan Dinamis (di-render dari Spreadsheet) -->
                 <div id="questionsContainer"></div>
 
