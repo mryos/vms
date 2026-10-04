@@ -434,7 +434,13 @@ async function processPinLogin(pin) {
         localStorage.setItem('ethos_user_vendors', JSON.stringify(userAssignedVendors));
 
         updateHeaderUser(currentAssessorName, currentPin);
+
+        // Sembunyikan overlay paksa dengan inline style (bukan hanya class)
         overlay.classList.remove('show');
+        overlay.style.display = 'none';
+        overlay.style.opacity = '0';
+        overlay.style.visibility = 'hidden';
+        overlay.style.pointerEvents = 'none';
 
         switchPeriod(selectedPeriode);
     } else {
@@ -494,32 +500,49 @@ function updateRoleBasedView(pin) {
     }
 }
 
+function doLogout() {
+    // Hapus semua data sesi dari localStorage
+    localStorage.removeItem('ethos_pin');
+    localStorage.removeItem('ethos_nama');
+    localStorage.removeItem('ethos_user_vendors');
+
+    // Reset semua variabel global sesi
+    currentPin = '';
+    currentAssessorName = '';
+    userAssignedVendors = [];
+    vendors = [];
+    scoreSummary = {};
+    allRawOrders = [];
+    serverPeriods = {};
+    serverPeriodList = [];
+    selectedPeriode = '';
+    poStats = { totalOrders: 0, totalOnTime: 0, overallOnTimePct: 0, vendorMap: {} };
+    allMasterVendors = [...DEFAULT_VENDORS];
+
+    // Tampilkan PIN overlay
+    const overlay = document.getElementById('welcomeOverlay');
+    if (overlay) {
+        overlay.classList.add('show');
+        overlay.style.display = 'flex';
+        overlay.style.opacity = '1';
+        overlay.style.visibility = 'visible';
+    }
+
+    // Reset input PIN
+    const input = document.getElementById('welcomePinInput');
+    if (input) {
+        input.value = '';
+        setTimeout(() => input.focus(), 100);
+    }
+    const errEl = document.getElementById('pinErrorMsg');
+    if (errEl) errEl.style.display = 'none';
+}
+
 function initHeaderUser() {
+    // Tetap dukung klik pada headerUser untuk backward compatibility
     const el = document.getElementById('headerUser');
     if (el) {
-        el.addEventListener('click', () => {
-            if (confirm('Apakah Anda ingin keluar / mengganti PIN Penilai?')) {
-                // Reset semua state sesi
-                localStorage.removeItem('ethos_pin');
-                localStorage.removeItem('ethos_nama');
-                localStorage.removeItem('ethos_user_vendors');
-
-                // Reset variabel global sesi
-                currentPin = '';
-                currentAssessorName = '';
-                userAssignedVendors = [];
-                vendors = [];
-                scoreSummary = {};
-                allRawOrders = [];
-                serverPeriods = {};
-                serverPeriodList = [];
-                selectedPeriode = '';
-                poStats = { totalOrders: 0, totalOnTime: 0, overallOnTimePct: 0, vendorMap: {} };
-                allMasterVendors = [...DEFAULT_VENDORS];
-
-                showWelcome();
-            }
-        });
+        el.style.cursor = 'default';
     }
 }
 
