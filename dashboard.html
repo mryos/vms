@@ -36,100 +36,126 @@ tailwind.config = {
 </script>
 <style>
   * { box-sizing: border-box; }
-  body { font-family: 'Inter', system-ui, sans-serif; background: #f9fafb; color: #111827; margin: 0; }
+  body { font-family: 'Inter', system-ui, sans-serif; background: #f8fafc; color: #0f172a; margin: 0; }
 
-  /* Tremor-style scrollbar */
+  /* Smooth scroll & modern scrollbar */
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+  ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-  /* Tremor card */
+  /* Tremor & Executive Cards */
   .tremor-card {
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 0.75rem;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 1rem;
     padding: 1.5rem;
-    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.05);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   }
+  .tremor-card:hover {
+    box-shadow: 0 4px 12px 0 rgb(0 0 0 / 0.06), 0 2px 4px -1px rgb(0 0 0 / 0.04);
+  }
+
+  /* Executive KPI Cards with Accent Top Borders */
+  .kpi-card {
+    position: relative;
+    overflow: hidden;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 1rem;
+    padding: 1.25rem 1.25rem 1.15rem;
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.04);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px -4px rgb(0 0 0 / 0.08);
+  }
+  .kpi-card-blue { border-top: 4px solid #2563eb; }
+  .kpi-card-amber { border-top: 4px solid #f59e0b; }
+  .kpi-card-emerald { border-top: 4px solid #10b981; }
+  .kpi-card-purple { border-top: 4px solid #8b5cf6; }
+  .kpi-card-indigo { border-top: 4px solid #6366f1; }
 
   /* Tremor table */
   .tremor-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
   .tremor-table thead th {
-    text-align: left; padding: 0.75rem 1rem; font-weight: 500; color: #6b7280;
-    border-bottom: 1px solid #e5e7eb; font-size: 0.75rem; text-transform: uppercase;
-    letter-spacing: 0.05em; white-space: nowrap;
+    text-align: left; padding: 0.75rem 1rem; font-weight: 600; color: #475569;
+    border-bottom: 1px solid #e2e8f0; font-size: 0.72rem; text-transform: uppercase;
+    letter-spacing: 0.06em; white-space: nowrap; background: #f8fafc;
   }
   .tremor-table tbody td {
-    padding: 0.75rem 1rem; border-bottom: 1px solid #f3f4f6; color: #374151;
+    padding: 0.8rem 1rem; border-bottom: 1px solid #f1f5f9; color: #334155;
     vertical-align: middle;
   }
   .tremor-table tbody tr:last-child td { border-bottom: none; }
-  .tremor-table tbody tr:hover { background: #f9fafb; }
+  .tremor-table tbody tr:hover { background: #f8fafc; }
 
   /* Tremor Badge */
   .tremor-badge {
-    display: inline-flex; align-items: center; gap: 0.25rem;
-    padding: 0.125rem 0.625rem; border-radius: 9999px;
-    font-size: 0.75rem; font-weight: 500; line-height: 1.25rem;
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    padding: 0.2rem 0.65rem; border-radius: 9999px;
+    font-size: 0.75rem; font-weight: 600; line-height: 1.2rem;
   }
-  .tremor-badge-emerald { background: #ecfdf5; color: #065f46; }
-  .tremor-badge-red { background: #fef2f2; color: #991b1b; }
-  .tremor-badge-amber { background: #fffbeb; color: #92400e; }
-  .tremor-badge-blue { background: #eff6ff; color: #1e40af; }
-  .tremor-badge-purple { background: #f5f3ff; color: #5b21b6; }
-  .tremor-badge-gray { background: #f3f4f6; color: #374151; }
+  .tremor-badge-emerald { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+  .tremor-badge-red { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+  .tremor-badge-amber { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+  .tremor-badge-blue { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+  .tremor-badge-purple { background: #f5f3ff; color: #5b21b6; border: 1px solid #ddd6fe; }
+  .tremor-badge-gray { background: #f1f5f9; color: #334155; border: 1px solid #e2e8f0; }
 
-  /* Predikat Badge & Progress Bar Helpers */
+  /* Predikat Badge */
   .predikat-badge {
     display: inline-flex; align-items: center; gap: 0.25rem;
     padding: 0.15rem 0.65rem; border-radius: 9999px;
-    font-size: 0.75rem; font-weight: 600; line-height: 1.25rem;
-  }
-  .progress-bar-container {
-    background: #e5e7eb; height: 6px; border-radius: 9999px; overflow: hidden;
-  }
-  .progress-bar-fill {
-    height: 100%; border-radius: 9999px; transition: width 0.4s ease;
+    font-size: 0.72rem; font-weight: 700; line-height: 1.25rem;
   }
 
-  /* Tremor progress bar */
+  /* Progress bars */
+  .progress-bar-container {
+    background: #e2e8f0; height: 6px; border-radius: 9999px; overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%; border-radius: 9999px; transition: width 0.5s ease;
+  }
+
   .tremor-progress-bar {
     width: 100%; height: 0.5rem; border-radius: 9999px;
-    background: #e5e7eb; overflow: hidden;
+    background: #f1f5f9; overflow: hidden;
   }
   .tremor-progress-fill {
     height: 100%; border-radius: 9999px;
-    transition: width 0.6s ease;
+    transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   /* Tremor select */
   .tremor-select {
-    appearance: none; background: #fff; border: 1px solid #e5e7eb;
-    border-radius: 0.5rem; padding: 0.5rem 2rem 0.5rem 0.75rem;
-    font-size: 0.875rem; color: #374151; cursor: pointer;
+    appearance: none; background: #fff; border: 1px solid #e2e8f0;
+    border-radius: 0.6rem; padding: 0.5rem 2rem 0.5rem 0.75rem;
+    font-size: 0.825rem; font-weight: 500; color: #334155; cursor: pointer;
     box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
     background-position: right 0.5rem center; background-repeat: no-repeat; background-size: 1.25rem;
     transition: border-color 0.15s, box-shadow 0.15s;
   }
-  .tremor-select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 1px #3b82f6; }
+  .tremor-select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15); }
 
   /* Tremor tabs */
   .tremor-tab {
-    padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 500;
-    color: #6b7280; border-bottom: 2px solid transparent;
-    cursor: pointer; transition: all 0.15s; background: none; border-top: none; border-left: none; border-right: none;
-    white-space: nowrap;
+    padding: 0.65rem 1.15rem; font-size: 0.85rem; font-weight: 600;
+    color: #64748b; border-bottom: 2px solid transparent;
+    cursor: pointer; transition: all 0.15s ease; background: none; border-top: none; border-left: none; border-right: none;
+    white-space: nowrap; display: inline-flex; align-items: center; gap: 0.5rem;
   }
-  .tremor-tab:hover { color: #374151; }
-  .tremor-tab.active { color: #3b82f6; border-bottom-color: #3b82f6; }
+  .tremor-tab:hover { color: #0f172a; }
+  .tremor-tab.active { color: #2563eb; border-bottom-color: #2563eb; }
 
   /* Toast */
   .toast-box { position: fixed; bottom: 1rem; right: 1rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.5rem; }
   .toast {
     display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem;
-    border-radius: 0.5rem; font-size: 0.875rem; font-weight: 500;
+    border-radius: 0.75rem; font-size: 0.875rem; font-weight: 500;
     box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); transform: translateX(100%);
     opacity: 0; transition: all 0.3s ease;
   }
@@ -138,47 +164,52 @@ tailwind.config = {
   .toast.error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
   .toast.info { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
 
-  /* Responsive */
+  /* Rank badges */
+  .rank-badge-1 { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-weight: 800; }
+  .rank-badge-2 { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; font-weight: 800; }
+  .rank-badge-3 { background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; font-weight: 800; }
+
+  /* Responsive adjustments */
   @media (max-width: 768px) {
     .kpi-grid { grid-template-columns: 1fr !important; }
     .chart-grid { grid-template-columns: 1fr !important; }
     .perf-grid { grid-template-columns: 1fr !important; }
     .filter-bar { flex-direction: column; align-items: stretch !important; }
-    .tremor-card { padding: 1rem; }
+    .tremor-card { padding: 1.15rem; }
   }
 
   /* Subtle animations */
   @keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
   .animate-in { animation: fadeInUp 0.4s ease both; }
-  .animate-in-1 { animation-delay: 0.05s; }
-  .animate-in-2 { animation-delay: 0.1s; }
-  .animate-in-3 { animation-delay: 0.15s; }
-  .animate-in-4 { animation-delay: 0.2s; }
-  .animate-in-5 { animation-delay: 0.25s; }
+  .animate-in-1 { animation-delay: 0.03s; }
+  .animate-in-2 { animation-delay: 0.07s; }
+  .animate-in-3 { animation-delay: 0.11s; }
+  .animate-in-4 { animation-delay: 0.15s; }
+  .animate-in-5 { animation-delay: 0.19s; }
 </style>
 </head>
 <body class="min-h-screen">
 
     <!-- ========== HEADER ========== -->
-    <header class="sticky top-0 z-30 border-b border-gray-200 bg-white/90 backdrop-blur-lg">
+    <header class="sticky top-0 z-30 border-b border-gray-200 bg-white/95 backdrop-blur-md shadow-xs">
         <div class="mx-auto max-w-7xl px-4 lg:px-8">
             <div class="flex h-16 items-center justify-between">
                 <a href="index.html" class="flex items-center gap-3 no-underline">
-                    <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 text-white">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                    <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
                     </div>
                     <div>
-                        <div class="text-sm font-bold text-gray-900 leading-tight">Vendor & Contract Lifecycle</div>
-                        <div class="text-xs text-gray-500">PT Ethos Kreatif Indonesia</div>
+                        <div class="text-sm font-extrabold text-gray-900 leading-tight">Vendor Management System</div>
+                        <div class="text-xs font-medium text-gray-500">PT Ethos Kreatif Indonesia</div>
                     </div>
                 </a>
-                <div class="flex items-center gap-4">
-                    <a href="index.html" class="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition">
-                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                <div class="flex items-center gap-3">
+                    <a href="index.html" class="hidden sm:inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-xs hover:bg-gray-50 transition">
+                        <svg class="w-3.5 h-3.5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                         Form Penilaian
                     </a>
-                    <span class="text-sm text-gray-500" id="headerUser">👤 Guest</span>
-                    <button onclick="adminLogout()" class="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-100 hover:border-red-300 transition shadow-sm" title="Keluar / Ganti PIN">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-100 border border-gray-200 text-xs font-semibold text-gray-700" id="headerUser">👤 Guest</span>
+                    <button onclick="adminLogout()" class="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100 hover:border-red-300 transition shadow-xs" title="Keluar / Ganti PIN">
                         <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                         Ganti PIN
                     </button>
@@ -190,202 +221,346 @@ tailwind.config = {
     <!-- ========== MAIN CONTENT ========== -->
     <main class="mx-auto max-w-7xl px-4 lg:px-8 py-6">
 
-        <!-- Page Title -->
-        <div class="mb-6">
-            <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Dashboard Overview</h1>
-            <p class="mt-1 text-sm text-gray-500">Monitoring kinerja vendor, kontrak, dan purchase order secara real-time.</p>
-        </div>
-
-        <!-- ========== TAB NAVIGATION ========== -->
-        <div class="mb-6 flex items-start justify-between gap-4 flex-wrap border-b border-gray-200">
-            <div class="flex gap-0 -mb-px overflow-x-auto" id="dashboardTabs">
-                <button class="tremor-tab active" data-tab="all">Semua Ringkasan</button>
-                <button class="tremor-tab" data-tab="clm">Contract Lifecycle</button>
-                <button class="tremor-tab" data-tab="performance">Kinerja & Evaluasi</button>
-                <button class="tremor-tab" data-tab="orders">PO & Delivery</button>
-            </div>
-        </div>
-
-        <!-- ========== FILTER BAR ========== -->
-        <div class="mb-6 flex items-center gap-3 flex-wrap filter-bar">
-            <select id="slicerPeriodSelect" class="tremor-select" title="Filter Periode">
-                <option value="all">📅 Semua Periode</option>
-            </select>
-            <select id="slicerCategorySelect" class="tremor-select" title="Filter Bidang Vendor">
-                <option value="all">📁 Semua Bidang</option>
-            </select>
-            <select id="slicerComplianceSelect" class="tremor-select" title="Filter Status Kontrak">
-                <option value="all">📜 Semua Kontrak</option>
-                <option value="comply">✅ Comply</option>
-                <option value="not-comply">❌ Not Comply</option>
-            </select>
-            <select id="slicerTierSelect" class="tremor-select" title="Filter Rating">
-                <option value="all">⭐ Semua Rating</option>
-                <option value="high">⭐ Sangat Baik (≥ 4.5)</option>
-                <option value="good">👍 Baik (3.5 - 4.4)</option>
-                <option value="poor">⚠️ Perlu Perhatian (< 2.5)</option>
-            </select>
-            <button id="slicerResetBtn" onclick="resetAllSlicers()" class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-600 shadow-sm hover:bg-gray-50 transition">
-                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
-                Reset
-            </button>
-        </div>
-
-        <!-- ========== ALERT BANNER ========== -->
-        <div class="tremor-card mb-6 border-l-4 border-l-amber-400 bg-amber-50" id="expiringContractsBanner" style="display: none;">
-            <div class="flex items-start justify-between gap-4 flex-wrap">
-                <div class="flex items-start gap-3">
-                    <div class="mt-0.5 text-amber-500">
-                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm-1-7v2h2v-2h-2zm0-8v6h2V7h-2z"/></svg>
-                    </div>
-                    <div>
-                        <h5 class="text-sm font-semibold text-amber-800" id="alertBannerTitle">Peringatan Masa Berlaku Kontrak</h5>
-                        <p class="text-sm text-amber-700 mt-0.5" id="alertBannerDesc">Terdapat kontrak vendor yang akan segera berakhir dalam 90 hari.</p>
-                    </div>
+        <!-- ========== EXECUTIVE HERO BANNER ========== -->
+        <div class="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-5 rounded-2xl border border-gray-200 shadow-xs">
+            <div>
+                <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                        <span class="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span>
+                        Executive Dashboard · Admin Workspace
+                    </span>
+                    <span class="text-xs text-gray-500 font-medium" id="liveSyncStatus">Data tersinkronisasi realtime</span>
                 </div>
-                <button onclick="document.getElementById('sectionContracts').scrollIntoView({behavior: 'smooth'})" class="text-sm font-medium text-amber-700 hover:text-amber-900 whitespace-nowrap">
-                    Lihat Detail →
+                <h1 class="text-xl font-extrabold text-gray-900 sm:text-2xl tracking-tight">Vendor & Contract Lifecycle Intelligence</h1>
+                <p class="text-xs sm:text-sm text-gray-500 mt-1">Monitoring komprehensif performa vendor, kepatuhan kontrak, dan keandalan logistik pesanan.</p>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+                <button onclick="loadDashboardData()" class="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition shadow-xs" title="Muat ulang data dari Spreadsheet">
+                    <svg class="w-3.5 h-3.5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    Sinkron Data
+                </button>
+                <button onclick="exportDashboardCsv()" class="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 text-xs font-semibold transition shadow-sm hover:shadow" title="Unduh data penilaian & kontrak dalam format CSV">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Unduh CSV
                 </button>
             </div>
         </div>
 
-        <!-- ========== KPI CARDS GRID ========== -->
+        <!-- ========== TAB NAVIGATION ========== -->
+        <div class="mb-5 flex items-start justify-between gap-4 flex-wrap border-b border-gray-200">
+            <div class="flex gap-1 -mb-px overflow-x-auto" id="dashboardTabs">
+                <button class="tremor-tab active" data-tab="all">
+                    <span>📊</span>
+                    <span>Semua Ringkasan</span>
+                </button>
+                <button class="tremor-tab" data-tab="clm">
+                    <span>📜</span>
+                    <span>Kepatuhan & Kontrak</span>
+                </button>
+                <button class="tremor-tab" data-tab="performance">
+                    <span>⭐</span>
+                    <span>Kinerja & Evaluasi</span>
+                </button>
+                <button class="tremor-tab" data-tab="orders">
+                    <span>🚚</span>
+                    <span>PO & Delivery</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- ========== FILTER BAR (SLICERS) ========== -->
+        <div class="mb-6 bg-white p-3.5 rounded-xl border border-gray-200 shadow-xs flex items-center justify-between gap-3 flex-wrap filter-bar">
+            <div class="flex items-center gap-2.5 flex-wrap">
+                <select id="slicerPeriodSelect" class="tremor-select" title="Filter Periode">
+                    <option value="all">📅 Semua Periode</option>
+                </select>
+                <select id="slicerCategorySelect" class="tremor-select" title="Filter Bidang Vendor">
+                    <option value="all">📁 Semua Bidang</option>
+                </select>
+                <select id="slicerComplianceSelect" class="tremor-select" title="Filter Status Kontrak">
+                    <option value="all">📜 Semua Kontrak</option>
+                    <option value="comply">✅ Comply</option>
+                    <option value="not-comply">❌ Not Comply</option>
+                </select>
+                <select id="slicerTierSelect" class="tremor-select" title="Filter Rating">
+                    <option value="all">⭐ Semua Rating</option>
+                    <option value="high">⭐ Sangat Baik (≥ 4.5)</option>
+                    <option value="good">👍 Baik (3.5 - 4.4)</option>
+                    <option value="poor">⚠️ Perlu Perhatian (&lt; 2.5)</option>
+                </select>
+                <button id="slicerResetBtn" onclick="resetAllSlicers()" class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-600 shadow-xs hover:bg-gray-50 transition">
+                    <svg class="w-3 h-3 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+                    Reset Filter
+                </button>
+            </div>
+            <div class="text-xs font-medium text-gray-500" id="filterCountSummary">
+                Memuat data...
+            </div>
+        </div>
+
+        <!-- ========== ALERT BANNER ========== -->
+        <div class="tremor-card mb-6 border-l-4 border-l-amber-500 bg-amber-50/80" id="expiringContractsBanner" style="display: none;">
+            <div class="flex items-start justify-between gap-4 flex-wrap">
+                <div class="flex items-start gap-3">
+                    <div class="mt-0.5 text-amber-600">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm-1-7v2h2v-2h-2zm0-8v6h2V7h-2z"/></svg>
+                    </div>
+                    <div>
+                        <h5 class="text-sm font-bold text-amber-900" id="alertBannerTitle">Peringatan Masa Berlaku Kontrak</h5>
+                        <p class="text-xs text-amber-800 mt-0.5" id="alertBannerDesc">Terdapat kontrak vendor yang akan segera berakhir dalam 90 hari.</p>
+                    </div>
+                </div>
+                <button onclick="document.getElementById('sectionContracts').scrollIntoView({behavior: 'smooth'})" class="text-xs font-bold text-amber-900 hover:text-amber-950 underline whitespace-nowrap">
+                    Lihat Detail Kontrak →
+                </button>
+            </div>
+        </div>
+
+        <!-- ========== KPI CARDS GRID (5 PILLARS) ========== -->
         <div class="kpi-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
             <!-- 1. Total Nilai Kontrak -->
-            <div class="tremor-card animate-in animate-in-1">
+            <div class="kpi-card kpi-card-blue animate-in animate-in-1">
                 <div class="flex items-center justify-between mb-2">
-                    <p class="text-tremor-default text-tremor-content font-medium">Total Nilai Kontrak</p>
-                    <span class="text-blue-500">
-                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 100 4h4a2 2 0 110 4H8"/><path d="M12 18V6"/></svg>
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Nilai Kontrak</p>
+                    <span class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 100 4h4a2 2 0 110 4H8"/><path d="M12 18V6"/></svg>
                     </span>
                 </div>
-                <p class="text-tremor-metric font-bold text-tremor-content-strong truncate" id="statTotalContractValue">Rp 0</p>
-                <p class="text-tremor-label text-tremor-content mt-1" id="statTotalContractsCount">0 kontrak terdaftar</p>
+                <p class="text-xl sm:text-2xl font-black text-gray-900 truncate" id="statTotalContractValue">Rp 0</p>
+                <div class="flex items-center justify-between mt-2 pt-2 border-t border-gray-100 text-xs">
+                    <span class="text-gray-500" id="statTotalContractsCount">0 kontrak</span>
+                    <span class="text-blue-600 font-semibold" id="statAvgContractValue">Rata-rata: -</span>
+                </div>
             </div>
 
             <!-- 2. Contract Compliance -->
-            <div class="tremor-card animate-in animate-in-2">
+            <div class="kpi-card kpi-card-amber animate-in animate-in-2">
                 <div class="flex items-center justify-between mb-2">
-                    <p class="text-tremor-default text-tremor-content font-medium">Contract Compliance</p>
-                    <span class="text-amber-500">
-                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Kepatuhan Kontrak</p>
+                    <span class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                     </span>
                 </div>
-                <p class="text-tremor-metric font-bold text-tremor-content-strong" id="statContractCompliance">0%</p>
-                <p class="text-tremor-label text-tremor-content mt-1" id="statContractRatio">0 / 0 vendor comply</p>
-                <div class="tremor-progress-bar mt-3">
+                <div class="flex items-baseline gap-2">
+                    <p class="text-xl sm:text-2xl font-black text-gray-900" id="statContractCompliance">0%</p>
+                    <span id="statComplianceBadge" class="text-xs font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-md">Status -</span>
+                </div>
+                <p class="text-xs text-gray-500 mt-1" id="statContractRatio">0 / 0 vendor comply</p>
+                <div class="tremor-progress-bar mt-2">
                     <div class="tremor-progress-fill bg-amber-500" id="progressCompliance" style="width: 0%;"></div>
                 </div>
             </div>
 
             <!-- 3. Performance Score -->
-            <div class="tremor-card animate-in animate-in-3">
+            <div class="kpi-card kpi-card-emerald animate-in animate-in-3">
                 <div class="flex items-center justify-between mb-2">
-                    <p class="text-tremor-default text-tremor-content font-medium">Performance Score</p>
-                    <span class="text-emerald-500">
-                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .587l3.668 7.568 8.332 1.151-6.064 5.828 1.48 8.279L12 19.771l-7.416 3.642 1.48-8.279-6.064-5.828 8.332-1.151z"/></svg>
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Skor Kinerja</p>
+                    <span class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .587l3.668 7.568 8.332 1.151-6.064 5.828 1.48 8.279L12 19.771l-7.416 3.642 1.48-8.279-6.064-5.828 8.332-1.151z"/></svg>
                     </span>
                 </div>
-                <p class="text-tremor-metric font-bold text-tremor-content-strong" id="statAvgScore">0.0</p>
-                <p class="text-tremor-label text-tremor-content mt-1" id="statEvalCount">0 vendor dinilai</p>
-                <div class="tremor-progress-bar mt-3">
+                <div class="flex items-baseline gap-2">
+                    <p class="text-xl sm:text-2xl font-black text-gray-900" id="statAvgScore">0.0</p>
+                    <span class="text-xs text-gray-400 font-semibold">/ 5.0</span>
+                    <span id="statScoreBenchmark" class="text-xs font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-md ml-auto">Target: &ge; 3.5</span>
+                </div>
+                <p class="text-xs text-gray-500 mt-1" id="statEvalCount">0 vendor dinilai</p>
+                <div class="tremor-progress-bar mt-2">
                     <div class="tremor-progress-fill bg-emerald-500" id="progressScore" style="width: 0%;"></div>
                 </div>
             </div>
 
             <!-- 4. Eval Completion -->
-            <div class="tremor-card animate-in animate-in-4">
+            <div class="kpi-card kpi-card-purple animate-in animate-in-4">
                 <div class="flex items-center justify-between mb-2">
-                    <p class="text-tremor-default text-tremor-content font-medium">Eval Completion</p>
-                    <span class="text-violet-500">
-                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Progres Evaluasi</p>
+                    <span class="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
                     </span>
                 </div>
-                <p class="text-tremor-metric font-bold text-tremor-content-strong" id="statEvalCompletion">0%</p>
-                <p class="text-tremor-label text-tremor-content mt-1" id="statEvalRatio">0 / 0 vendor selesai</p>
-                <div class="tremor-progress-bar mt-3">
-                    <div class="tremor-progress-fill bg-violet-500" id="progressCompletion" style="width: 0%;"></div>
+                <div class="flex items-baseline gap-2">
+                    <p class="text-xl sm:text-2xl font-black text-gray-900" id="statEvalCompletion">0%</p>
+                    <span id="statPendingEvalCount" class="text-xs font-bold text-purple-700 bg-purple-100 px-1.5 py-0.5 rounded-md ml-auto">0 Pending</span>
+                </div>
+                <p class="text-xs text-gray-500 mt-1" id="statEvalRatio">0 / 0 vendor selesai</p>
+                <div class="tremor-progress-bar mt-2">
+                    <div class="tremor-progress-fill bg-purple-500" id="progressCompletion" style="width: 0%;"></div>
                 </div>
             </div>
 
             <!-- 5. On-Time Delivery -->
-            <div class="tremor-card animate-in animate-in-5">
+            <div class="kpi-card kpi-card-indigo animate-in animate-in-5">
                 <div class="flex items-center justify-between mb-2">
-                    <p class="text-tremor-default text-tremor-content font-medium">On-Time Delivery</p>
-                    <span class="text-indigo-500">
-                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5a2 2 0 01-2 2h-1"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Ketepatan PO</p>
+                    <span class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5a2 2 0 01-2 2h-1"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
                     </span>
                 </div>
-                <p class="text-tremor-metric font-bold text-tremor-content-strong" id="statOnTimePct">0%</p>
-                <p class="text-tremor-label text-tremor-content mt-1" id="statTotalPoMeta">0 total pesanan PO</p>
-                <div class="tremor-progress-bar mt-3">
+                <div class="flex items-baseline gap-2">
+                    <p class="text-xl sm:text-2xl font-black text-gray-900" id="statOnTimePct">0%</p>
+                    <span id="statLateOrdersMeta" class="text-xs font-bold text-indigo-700 bg-indigo-100 px-1.5 py-0.5 rounded-md ml-auto">0 Terlambat</span>
+                </div>
+                <p class="text-xs text-gray-500 mt-1" id="statTotalPoMeta">0 pesanan PO</p>
+                <div class="tremor-progress-bar mt-2">
                     <div class="tremor-progress-fill bg-indigo-500" id="progressOnTime" style="width: 0%;"></div>
                 </div>
             </div>
         </div>
 
-        <!-- ========== CHARTS GRID ========== -->
-        <div class="chart-grid grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6" id="chartsSection">
-            <!-- Donut: Compliance -->
-            <div class="tremor-card">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-tremor-title font-semibold text-tremor-content-strong">Kepatuhan Kontrak</h3>
-                    <span class="tremor-badge tremor-badge-amber">Compliance</span>
+        <!-- ========== MACRO ANALYTICS & CHARTS GRID (3-COLUMN) ========== -->
+        <div class="chart-grid grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6" id="chartsSection">
+            <!-- Chart 1: Donut Compliance -->
+            <div class="tremor-card flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <h3 class="text-sm font-bold text-gray-900">Kepatuhan Kontrak Vendor</h3>
+                        <span class="tremor-badge tremor-badge-amber">Compliance</span>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-4">Rasio kepatuhan dokumen kelengkapan kontrak</p>
                 </div>
-                <div class="flex justify-center items-center" style="min-height:260px;">
-                    <canvas id="complianceChart" style="max-width:250px; max-height:250px;"></canvas>
+                <div class="flex justify-center items-center my-auto" style="min-height:230px;">
+                    <canvas id="complianceChart" style="max-width:240px; max-height:240px;"></canvas>
                 </div>
-            </div>
-
-            <!-- TOP 5 Vendor -->
-            <div class="tremor-card">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-tremor-title font-semibold text-tremor-content-strong">Top 5 Vendor Terbaik</h3>
-                    <span class="tremor-badge tremor-badge-emerald">Skor Tertinggi</span>
-                </div>
-                <div class="overflow-x-auto -mx-1.5">
-                    <table class="tremor-table">
-                        <thead>
-                            <tr>
-                                <th style="width:32px">#</th>
-                                <th>Vendor</th>
-                                <th>Kategori</th>
-                                <th class="text-right">Skor</th>
-                                <th class="text-center">Predikat</th>
-                            </tr>
-                        </thead>
-                        <tbody id="topVendorsTable">
-                            <tr><td colspan="5" class="text-center text-gray-400 py-8">Memuat data ranking...</td></tr>
-                        </tbody>
-                    </table>
+                <div class="grid grid-cols-2 gap-2 pt-3 mt-3 border-t border-gray-100 text-center text-xs">
+                    <div class="p-2 bg-emerald-50 rounded-lg">
+                        <div class="text-emerald-700 font-bold text-sm" id="donutComplyCount">0</div>
+                        <div class="text-emerald-600 text-2xs uppercase font-semibold">Comply</div>
+                    </div>
+                    <div class="p-2 bg-rose-50 rounded-lg">
+                        <div class="text-rose-700 font-bold text-sm" id="donutNotComplyCount">0</div>
+                        <div class="text-rose-600 text-2xs uppercase font-semibold">Not Comply</div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Radar: Skor per Kategori -->
-            <div class="tremor-card">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-tremor-title font-semibold text-tremor-content-strong">Skor per Bidang</h3>
-                    <span class="tremor-badge tremor-badge-blue">Radar</span>
+            <!-- Chart 2: Predicate Distribution -->
+            <div class="tremor-card flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <h3 class="text-sm font-bold text-gray-900">Distribusi Predikat Kinerja</h3>
+                        <span class="tremor-badge tremor-badge-emerald">Sebaran Mutu</span>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-4">Proporsi tingkatan skor evaluasi rekanan</p>
                 </div>
-                <div class="flex justify-center items-center" style="min-height:260px;">
-                    <canvas id="radarChart" style="max-width:100%; max-height:260px;"></canvas>
+                <div class="flex justify-center items-center my-auto" style="min-height:230px;">
+                    <canvas id="predicateChart" style="max-width:240px; max-height:240px;"></canvas>
+                </div>
+                <div class="grid grid-cols-4 gap-1.5 pt-3 mt-3 border-t border-gray-100 text-center text-xs">
+                    <div class="p-1.5 bg-emerald-50 rounded-lg">
+                        <div class="text-emerald-700 font-bold text-xs" id="distSangatBaikCount">0</div>
+                        <div class="text-emerald-600 text-2xs font-semibold">Sangat Baik</div>
+                    </div>
+                    <div class="p-1.5 bg-blue-50 rounded-lg">
+                        <div class="text-blue-700 font-bold text-xs" id="distBaikCount">0</div>
+                        <div class="text-blue-600 text-2xs font-semibold">Baik</div>
+                    </div>
+                    <div class="p-1.5 bg-amber-50 rounded-lg">
+                        <div class="text-amber-700 font-bold text-xs" id="distCukupCount">0</div>
+                        <div class="text-amber-600 text-2xs font-semibold">Cukup</div>
+                    </div>
+                    <div class="p-1.5 bg-rose-50 rounded-lg">
+                        <div class="text-rose-700 font-bold text-xs" id="distKurangCount">0</div>
+                        <div class="text-rose-600 text-2xs font-semibold">Kurang</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chart 3: Radar Score per Bidang -->
+            <div class="tremor-card flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <h3 class="text-sm font-bold text-gray-900">Skor Kinerja per Bidang</h3>
+                        <span class="tremor-badge tremor-badge-blue">Kategori</span>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-4">Perbandingan rata-rata performa antar spesialisasi</p>
+                </div>
+                <div class="flex justify-center items-center my-auto" style="min-height:230px;">
+                    <canvas id="radarChart" style="max-width:100%; max-height:240px;"></canvas>
+                </div>
+                <div class="pt-3 mt-3 border-t border-gray-100 text-center text-xs text-gray-500" id="radarSummaryMeta">
+                    Memetakan komparasi standar antar bidang kerja
                 </div>
             </div>
         </div>
 
-        <!-- ========== CONTRACT TABLE ========== -->
+        <!-- ========== OPERATIONAL MONITORING GRID (3-COLUMN) ========== -->
+        <div class="perf-grid grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6" id="sectionPerformance">
+            <!-- 1. TOP 5 Vendor Terbaik -->
+            <div class="tremor-card flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <h3 class="text-sm font-bold text-gray-900">🏆 Top 5 Vendor Terbaik</h3>
+                        <span class="tremor-badge tremor-badge-emerald">Skor Tertinggi</span>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-3">Rekanan dengan performa paling konsisten</p>
+                    <div class="overflow-x-auto -mx-1.5">
+                        <table class="tremor-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:36px">Rank</th>
+                                    <th>Vendor</th>
+                                    <th class="text-right">Skor</th>
+                                    <th class="text-center">Predikat</th>
+                                </tr>
+                            </thead>
+                            <tbody id="topVendorsTable">
+                                <tr><td colspan="4" class="text-center text-gray-400 py-6">Memuat data ranking...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Status Penilaian & Vendor Belum Dinilai -->
+            <div class="tremor-card flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <h3 class="text-sm font-bold text-gray-900">📋 Pengawasan Evaluasi</h3>
+                        <span class="tremor-badge tremor-badge-purple" id="pendingVendorBadge">0 Pending</span>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-3">Vendor yang perlu dinilai atau memerlukan atensi</p>
+                    <div class="overflow-y-auto" style="max-height: 280px;" id="pendingVendorsContainer">
+                        <div class="text-center text-gray-400 py-6">Memeriksa status evaluasi vendor...</div>
+                    </div>
+                </div>
+                <div class="pt-2 mt-2 border-t border-gray-100">
+                    <table class="tremor-table" style="display:none;" id="attentionVendorsTable">
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 3. Kinerja Pengiriman PO Realtime -->
+            <div id="sectionOrders" class="tremor-card flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <h3 class="text-sm font-bold text-gray-900">🚚 Ketepatan Pengiriman PO</h3>
+                        <span id="overallOnTimeBadge" class="tremor-badge tremor-badge-blue">0% On-Time</span>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-3">Monitoring ketepatan waktu pengiriman purchase order</p>
+                    <div class="po-performance-list overflow-y-auto" id="poPerformanceList" style="max-height: 280px;">
+                        <div class="text-center text-gray-400 py-6">Memuat data pengiriman...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== CONTRACT REPOSITORY TABLE ========== -->
         <div class="tremor-card mb-6" id="sectionContracts">
             <div class="flex items-start justify-between gap-4 mb-4 flex-wrap">
                 <div>
-                    <h3 class="text-tremor-title font-semibold text-tremor-content-strong">Contract Repository & Compliance</h3>
-                    <p class="text-tremor-default text-tremor-content mt-0.5">Monitoring kelengkapan dan kepatuhan kontrak vendor</p>
+                    <h3 class="text-base font-bold text-gray-900">Contract Repository & Compliance</h3>
+                    <p class="text-xs text-gray-500 mt-0.5">Monitoring kelengkapan dan kepatuhan kontrak vendor dari sheet Kontrak Vendor</p>
                 </div>
-                <div class="flex items-center gap-3">
-                    <input type="text" id="contractSearchInput" placeholder="Cari No. Kontrak / Vendor..." class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm" style="min-width: 220px;">
-                    <span class="tremor-badge tremor-badge-gray" id="contractBadgeCount">Sheet: Kontrak Vendor</span>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <input type="text" id="contractSearchInput" placeholder="Cari No. Kontrak / Vendor..." class="text-xs px-3 py-2 rounded-xl border border-gray-200 bg-white text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xs" style="min-width: 220px;">
+                    <span class="tremor-badge tremor-badge-gray" id="contractBadgeCount">0 Kontrak</span>
+                    <button onclick="exportContractCsv()" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 text-xs font-semibold text-gray-700 transition" title="Export tabel kontrak ke CSV">
+                        📥 CSV
+                    </button>
                 </div>
             </div>
-            <div class="overflow-x-auto -mx-1.5">
+            <div class="overflow-x-auto -mx-1.5 border border-gray-100 rounded-xl">
                 <table class="tremor-table">
                     <thead>
                         <tr>
@@ -406,54 +581,22 @@ tailwind.config = {
             </div>
         </div>
 
-        <!-- ========== PERFORMANCE GRID ========== -->
-        <div class="perf-grid grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6" id="sectionPerformance">
-            <!-- Attention Vendors -->
-            <div class="tremor-card" style="height:100%;">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-tremor-title font-semibold text-tremor-content-strong">Vendor Perlu Perhatian</h3>
-                    <span class="tremor-badge tremor-badge-red">Skor &lt; 2.5</span>
-                </div>
-                <div class="overflow-x-auto -mx-1.5">
-                    <table class="tremor-table">
-                        <thead>
-                            <tr>
-                                <th>Vendor</th>
-                                <th>Kategori</th>
-                                <th class="text-right">Skor</th>
-                                <th class="text-center">Predikat</th>
-                            </tr>
-                        </thead>
-                        <tbody id="attentionVendorsTable">
-                            <tr><td colspan="4" class="text-center text-gray-400 py-8">Memuat data...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- PO Delivery -->
-            <div id="sectionOrders" class="tremor-card" style="height:100%;">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-tremor-title font-semibold text-tremor-content-strong">Kinerja Pengiriman PO</h3>
-                    <span id="overallOnTimeBadge" class="tremor-badge tremor-badge-blue">0% On-Time</span>
-                </div>
-                <div class="po-performance-list overflow-y-auto" id="poPerformanceList" style="max-height: 420px;">
-                    <div class="text-center text-gray-400 py-8">Memuat data pengiriman...</div>
-                </div>
-            </div>
         <!-- ========== EVALUATION HISTORY TABLE ========== -->
         <div class="tremor-card mb-6" id="sectionEvaluations">
             <div class="flex items-start justify-between gap-4 mb-4 flex-wrap">
                 <div>
-                    <h3 class="text-tremor-title font-semibold text-tremor-content-strong">Hasil Penilaian Kinerja Vendor</h3>
-                    <p class="text-tremor-default text-tremor-content mt-0.5">Daftar evaluasi vendor dari sheet Penilaian Vendor</p>
+                    <h3 class="text-base font-bold text-gray-900">Hasil Penilaian Kinerja Vendor</h3>
+                    <p class="text-xs text-gray-500 mt-0.5">Log hasil evaluasi performa vendor dari sheet Penilaian Vendor</p>
                 </div>
-                <div class="flex items-center gap-3">
-                    <input type="text" id="evalSearchInput" placeholder="Cari Penilai / Vendor / Catatan..." class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm" style="min-width: 220px;">
-                    <span class="tremor-badge tremor-badge-gray" id="evalBadgeCount">Sheet: Penilaian Vendor</span>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <input type="text" id="evalSearchInput" placeholder="Cari Penilai / Vendor / Catatan..." class="text-xs px-3 py-2 rounded-xl border border-gray-200 bg-white text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xs" style="min-width: 220px;">
+                    <span class="tremor-badge tremor-badge-gray" id="evalBadgeCount">0 Evaluasi</span>
+                    <button onclick="exportEvaluationCsv()" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 text-xs font-semibold text-gray-700 transition" title="Export hasil evaluasi ke CSV">
+                        📥 CSV
+                    </button>
                 </div>
             </div>
-            <div class="overflow-x-auto -mx-1.5">
+            <div class="overflow-x-auto -mx-1.5 border border-gray-100 rounded-xl">
                 <table class="tremor-table">
                     <thead>
                         <tr>
@@ -478,7 +621,7 @@ tailwind.config = {
     <!-- Footer -->
     <footer class="border-t border-gray-200 bg-white mt-8">
         <div class="mx-auto max-w-7xl px-4 lg:px-8 py-6 text-center">
-            <p class="text-sm text-gray-400">© 2026 PT Ethos Kreatif Indonesia · Vendor Management System</p>
+            <p class="text-xs font-medium text-gray-400">© 2026 PT Ethos Kreatif Indonesia · Enterprise Vendor Management System</p>
         </div>
     </footer>
 

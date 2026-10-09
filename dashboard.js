@@ -466,20 +466,24 @@ function renderDashboard(vendors, scoreSummary, cc, poStats, kategori, evaluatio
 
     // 3. Render Enterprise Charts (Chart.js)
     renderComplianceChart(cc);
+    renderPredicateChart(scoreSummary);
     renderRadarChart(vendors, scoreSummary, kategori);
 
-    // 4. Render Tables
+    // 4. Render Operational Tables & Tracking Cards
     renderContractTable(cc);
     renderEvaluationsTable(evaluations);
     renderTopVendors(scoreSummary, vendors, kategori);
-    renderAttentionVendors(scoreSummary, vendors, kategori);
+    renderPendingVendors(vendors, scoreSummary, kategori);
     renderPoPerformance(poStats);
+
+    // 5. Update Status & Filter Counters
+    updateFilterCountSummary(vendors, cc, evaluations);
 }
 
 function renderSummaryCards(vendors, scoreSummary, cc, poStats) {
     const totalVendors = vendors ? vendors.length : 0;
     
-    // 1. Total Contract Value
+    // 1. Total Nilai Kontrak
     let totalContractVal = 0;
     let totalContractsCount = 0;
     if (cc && cc.list) {
@@ -490,17 +494,41 @@ function renderSummaryCards(vendors, scoreSummary, cc, poStats) {
     }
     const valEl = document.getElementById('statTotalContractValue');
     const valCountEl = document.getElementById('statTotalContractsCount');
+    const valAvgEl = document.getElementById('statAvgContractValue');
     if (valEl) valEl.textContent = formatRupiah(totalContractVal);
-    if (valCountEl) valCountEl.textContent = `${totalContractsCount} kontrak terdaftar`;
+    if (valCountEl) valCountEl.textContent = `${totalContractsCount} kontrak aktif`;
+    if (valAvgEl) {
+        const avgVal = totalContractsCount > 0 ? (totalContractVal / totalContractsCount) : 0;
+        valAvgEl.textContent = totalContractVal > 0 ? `Rata-rata: ${formatRupiah(avgVal)}` : `Portofolio Aktif`;
+    }
 
     // 2. KPI 4: Contract Compliance
     const ccRate = cc.vendorComplianceRate != null ? cc.vendorComplianceRate : 100;
     const ccEl = document.getElementById('statContractCompliance');
     const ccRatioEl = document.getElementById('statContractRatio');
     const ccProg = document.getElementById('progressCompliance');
+    const ccBadgeEl = document.getElementById('statComplianceBadge');
     if (ccEl) ccEl.textContent = `${ccRate}%`;
     if (ccRatioEl) ccRatioEl.textContent = `${cc.uniqueCompliantVendors || 0} / ${cc.uniqueContractedVendors || 0} vendor comply`;
     if (ccProg) ccProg.style.width = `${ccRate}%`;
+    if (ccBadgeEl) {
+        if (ccRate >= 80) {
+            ccBadgeEl.textContent = 'Optimal';
+            ccBadgeEl.className = 'text-xs font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-md';
+        } else if (ccRate >= 50) {
+            ccBadgeEl.textContent = 'Cukup';
+            ccBadgeEl.className = 'text-xs font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-md';
+        } else {
+            ccBadgeEl.textContent = 'Perlu Review';
+            ccBadgeEl.className = 'text-xs font-bold text-rose-700 bg-rose-100 px-1.5 py-0.5 rounded-md';
+        }
+    }
+
+    // Update Donut numbers
+    const donutComply = document.getElementById('donutComplyCount');
+    const donutNotComply = document.getElementById('donutNotComplyCount');
+    if (donutComply) donutComply.textContent = cc.uniqueCompliantVendors || 0;
+    if (donutNotComply) donutNotComply.textContent = Math.max((cc.uniqueContractedVendors || 0) - (cc.uniqueCompliantVendors || 0), 0);
 
     // 3. KPI 1: Performance Score
     let sumScore = 0;
@@ -516,27 +544,56 @@ function renderSummaryCards(vendors, scoreSummary, cc, poStats) {
     const scoreEl = document.getElementById('statAvgScore');
     const scoreCountEl = document.getElementById('statEvalCount');
     const scoreProg = document.getElementById('progressScore');
-    if (scoreEl) scoreEl.textContent = `${avgScore} / 5.0`;
+    const scoreBenchmarkEl = document.getElementById('statScoreBenchmark');
+    if (scoreEl) scoreEl.textContent = `${avgScore}`;
     if (scoreCountEl) scoreCountEl.textContent = `${countScore} vendor dinilai`;
     if (scoreProg) scoreProg.style.width = `${scorePct}%`;
+    if (scoreBenchmarkEl) {
+        const numAvg = Number(avgScore);
+        if (numAvg >= 4.5) {
+            scoreBenchmarkEl.textContent = 'Sangat Baik';
+            scoreBenchmarkEl.className = 'text-xs font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-md ml-auto';
+        } else if (numAvg >= 3.5) {
+            scoreBenchmarkEl.textContent = 'Baik (Target Tercapai)';
+            scoreBenchmarkEl.className = 'text-xs font-bold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded-md ml-auto';
+        } else if (numAvg >= 2.5) {
+            scoreBenchmarkEl.textContent = 'Cukup';
+            scoreBenchmarkEl.className = 'text-xs font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-md ml-auto';
+        } else {
+            scoreBenchmarkEl.textContent = 'Perlu Perhatian';
+            scoreBenchmarkEl.className = 'text-xs font-bold text-rose-700 bg-rose-100 px-1.5 py-0.5 rounded-md ml-auto';
+        }
+    }
 
     // 4. KPI 2: Evaluation Completion
     const evalCompletionPct = totalVendors > 0 ? Math.round((countScore / totalVendors) * 100) : 0;
+    const pendingCount = Math.max(totalVendors - countScore, 0);
     const evalEl = document.getElementById('statEvalCompletion');
     const evalRatioEl = document.getElementById('statEvalRatio');
     const evalProg = document.getElementById('progressCompletion');
+    const pendingBadgeEl = document.getElementById('statPendingEvalCount');
     if (evalEl) evalEl.textContent = `${evalCompletionPct}%`;
-    if (evalRatioEl) evalRatioEl.textContent = `${countScore} / ${totalVendors} vendor selesai`;
+    if (evalRatioEl) evalRatioEl.textContent = `${countScore} / ${totalVendors} vendor dinilai`;
     if (evalProg) evalProg.style.width = `${evalCompletionPct}%`;
+    if (pendingBadgeEl) pendingBadgeEl.textContent = `${pendingCount} Belum Dinilai`;
 
     // 5. On-Time PO Delivery Rate
     const onTimePct = (poStats && poStats.overallOnTimePct != null) ? poStats.overallOnTimePct : 100;
-    const totalOrders = poStats ? poStats.totalOrders : 0;
+    const totalOrders = poStats ? (poStats.totalOrders || 0) : 0;
+    const onTimeOrders = poStats ? (poStats.totalOnTime || 0) : 0;
+    const lateOrders = Math.max(totalOrders - onTimeOrders, 0);
     const onTimeEl = document.getElementById('statOnTimePct');
     const onTimeMetaEl = document.getElementById('statTotalPoMeta');
+    const lateMetaEl = document.getElementById('statLateOrdersMeta');
     const onTimeProg = document.getElementById('progressOnTime');
     if (onTimeEl) onTimeEl.textContent = `${onTimePct}%`;
     if (onTimeMetaEl) onTimeMetaEl.textContent = `${totalOrders} total pesanan PO`;
+    if (lateMetaEl) {
+        lateMetaEl.textContent = lateOrders > 0 ? `${lateOrders} Terlambat` : `100% Tepat Waktu`;
+        lateMetaEl.className = lateOrders > 0
+            ? 'text-xs font-bold text-rose-700 bg-rose-100 px-1.5 py-0.5 rounded-md ml-auto'
+            : 'text-xs font-bold text-indigo-700 bg-indigo-100 px-1.5 py-0.5 rounded-md ml-auto';
+    }
     if (onTimeProg) onTimeProg.style.width = `${onTimePct}%`;
 }
 
@@ -577,7 +634,7 @@ function renderTopVendors(scoreSummary, vendors, categories) {
     if (!tableBody) return;
 
     if (!scoreSummary || Object.keys(scoreSummary).length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text3); padding:2rem;">Belum ada vendor yang dinilai.</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:2rem;">Belum ada vendor yang dinilai.</td></tr>`;
         return;
     }
 
@@ -595,12 +652,22 @@ function renderTopVendors(scoreSummary, vendors, categories) {
         };
     }).sort((a, b) => b.avgScore - a.avgScore).slice(0, 5);
 
+    const rankBadges = [
+        '<span class="rank-badge-1 px-1.5 py-0.5 rounded-full text-xs">🥇 1</span>',
+        '<span class="rank-badge-2 px-1.5 py-0.5 rounded-full text-xs">🥈 2</span>',
+        '<span class="rank-badge-3 px-1.5 py-0.5 rounded-full text-xs">🥉 3</span>',
+        '<span class="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded-full text-xs font-bold">4</span>',
+        '<span class="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded-full text-xs font-bold">5</span>'
+    ];
+
     tableBody.innerHTML = sorted.map((v, i) => `
         <tr>
-            <td style="font-weight:700; color:var(--secondary);">${i + 1}</td>
-            <td style="font-weight:600; color:var(--text);">${esc(v.name)}</td>
-            <td style="font-size:0.85rem; color:var(--text2);">${esc(v.categoryIcon)} ${esc(v.categoryName)}</td>
-            <td style="text-align:right; font-weight:700; color:var(--accent); font-size:1.05rem;">${v.avgScore.toFixed(2)}</td>
+            <td style="font-weight:700;">${rankBadges[i] || (i + 1)}</td>
+            <td>
+                <div style="font-weight:600; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;" title="${esc(v.name)}">${esc(v.name)}</div>
+                <div style="font-size:0.75rem; color:#64748b;">${esc(v.categoryIcon)} ${esc(v.categoryName)}</div>
+            </td>
+            <td style="text-align:right; font-weight:800; color:#0f172a; font-size:1rem;">${v.avgScore.toFixed(2)}</td>
             <td style="text-align:center;">
                 <span class="predikat-badge" style="background:${getPredikatColor(v.avgScore)}15; color:${getPredikatColor(v.avgScore)}; border:1px solid ${getPredikatColor(v.avgScore)}30;">
                     ${esc(v.predikat)}
@@ -610,49 +677,156 @@ function renderTopVendors(scoreSummary, vendors, categories) {
     `).join('');
 }
 
-function renderAttentionVendors(scoreSummary, vendors, categories) {
-    const tableBody = document.getElementById('attentionVendorsTable');
-    if (!tableBody) return;
+function renderPendingVendors(vendors, scoreSummary, categories) {
+    const container = document.getElementById('pendingVendorsContainer');
+    const badge = document.getElementById('pendingVendorBadge');
+    if (!container) return;
 
-    const poorVendors = [];
+    const evaluatedNames = new Set(scoreSummary ? Object.keys(scoreSummary) : []);
+    const allList = vendors || [];
+    
+    const pendingList = allList.filter(v => !evaluatedNames.has(v.nama));
+    const attentionList = [];
     if (scoreSummary) {
         for (let name in scoreSummary) {
-            const score = scoreSummary[name].avgScore;
-            if (score < 2.5) {
-                const vInfo = (vendors && vendors.find(v => v.nama === name)) || {};
-                const catCode = vInfo.kategori || 'general';
-                const catInfo = (categories && categories.find(c => c.kode === catCode)) || { nama: 'General', ikon: '📦' };
-                
-                poorVendors.push({
-                    name: name,
-                    categoryName: catInfo.nama,
-                    categoryIcon: catInfo.ikon,
-                    avgScore: score,
-                    predikat: scoreSummary[name].predikat
-                });
+            if (scoreSummary[name].avgScore < 2.5) {
+                attentionList.push({ name: name, ...scoreSummary[name] });
             }
         }
     }
 
-    poorVendors.sort((a, b) => a.avgScore - b.avgScore);
+    if (badge) {
+        badge.textContent = `${pendingList.length} Belum Dinilai`;
+        badge.className = pendingList.length > 0
+            ? 'tremor-badge tremor-badge-purple'
+            : 'tremor-badge tremor-badge-emerald';
+    }
 
-    if (poorVendors.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#10b981; font-weight:600; padding:2rem;">🎉 Semua vendor dalam kondisi BAIK (Skor &ge; 2.5)</td></tr>`;
+    if (pendingList.length === 0 && attentionList.length === 0) {
+        container.innerHTML = `
+        <div class="text-center py-6 px-4 bg-emerald-50/70 rounded-xl border border-emerald-100">
+            <div class="text-2xl mb-1">🎉</div>
+            <div class="font-bold text-xs text-emerald-800">Semua Vendor Telah Dievaluasi</div>
+            <div class="text-2xs text-emerald-600 mt-0.5">Seluruh rekanan pada periode ini memiliki nilai dan dalam status prima (&ge; 2.5).</div>
+        </div>`;
         return;
     }
 
-    tableBody.innerHTML = poorVendors.map(v => `
-        <tr>
-            <td style="font-weight:600; color:var(--text);">${esc(v.name)}</td>
-            <td style="font-size:0.85rem; color:var(--text2);">${esc(v.categoryIcon)} ${esc(v.categoryName)}</td>
-            <td style="text-align:right; font-weight:700; color:#ef4444; font-size:1.05rem;">${v.avgScore.toFixed(2)}</td>
-            <td style="text-align:center;">
-                <span class="predikat-badge" style="background:#ef444415; color:#ef4444; border:1px solid #ef444430;">
-                    ${esc(v.predikat)}
-                </span>
-            </td>
-        </tr>
-    `).join('');
+    let html = '';
+
+    // Peringatan jika ada vendor kritis (< 2.5)
+    if (attentionList.length > 0) {
+        html += `
+        <div class="mb-3 p-2.5 bg-rose-50 border border-rose-200 rounded-xl">
+            <div class="flex items-center gap-1.5 text-xs font-bold text-rose-800 mb-1">
+                <span>⚠️</span>
+                <span>Perlu Atensi Khusus (${attentionList.length} Rekanan)</span>
+            </div>
+            <div class="space-y-1">
+                ${attentionList.map(v => `
+                    <div class="flex items-center justify-between text-xs py-0.5">
+                        <span class="font-semibold text-rose-900 truncate max-w-[170px]" title="${esc(v.name)}">${esc(v.name)}</span>
+                        <span class="font-bold text-rose-700 bg-rose-100 px-1.5 py-0.2 rounded text-2xs">${v.avgScore.toFixed(2)} (${esc(v.predikat)})</span>
+                    </div>
+                `).join('')}
+            </div>
+        </div>`;
+    }
+
+    // Daftar vendor belum dievaluasi
+    if (pendingList.length > 0) {
+        html += `
+        <div class="text-xs font-bold text-gray-700 mb-2 flex items-center justify-between">
+            <span>Menunggu Penilaian:</span>
+            <span class="text-gray-400 font-normal">${pendingList.length} rekanan</span>
+        </div>
+        <div class="space-y-1.5">
+            ${pendingList.slice(0, 7).map(v => {
+                const catCode = v.kategori || 'general';
+                const catInfo = (categories && categories.find(c => c.kode === catCode)) || { nama: 'General', ikon: '📦' };
+                return `
+                <div class="flex items-center justify-between p-2 rounded-lg bg-gray-50 border border-gray-100 hover:bg-gray-100/70 transition">
+                    <div class="min-w-0 pr-2">
+                        <div class="font-semibold text-xs text-gray-800 truncate" title="${esc(v.nama)}">${esc(v.nama)}</div>
+                        <div class="text-2xs text-gray-400">${esc(catInfo.ikon)} ${esc(catInfo.nama)}</div>
+                    </div>
+                    <span class="text-2xs font-semibold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 whitespace-nowrap">
+                        ⏳ Belum Dinilai
+                    </span>
+                </div>`;
+            }).join('')}
+            ${pendingList.length > 7 ? `
+                <div class="text-center text-xs text-gray-400 pt-1 font-medium">
+                    +${pendingList.length - 7} vendor lainnya
+                </div>
+            ` : ''}
+        </div>`;
+    }
+
+    container.innerHTML = html;
+}
+
+function updateFilterCountSummary(vendors, cc, evaluations) {
+    const el = document.getElementById('filterCountSummary');
+    if (!el) return;
+    const vCount = vendors ? vendors.length : 0;
+    const cCount = (cc && cc.list) ? cc.list.length : 0;
+    const eCount = evaluations ? evaluations.length : 0;
+    el.innerHTML = `<span>Menampilkan: <strong class="text-gray-800">${vCount}</strong> Rekanan · <strong class="text-gray-800">${cCount}</strong> Kontrak · <strong class="text-gray-800">${eCount}</strong> Evaluasi</span>`;
+}
+
+// =====================================================
+// CSV EXPORT UTILITIES
+// =====================================================
+function downloadCsv(content, filename) {
+    const blob = new Blob(['\uFEFF' + content], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function escCsv(val) {
+    if (val === undefined || val === null) return '';
+    return val.toString().replace(/"/g, '""');
+}
+
+function exportContractCsv() {
+    if (!dashboardData || !dashboardData.contractCompliance || !dashboardData.contractCompliance.list || dashboardData.contractCompliance.list.length === 0) {
+        showToast('Tidak ada data kontrak untuk diexport.', 'error');
+        return;
+    }
+    const list = dashboardData.contractCompliance.list;
+    let csv = 'No Kontrak,Vendor,Ruang Lingkup,Tgl Mulai,Tgl Selesai,Kelengkapan,Nilai Kontrak,Status,Keterangan\n';
+    list.forEach(c => {
+        csv += `"${escCsv(c.noKontrak)}","${escCsv(c.vendor)}","${escCsv(c.jenisPekerjaan)}","${escCsv(c.tglMulai)}","${escCsv(c.tglSelesai)}","${escCsv(c.kelengkapan)}","${c.nilai || 0}","${escCsv(c.status)}","${escCsv(c.keterangan)}"\n`;
+    });
+    const nowStr = new Date().toISOString().slice(0, 10);
+    downloadCsv(csv, `Laporan_Kontrak_Vendor_${nowStr}.csv`);
+    showToast('Laporan kontrak berhasil diunduh.', 'success');
+}
+
+function exportEvaluationCsv() {
+    if (!dashboardData || !dashboardData.evaluationsList || dashboardData.evaluationsList.length === 0) {
+        showToast('Tidak ada data evaluasi untuk diexport.', 'error');
+        return;
+    }
+    const list = dashboardData.evaluationsList;
+    let csv = 'Tanggal,Penilai,Vendor,Periode,Skor Rata-rata,Predikat,Catatan\n';
+    list.forEach(e => {
+        csv += `"${escCsv(e.timestamp)}","${escCsv(e.penilai)}","${escCsv(e.vendor)}","${escCsv(e.periode)}","${e.score}","${escCsv(e.predikat)}","${escCsv(e.catatan)}"\n`;
+    });
+    const nowStr = new Date().toISOString().slice(0, 10);
+    downloadCsv(csv, `Laporan_Evaluasi_Vendor_${nowStr}.csv`);
+    showToast('Laporan evaluasi berhasil diunduh.', 'success');
+}
+
+function exportDashboardCsv() {
+    exportEvaluationCsv();
 }
 
 function renderPoPerformance(poStats) {
@@ -883,6 +1057,14 @@ function renderRadarChart(vendors, scoreSummary, kategori) {
         data.push(0);
     }
 
+    const radarMetaEl = document.getElementById('radarSummaryMeta');
+    if (radarMetaEl) {
+        const catCount = Object.keys(catScores).length;
+        radarMetaEl.textContent = catCount > 0
+            ? `Membandingkan performa pada ${catCount} bidang rekanan aktif`
+            : 'Belum ada data evaluasi untuk bidang rekanan';
+    }
+
     if (radarChartInstance) radarChartInstance.destroy();
 
     radarChartInstance = new Chart(canvas, {
@@ -936,6 +1118,112 @@ function renderRadarChart(vendors, scoreSummary, kategori) {
                 }
             }
         }
+    });
+}
+
+let predicateChartInstance = null;
+
+function renderPredicateChart(scoreSummary) {
+    const canvas = document.getElementById('predicateChart');
+    if (!canvas) return;
+
+    let sangatBaik = 0;
+    let baik = 0;
+    let cukup = 0;
+    let kurang = 0;
+
+    if (scoreSummary) {
+        for (let name in scoreSummary) {
+            const score = scoreSummary[name].avgScore;
+            if (score >= 4.5) sangatBaik++;
+            else if (score >= 3.5) baik++;
+            else if (score >= 2.5) cukup++;
+            else kurang++;
+        }
+    }
+
+    const total = sangatBaik + baik + cukup + kurang;
+
+    // Update counter labels di bawah chart
+    const elSB = document.getElementById('distSangatBaikCount');
+    const elB = document.getElementById('distBaikCount');
+    const elC = document.getElementById('distCukupCount');
+    const elK = document.getElementById('distKurangCount');
+    if (elSB) elSB.textContent = sangatBaik;
+    if (elB) elB.textContent = baik;
+    if (elC) elC.textContent = cukup;
+    if (elK) elK.textContent = kurang;
+
+    if (predicateChartInstance) predicateChartInstance.destroy();
+
+    const noData = (total === 0);
+
+    predicateChartInstance = new Chart(canvas, {
+        type: 'doughnut',
+        data: {
+            labels: noData ? ['Belum ada penilaian'] : ['Sangat Baik (≥ 4.5)', 'Baik (3.5 - 4.4)', 'Cukup (2.5 - 3.4)', 'Kurang (< 2.5)'],
+            datasets: [{
+                data: noData ? [1] : [sangatBaik, baik, cukup, kurang],
+                backgroundColor: noData ? ['#e2e8f0'] : ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'],
+                borderColor: '#ffffff',
+                borderWidth: 3,
+                hoverOffset: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            cutout: '68%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 10,
+                        usePointStyle: true,
+                        pointStyle: 'circle',
+                        font: { size: 11, weight: '600' },
+                        color: '#475569'
+                    }
+                },
+                tooltip: {
+                    backgroundColor: '#0f172a',
+                    titleFont: { size: 12, weight: '700' },
+                    bodyFont: { size: 11 },
+                    padding: 8,
+                    cornerRadius: 8,
+                    callbacks: {
+                        label: function(ctx) {
+                            if (noData) return 'Belum ada data evaluasi';
+                            const val = ctx.raw;
+                            const pct = total > 0 ? Math.round((val / total) * 100) : 0;
+                            return `${ctx.label}: ${val} rekanan (${pct}%)`;
+                        }
+                    }
+                }
+            }
+        },
+        plugins: [{
+            id: 'centerTextPredicate',
+            afterDraw(chart) {
+                const { ctx, chartArea } = chart;
+                const centerX = (chartArea.left + chartArea.right) / 2;
+                const centerY = (chartArea.top + chartArea.bottom) / 2;
+
+                ctx.save();
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                ctx.font = 'bold 24px Inter, sans-serif';
+                ctx.fillStyle = '#0f172a';
+                ctx.fillText(`${total}`, centerX, centerY - 8);
+
+                ctx.font = '600 11px Inter, sans-serif';
+                ctx.fillStyle = '#64748b';
+                ctx.fillText('Vendor Dinilai', centerX, centerY + 14);
+
+                ctx.restore();
+            }
+        }]
     });
 }
 
