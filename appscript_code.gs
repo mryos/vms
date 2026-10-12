@@ -1274,7 +1274,8 @@ function parsePoFromSheet(sheet, masterMap) {
  */
 
 function getKategoriVendor(ss) {
-  var sheet = ss.getSheetByName(SHEET_KATEGORI_VENDOR);
+  if (!ss) ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss ? ss.getSheetByName(SHEET_KATEGORI_VENDOR) : null;
   var list = [];
   if (sheet && sheet.getLastRow() >= 2) {
     var data = sheet.getDataRange().getValues();
@@ -1287,11 +1288,27 @@ function getKategoriVendor(ss) {
       }
     }
   }
+  // Jika sheet kosong atau belum ada, gunakan 9 kategori standar dari CATEGORY_KRITERIA_MAP
+  if (list.length === 0) {
+    var catIcons = {
+      'BarangJasa': '📦', 'Branding': '📣', 'KOLInfPodcast': '🎙️',
+      'PhotoVideo': '📸', 'Konsultan': '💼', 'ITSoftware': '💻',
+      'EventOrganizer': '🎪', 'BrandAmbasador': '🌟', 'DigitalMarketing': '📱'
+    };
+    for (var catKey in CATEGORY_KRITERIA_MAP) {
+      list.push({
+        kode: catKey,
+        nama: catKey,
+        ikon: catIcons[catKey] || '📦'
+      });
+    }
+  }
   return list;
 }
 
 function getAllVendors(ss) {
-  var sheet = ss.getSheetByName(SHEET_DAFTAR_VENDOR);
+  if (!ss) ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss ? ss.getSheetByName(SHEET_DAFTAR_VENDOR) : null;
   var list = [];
   if (sheet && sheet.getLastRow() >= 2) {
     var data = sheet.getDataRange().getValues();
@@ -1309,51 +1326,97 @@ function getAllVendors(ss) {
 }
 
 function getKriteriaPenilaian(ss) {
-  var sheet = ss.getSheetByName(SHEET_KRITERIA_PENILAIAN);
+  if (!ss) ss = SpreadsheetApp.getActiveSpreadsheet();
   var list = [];
-  if (!sheet || sheet.getLastRow() < 2) return list;
 
-  var data = sheet.getDataRange().getValues();
-  var header = data[0].map(function(h) { return h.toString().trim().toLowerCase(); });
+  // 1. Coba baca dari sheet "Kriteria Penilaian" jika ada
+  var sheet = ss ? ss.getSheetByName(SHEET_KRITERIA_PENILAIAN) : null;
+  if (sheet && sheet.getLastRow() >= 2) {
+    var data = sheet.getDataRange().getValues();
+    var header = data[0].map(function(h) { return h.toString().trim().toLowerCase(); });
+    var isHorizontal = header.some(function(h) { return h.indexOf('pertanyaan') !== -1; }) || (header[1] && header[1].indexOf('vendor') !== -1);
 
-  // Cek apakah format horizontal (ada kolom 'pertanyaan 1' atau 'nama vendor')
-  var isHorizontal = header.some(function(h) { return h.indexOf('pertanyaan') !== -1; }) || (header[1] && header[1].indexOf('vendor') !== -1);
+    if (isHorizontal) {
+      for (var i = 1; i < data.length; i++) {
+        var kategori = data[i][0] ? data[i][0].toString().trim() : 'BarangJasa';
+        var vendorSpesifik = data[i][1] ? data[i][1].toString().trim() : '';
+        if (vendorSpesifik.toLowerCase() === 'semua') vendorSpesifik = '';
 
-  if (isHorizontal) {
-    for (var i = 1; i < data.length; i++) {
-      var kategori = data[i][0] ? data[i][0].toString().trim() : 'UMUM';
-      var vendorSpesifik = data[i][1] ? data[i][1].toString().trim() : '';
-      if (vendorSpesifik.toLowerCase() === 'semua') vendorSpesifik = '';
+        for (var col = 2; col < data[i].length; col++) {
+          var qVal = data[i][col];
+          if (qVal && qVal.toString().trim() !== '' && qVal.toString().trim().toLowerCase() !== 'null') {
+            var qText = qVal.toString().trim();
+            var id = generateQuestionId(qText);
+            list.push({
+              id: id,
+              kriteria: qText,
+              deskripsi: getQuestionDescription(qText),
+              kategori: normalizeCategoryCode(kategori),
+              vendorSpesifik: vendorSpesifik
+            });
+          }
+        }
+      }
+    } else {
+      for (var i = 1; i < data.length; i++) {
+        var kategori = data[i][0] ? data[i][0].toString().trim() : '';
+        var kriteria = data[i][1] ? data[i][1].toString().trim() : '';
+        var deskripsi = data[i][2] ? data[i][2].toString().trim() : '';
 
-      for (var col = 2; col < data[i].length; col++) {
-        var qVal = data[i][col];
-        if (qVal && qVal.toString().trim() !== '' && qVal.toString().trim().toLowerCase() !== 'null') {
-          var qText = qVal.toString().trim();
-          var id = generateQuestionId(qText);
+        if (kriteria && kriteria.toLowerCase() !== 'kriteria') {
+          var id = generateQuestionId(kriteria);
           list.push({
             id: id,
-            kriteria: qText,
-            deskripsi: getQuestionDescription(qText),
-            kategori: kategori,
-            vendorSpesifik: vendorSpesifik
+            kriteria: kriteria,
+            deskripsi: deskripsi || getQuestionDescription(kriteria),
+            kategori: normalizeCategoryCode(kategori),
+            vendorSpesifik: ''
           });
         }
       }
     }
-  } else {
-    // Format vertikal standard (Kategori, Kriteria, Deskripsi)
-    for (var i = 1; i < data.length; i++) {
-      var kategori = data[i][0] ? data[i][0].toString().trim() : '';
-      var kriteria = data[i][1] ? data[i][1].toString().trim() : '';
-      var deskripsi = data[i][2] ? data[i][2].toString().trim() : '';
+  }
 
-      if (kriteria && kriteria.toLowerCase() !== 'kriteria') {
-        var id = generateQuestionId(kriteria);
+  // 2. Jika sheet Kriteria Penilaian tidak ada/kosong, baca langsung dari HEADER SHEET "Penilaian - <Kategori>"!
+  if (list.length === 0 && ss) {
+    for (var catCode in CATEGORY_KRITERIA_MAP) {
+      var catSheet = ss.getSheetByName('Penilaian - ' + catCode);
+      if (catSheet && catSheet.getLastColumn() >= 5) {
+        var headers = catSheet.getRange(1, 1, 1, catSheet.getLastColumn()).getValues()[0];
+        // Kolom 1-4: Timestamp, Nama Penilai, Nama Vendor, Periode
+        // Kolom terakhir 3: Rata-rata Skor, Predikat, Catatan
+        for (var h = 4; h < headers.length; h++) {
+          var hName = headers[h].toString().trim();
+          var hLower = hName.toLowerCase();
+          if (hLower.indexOf('rata') !== -1 || hLower === 'skor' || hLower.indexOf('predikat') !== -1 || hLower.indexOf('catatan') !== -1) {
+            continue;
+          }
+          var cleanQ = hName.replace(/\s*\([0-9-]+\)\s*$/, '').trim();
+          if (cleanQ) {
+            list.push({
+              id: generateQuestionId(cleanQ),
+              kriteria: cleanQ,
+              deskripsi: getQuestionDescription(cleanQ),
+              kategori: catCode,
+              vendorSpesifik: ''
+            });
+          }
+        }
+      }
+    }
+  }
+
+  // 3. Fallback: jika sheet belum dibuat, ambil dari CATEGORY_KRITERIA_MAP
+  if (list.length === 0) {
+    for (var catCode in CATEGORY_KRITERIA_MAP) {
+      var questions = CATEGORY_KRITERIA_MAP[catCode];
+      for (var q = 0; q < questions.length; q++) {
+        var qText = questions[q];
         list.push({
-          id: id,
-          kriteria: kriteria,
-          deskripsi: deskripsi || getQuestionDescription(kriteria),
-          kategori: kategori,
+          id: generateQuestionId(qText),
+          kriteria: qText,
+          deskripsi: getQuestionDescription(qText),
+          kategori: catCode,
           vendorSpesifik: ''
         });
       }
