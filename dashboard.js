@@ -892,26 +892,36 @@ function renderContractTable(cc) {
         const isDocComplete = c.kelengkapan && c.kelengkapan.toLowerCase().includes('lengkap');
         const docColor = isDocComplete ? '#0284c7' : '#f59e0b';
 
+        const cleanVendor = (c.vendor || '').replace(/\r?\n|\r/g, ' ').trim();
+        const cleanJenis = (c.jenisPekerjaan || '-').replace(/\r?\n|\r/g, ' ').trim();
+        const cleanKet = (c.keterangan || '-').replace(/\r?\n|\r/g, ' ').trim();
+
         return `
-        <tr>
-            <td style="font-weight:700; color:var(--primary); font-size:0.85rem; white-space:nowrap;">${esc(c.noKontrak)}</td>
-            <td style="font-weight:600; color:var(--text); white-space:nowrap;">${esc(c.vendor)}</td>
-            <td style="font-size:0.85rem; color:var(--text2); max-width:200px;">${esc(c.jenisPekerjaan)}</td>
-            <td style="font-size:0.8rem; color:var(--text3); white-space:nowrap;">
-                <span>📅 ${esc(c.tglMulai)} &ndash; ${esc(c.tglSelesai)}</span>
+        <tr class="hover:bg-blue-50/40 transition-colors">
+            <td style="font-weight:700; color:#2563eb; font-size:0.78rem; white-space:nowrap;">#${esc(c.noKontrak)}</td>
+            <td>
+                <div style="font-weight:600; color:#0f172a; max-width:240px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${esc(cleanVendor)}">${esc(cleanVendor)}</div>
             </td>
             <td>
-                <span class="predikat-badge" style="background:${docColor}15; color:${docColor}; border:1px solid ${docColor}30; font-size:0.72rem; font-weight:600;">
+                <div style="font-size:0.78rem; color:#475569; max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${esc(cleanJenis)}">${esc(cleanJenis)}</div>
+            </td>
+            <td style="font-size:0.75rem; color:#64748b; white-space:nowrap;">
+                <span>${esc(c.tglMulai || '-')} &ndash; ${esc(c.tglSelesai || '-')}</span>
+            </td>
+            <td>
+                <span class="predikat-badge" style="background:${docColor}15; color:${docColor}; border:1px solid ${docColor}30; font-size:0.68rem; font-weight:600; padding:1px 6px;">
                     ${esc(c.kelengkapan)}
                 </span>
             </td>
-            <td style="text-align:right; font-weight:700; color:var(--text); font-size:0.85rem; white-space:nowrap;">${c.nilai ? formatRupiah(c.nilai) : '-'}</td>
+            <td style="text-align:right; font-weight:700; color:#0f172a; font-size:0.78rem; white-space:nowrap;">${c.nilai ? formatRupiah(c.nilai) : '-'}</td>
             <td style="text-align:center;">
-                <span class="predikat-badge" style="background:${statusColor}15; color:${statusColor}; border:1px solid ${statusColor}30; font-size:0.75rem; font-weight:700;">
+                <span class="predikat-badge" style="background:${statusColor}15; color:${statusColor}; border:1px solid ${statusColor}30; font-size:0.7rem; font-weight:700; padding:1px 6px;">
                     ${isComply ? '✓ Comply' : '✗ Not Comply'}
                 </span>
             </td>
-            <td style="font-size:0.8rem; color:var(--text3); max-width:220px;">${esc(c.keterangan)}</td>
+            <td>
+                <div style="font-size:0.75rem; color:#64748b; max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${esc(cleanKet)}">${esc(cleanKet)}</div>
+            </td>
         </tr>`;
     }).join('');
 }
@@ -944,20 +954,26 @@ function renderEvaluationsTable(evaluations) {
         const score = parseFloat(ev.score) || 0;
         const color = getPredikatColor(score);
         const pred = ev.predikat || getPredikat(score);
+        const cleanVendor = (ev.vendor || '').replace(/\r?\n|\r/g, ' ').trim();
+        const cleanCatatan = (ev.catatan || '-').replace(/\r?\n|\r/g, ' ').trim();
 
         return `
-        <tr>
-            <td style="font-size:0.8rem; color:var(--text3); white-space:nowrap;">${esc(ev.timestamp)}</td>
-            <td style="font-size:0.85rem; color:var(--text2);">${esc(ev.penilai)}</td>
-            <td style="font-weight:600; color:var(--text); white-space:nowrap;">${esc(ev.vendor)}</td>
-            <td style="font-size:0.8rem; color:var(--text3);">${esc(ev.periode)}</td>
-            <td style="text-align:right; font-weight:700; color:${color}; font-size:1.05rem;">${score.toFixed(2)}</td>
+        <tr class="hover:bg-blue-50/40 transition-colors">
+            <td style="font-size:0.75rem; color:#64748b; white-space:nowrap;">${esc(ev.timestamp)}</td>
+            <td style="font-size:0.78rem; color:#475569; white-space:nowrap;">${esc(ev.penilai)}</td>
+            <td>
+                <div style="font-weight:600; color:#0f172a; max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${esc(cleanVendor)}">${esc(cleanVendor)}</div>
+            </td>
+            <td style="font-size:0.75rem; color:#64748b; white-space:nowrap;">${esc(ev.periode)}</td>
+            <td style="text-align:right; font-weight:800; color:${color}; font-size:0.85rem;">${score.toFixed(2)}</td>
             <td style="text-align:center;">
-                <span class="predikat-badge" style="background:${color}15; color:${color}; border:1px solid ${color}30; font-size:0.75rem; font-weight:700;">
+                <span class="predikat-badge" style="background:${color}15; color:${color}; border:1px solid ${color}30; font-size:0.7rem; font-weight:700; padding:1px 6px;">
                     ${esc(pred)}
                 </span>
             </td>
-            <td style="font-size:0.8rem; color:var(--text3); max-width:220px;">${esc(ev.catatan)}</td>
+            <td>
+                <div style="font-size:0.75rem; color:#64748b; max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${esc(cleanCatatan)}">${esc(cleanCatatan)}</div>
+            </td>
         </tr>`;
     }).join('');
 }
