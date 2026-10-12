@@ -143,6 +143,8 @@ var GID_KONTRAK_VENDOR = 487575887;
  * 2. Fallback: cari berdasarkan nama sheet (case-insensitive)
  */
 function getAksesPenilaiSheet(ss) {
+  if (!ss) ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss) return null;
   var sheets = ss.getSheets();
   for (var i = 0; i < sheets.length; i++) {
     if (sheets[i].getSheetId() === GID_AKSES_PENILAI) {
@@ -167,6 +169,8 @@ function getAksesPenilaiSheet(ss) {
  * 2. Fallback: cari berdasarkan nama sheet (case-insensitive)
  */
 function getKontrakVendorSheet(ss) {
+  if (!ss) ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss) return null;
   var sheets = ss.getSheets();
   for (var i = 0; i < sheets.length; i++) {
     if (sheets[i].getSheetId() === GID_KONTRAK_VENDOR) {
@@ -191,6 +195,8 @@ function getKontrakVendorSheet(ss) {
  * 2. Fallback: pencarian case-insensitive & partial match
  */
 function getPenilaianVendorSheet(ss) {
+  if (!ss) ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss) return null;
   var candidates = [
     SHEET_PENILAIAN_VENDOR,
     'penilaian vendor',
@@ -1789,6 +1795,8 @@ function createJsonResponse(data) {
  * Inisialisasi Seluruh Sheet Database secara Otomatis jika belum ada
  */
 function initAllDatabaseSheets(ss) {
+  if (!ss) ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss) return;
   // Hanya inisialisasi jika sheet esensial belum ada sama sekali
   var sheetKategori = ss.getSheetByName(SHEET_KATEGORI_VENDOR);
   if (!sheetKategori) {
