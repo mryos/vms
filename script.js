@@ -2,7 +2,7 @@
 // KONFIGURASI
 // =====================================================
 // Ganti URL di bawah dengan URL Web App Google Apps Script Anda
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyw7G4scbeR0wkLyK5NZzpIQeYSmrklIQxD_tFiriUx15HZwG2pWX2FtJGzwJXcYG6C/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzfQJM8_-2TbSVo_oZWRtNdfb2oGvI4WV-t9VEZnfuzZZMUpIUp8tkY7G89muMyOUGTjQ/exec';
 
 // Daftar vendor default (fallback offline)
 const DEFAULT_VENDORS = [
@@ -294,7 +294,18 @@ function checkWelcome() {
     const savedCategories = localStorage.getItem('ethos_categories');
 
     if (savedKriteria) {
-        try { kriteriaList = JSON.parse(savedKriteria); } catch { kriteriaList = [...DEFAULT_KRITERIA]; }
+        try {
+            const parsed = JSON.parse(savedKriteria);
+            // Hanya gunakan cache jika berisi kriteria lengkap (>= 99 kriteria)
+            if (Array.isArray(parsed) && parsed.length >= 90) {
+                kriteriaList = parsed;
+            } else {
+                kriteriaList = [...DEFAULT_KRITERIA];
+                localStorage.removeItem('ethos_kriteria');
+            }
+        } catch {
+            kriteriaList = [...DEFAULT_KRITERIA];
+        }
     } else {
         kriteriaList = [...DEFAULT_KRITERIA];
     }
@@ -1372,19 +1383,16 @@ function renderDynamicForm(vendorName) {
     if (!container) return;
 
     const vendorCat = getVendorCategory(vendorName);
-    const activePool = (kriteriaList && kriteriaList.length > 0) ? kriteriaList : DEFAULT_KRITERIA;
-
-    // Filter kriteria:
-    // 1. Prioritaskan pertanyaan vendor spesifik jika ada
-    // 2. Pertanyaan khusus kategori vendor (tepat 11 pertanyaan)
-    let matchedKriteria = activePool.filter(k => {
+    
+    // Cari di kriteriaList dulu
+    let matchedKriteria = (kriteriaList || []).filter(k => {
         if (k.vendorSpesifik && k.vendorSpesifik.trim() !== '') {
             return k.vendorSpesifik.toLowerCase().trim() === vendorName.toLowerCase().trim();
         }
         return normalizeCategory(k.kategori) === vendorCat;
     });
 
-    // Fallback: jika kriteriaList dari server belum memiliki pertanyaan kategori ini, gunakan DEFAULT_KRITERIA
+    // Jika tidak ditemukan di kriteriaList (atau kriteriaList dari server kosong), ambil dari DEFAULT_KRITERIA (11 pertanyaan per kategori)
     if (matchedKriteria.length === 0) {
         matchedKriteria = DEFAULT_KRITERIA.filter(k => normalizeCategory(k.kategori) === vendorCat);
     }
