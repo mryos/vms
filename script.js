@@ -125,27 +125,122 @@ let categoriesList = []; // Diambil dari spreadsheet
 let poStats = { totalOrders: 0, totalOnTime: 0, overallOnTimePct: 0, vendorMap: {} };
 
 const DEFAULT_KRITERIA = [
-    { id: 'harga', kriteria: 'Harga', deskripsi: 'Kewajaran dan daya saing harga yang ditawarkan', kategori: 'all' },
-    { id: 'pelayanan', kriteria: 'Pelayanan', deskripsi: 'Responsivitas, komunikasi, dan profesionalisme', kategori: 'all' },
-    { id: 'ketepatanWaktu', kriteria: 'Ketepatan Waktu', deskripsi: 'Kemampuan menyelesaikan/mengirim sesuai jadwal', kategori: 'all' },
-    { id: 'kualitasProdukIT', kriteria: 'Kualitas Produk IT', deskripsi: 'Kualitas hardware/software yang disediakan', kategori: 'it' },
-    { id: 'dukunganTeknis', kriteria: 'Dukungan Teknis', deskripsi: 'Kecepatan dan kualitas dukungan teknis / after-sales', kategori: 'it' },
-    { id: 'garansiPemeliharaan', kriteria: 'Garansi & Pemeliharaan', deskripsi: 'Cakupan garansi dan layanan pemeliharaan', kategori: 'it' },
-    { id: 'keamananPengiriman', kriteria: 'Keamanan Pengiriman', deskripsi: 'Kondisi barang saat diterima (tidak rusak/hilang)', kategori: 'logistics' },
-    { id: 'jangkauanArea', kriteria: 'Jangkauan Area', deskripsi: 'Kemampuan menjangkau area pengiriman yang dibutuhkan', kategori: 'logistics' },
-    { id: 'ketepatanEstimasi', kriteria: 'Ketepatan Estimasi', deskripsi: 'Akurasi estimasi waktu pengiriman yang diberikan', kategori: 'logistics' },
-    { id: 'kreativitasDesain', kriteria: 'Kreativitas Desain', deskripsi: 'Kualitas dan originalitas konsep desain', kategori: 'branding' },
-    { id: 'kesesuaianBrief', kriteria: 'Kesesuaian Brief', deskripsi: 'Kemampuan memahami dan mengeksekusi brief klien', kategori: 'branding' },
-    { id: 'revisiFleksibilitas', kriteria: 'Revisi & Fleksibilitas', deskripsi: 'Kesediaan dan kecepatan dalam melakukan revisi', kategori: 'branding' },
-    { id: 'kualitasCetak', kriteria: 'Kualitas Cetak', deskripsi: 'Ketajaman warna, detail, dan kualitas bahan cetak', kategori: 'printing' },
-    { id: 'kesesuaianSpek', kriteria: 'Kesesuaian Spesifikasi', deskripsi: 'Hasil cetak sesuai ukuran, bahan, dan finishing yang diminta', kategori: 'printing' },
-    { id: 'kapasitasProduksi', kriteria: 'Kapasitas Produksi', deskripsi: 'Kemampuan menangani volume pesanan besar', kategori: 'printing' },
-    { id: 'keahlianKompetensi', kriteria: 'Keahlian & Kompetensi', deskripsi: 'Tingkat keahlian dan pengalaman di bidangnya', kategori: 'consultant' },
-    { id: 'kualitasLaporan', kriteria: 'Kualitas Laporan', deskripsi: 'Kelengkapan dan kejelasan laporan / deliverable', kategori: 'consultant' },
-    { id: 'dampakHasil', kriteria: 'Dampak & Hasil', deskripsi: 'Efektivitas rekomendasi atau solusi yang diberikan', kategori: 'consultant' },
-    { id: 'kualitasBarang', kriteria: 'Kualitas Barang', deskripsi: 'Kesesuaian produk dengan standar spesifikasi', kategori: 'general' },
-    { id: 'kelengkapanPesanan', kriteria: 'Kelengkapan Pesanan', deskripsi: 'Ketepatan jumlah dan jenis barang yang dikirim', kategori: 'general' },
-    { id: 'ketersediaanStok', kriteria: 'Ketersediaan Stok', deskripsi: 'Kemampuan menyediakan barang yang dibutuhkan', kategori: 'general' }
+    // === BarangJasa (11 pertanyaan) ===
+    { id: 'bj_kualitasBarang', kriteria: 'Kualitas Barang/Jasa', deskripsi: 'Kesesuaian produk/jasa dengan standar spesifikasi yang diminta', kategori: 'BarangJasa' },
+    { id: 'bj_kesesuaianSpek', kriteria: 'Kesesuaian Spesifikasi', deskripsi: 'Ketepatan hasil produk sesuai spesifikasi teknis dan mock-up', kategori: 'BarangJasa' },
+    { id: 'bj_ketepatanWaktu', kriteria: 'Ketepatan Waktu Pengiriman', deskripsi: 'Kemampuan mengirim/menyelesaikan pesanan sesuai jadwal PO', kategori: 'BarangJasa' },
+    { id: 'bj_kelengkapanPesanan', kriteria: 'Kelengkapan Pesanan', deskripsi: 'Ketepatan jumlah dan kelengkapan barang yang dikirim', kategori: 'BarangJasa' },
+    { id: 'bj_harga', kriteria: 'Harga & Kewajaran', deskripsi: 'Kewajaran dan daya saing harga yang ditawarkan terhadap pasar', kategori: 'BarangJasa' },
+    { id: 'bj_pelayanan', kriteria: 'Pelayanan & Responsivitas', deskripsi: 'Responsivitas, etika komunikasi, dan profesionalisme layanan', kategori: 'BarangJasa' },
+    { id: 'bj_garansi', kriteria: 'Garansi & Purna Jual', deskripsi: 'Cakupan garansi dan kemudahan layanan purna jual', kategori: 'BarangJasa' },
+    { id: 'bj_ketersediaanStok', kriteria: 'Ketersediaan Stok', deskripsi: 'Kemampuan menyediakan barang yang dibutuhkan secara kontinyu', kategori: 'BarangJasa' },
+    { id: 'bj_kemasan', kriteria: 'Kemasan & Pengemasan', deskripsi: 'Kualitas pengemasan dan kondisi barang saat diterima', kategori: 'BarangJasa' },
+    { id: 'bj_fleksibilitas', kriteria: 'Fleksibilitas Pesanan', deskripsi: 'Kemampuan mengakomodasi perubahan jumlah/spesifikasi pesanan', kategori: 'BarangJasa' },
+    { id: 'bj_dokumentasi', kriteria: 'Dokumentasi & Administrasi', deskripsi: 'Kelengkapan dan ketepatan dokumen pendukung (invoice, DO, dll)', kategori: 'BarangJasa' },
+
+    // === Branding (11 pertanyaan) ===
+    { id: 'br_kreativitasKonsep', kriteria: 'Kreativitas Konsep', deskripsi: 'Originalitas dan keunikan ide konsep branding yang diajukan', kategori: 'Branding' },
+    { id: 'br_kesesuaianBrief', kriteria: 'Kesesuaian Brief', deskripsi: 'Kemampuan memahami dan mengeksekusi brief klien dengan tepat', kategori: 'Branding' },
+    { id: 'br_kualitasDesain', kriteria: 'Kualitas Desain Visual', deskripsi: 'Estetika, ketajaman, dan kualitas output desain visual', kategori: 'Branding' },
+    { id: 'br_konsistensiBrand', kriteria: 'Konsistensi Brand Identity', deskripsi: 'Keselarasan hasil dengan brand guideline dan identitas merek', kategori: 'Branding' },
+    { id: 'br_ketepatanWaktu', kriteria: 'Ketepatan Waktu Pengerjaan', deskripsi: 'Kemampuan menyelesaikan pekerjaan sesuai timeline yang disepakati', kategori: 'Branding' },
+    { id: 'br_revisi', kriteria: 'Revisi & Fleksibilitas', deskripsi: 'Kesediaan dan kecepatan dalam mengakomodasi revisi', kategori: 'Branding' },
+    { id: 'br_komunikasi', kriteria: 'Komunikasi & Koordinasi', deskripsi: 'Proaktivitas dan kejelasan komunikasi selama proses kerja', kategori: 'Branding' },
+    { id: 'br_targetAudiens', kriteria: 'Pemahaman Target Audiens', deskripsi: 'Kemampuan memahami dan menyesuaikan konten dengan target pasar', kategori: 'Branding' },
+    { id: 'br_kualitasMaterial', kriteria: 'Kualitas Material Produksi', deskripsi: 'Mutu bahan dan finishing produksi (cetak, merchandise, dll)', kategori: 'Branding' },
+    { id: 'br_harga', kriteria: 'Harga & Nilai Tambah', deskripsi: 'Kewajaran harga dibandingkan kualitas dan nilai yang diberikan', kategori: 'Branding' },
+    { id: 'br_dampakAwareness', kriteria: 'Dampak Terhadap Brand Awareness', deskripsi: 'Efektivitas dalam meningkatkan kesadaran dan persepsi merek', kategori: 'Branding' },
+
+    // === KOLInfPodcast (11 pertanyaan) ===
+    { id: 'kol_relevansiAudiens', kriteria: 'Relevansi Audiens', deskripsi: 'Kesesuaian demografi dan minat followers dengan target brand', kategori: 'KOLInfPodcast' },
+    { id: 'kol_kualitasKonten', kriteria: 'Kualitas Konten', deskripsi: 'Mutu visual, narasi, dan penyampaian pesan dalam konten', kategori: 'KOLInfPodcast' },
+    { id: 'kol_engagementRate', kriteria: 'Engagement Rate', deskripsi: 'Tingkat interaksi (like, comment, share) terhadap konten', kategori: 'KOLInfPodcast' },
+    { id: 'kol_ketepatanWaktu', kriteria: 'Ketepatan Waktu Posting', deskripsi: 'Kepatuhan terhadap jadwal posting/tayang yang disepakati', kategori: 'KOLInfPodcast' },
+    { id: 'kol_kesesuaianBrief', kriteria: 'Kesesuaian Brief & Pesan', deskripsi: 'Ketepatan penyampaian key message dan talking points', kategori: 'KOLInfPodcast' },
+    { id: 'kol_profesionalisme', kriteria: 'Profesionalisme & Etika', deskripsi: 'Sikap profesional, etika kerja, dan kepatuhan terhadap aturan', kategori: 'KOLInfPodcast' },
+    { id: 'kol_jangkauan', kriteria: 'Jangkauan & Reach', deskripsi: 'Luas jangkauan konten terhadap audiens potensial', kategori: 'KOLInfPodcast' },
+    { id: 'kol_kreativitas', kriteria: 'Kreativitas Eksekusi', deskripsi: 'Originalitas dan keunikan cara menyampaikan pesan brand', kategori: 'KOLInfPodcast' },
+    { id: 'kol_responsivitas', kriteria: 'Responsivitas Komunikasi', deskripsi: 'Kecepatan dan kemudahan komunikasi dalam koordinasi kerja', kategori: 'KOLInfPodcast' },
+    { id: 'kol_harga', kriteria: 'Harga & ROI', deskripsi: 'Kewajaran rate card dan return on investment yang didapat', kategori: 'KOLInfPodcast' },
+    { id: 'kol_dampakBrand', kriteria: 'Dampak Terhadap Brand', deskripsi: 'Pengaruh nyata terhadap brand perception dan awareness', kategori: 'KOLInfPodcast' },
+
+    // === PhotoVideo (11 pertanyaan) ===
+    { id: 'pv_kualitasVisual', kriteria: 'Kualitas Visual & Teknis', deskripsi: 'Ketajaman gambar, pencahayaan, komposisi, dan kualitas teknis', kategori: 'PhotoVideo' },
+    { id: 'pv_kreativitasKonsep', kriteria: 'Kreativitas Konsep', deskripsi: 'Originalitas ide konsep visual dan storytelling', kategori: 'PhotoVideo' },
+    { id: 'pv_kesesuaianBrief', kriteria: 'Kesesuaian Brief', deskripsi: 'Kemampuan mengeksekusi brief dan moodboard dengan tepat', kategori: 'PhotoVideo' },
+    { id: 'pv_ketepatanWaktu', kriteria: 'Ketepatan Waktu Pengerjaan', deskripsi: 'Kepatuhan terhadap timeline produksi dan delivery', kategori: 'PhotoVideo' },
+    { id: 'pv_editing', kriteria: 'Kualitas Editing & Post-Production', deskripsi: 'Mutu editing, color grading, dan post-production', kategori: 'PhotoVideo' },
+    { id: 'pv_profesionalisme', kriteria: 'Profesionalisme Tim', deskripsi: 'Sikap profesional, etika kerja tim, dan manajemen lokasi', kategori: 'PhotoVideo' },
+    { id: 'pv_peralatan', kriteria: 'Kelengkapan Peralatan', deskripsi: 'Ketersediaan dan kualitas peralatan foto/video yang digunakan', kategori: 'PhotoVideo' },
+    { id: 'pv_revisi', kriteria: 'Revisi & Fleksibilitas', deskripsi: 'Kesediaan mengakomodasi revisi dan penyesuaian hasil', kategori: 'PhotoVideo' },
+    { id: 'pv_komunikasi', kriteria: 'Komunikasi & Koordinasi', deskripsi: 'Kejelasan komunikasi saat pra-produksi hingga delivery', kategori: 'PhotoVideo' },
+    { id: 'pv_harga', kriteria: 'Harga & Kewajaran', deskripsi: 'Kewajaran harga sesuai kualitas dan scope pekerjaan', kategori: 'PhotoVideo' },
+    { id: 'pv_hasilAkhir', kriteria: 'Hasil Akhir & Deliverable', deskripsi: 'Kualitas final output dan kelengkapan deliverable', kategori: 'PhotoVideo' },
+
+    // === Konsultan (11 pertanyaan) ===
+    { id: 'ks_keahlian', kriteria: 'Keahlian & Kompetensi', deskripsi: 'Tingkat keahlian, pengalaman, dan sertifikasi konsultan', kategori: 'Konsultan' },
+    { id: 'ks_kualitasAnalisa', kriteria: 'Kualitas Analisa & Rekomendasi', deskripsi: 'Kedalaman analisa dan relevansi rekomendasi yang diberikan', kategori: 'Konsultan' },
+    { id: 'ks_pemahamanBisnis', kriteria: 'Pemahaman Bisnis Klien', deskripsi: 'Kemampuan memahami konteks bisnis dan kebutuhan spesifik klien', kategori: 'Konsultan' },
+    { id: 'ks_ketepatanWaktu', kriteria: 'Ketepatan Waktu Deliverable', deskripsi: 'Kepatuhan terhadap tenggat waktu penyerahan deliverable', kategori: 'Konsultan' },
+    { id: 'ks_kualitasLaporan', kriteria: 'Kualitas Laporan', deskripsi: 'Kelengkapan, kejelasan, dan profesionalisme laporan/dokumen', kategori: 'Konsultan' },
+    { id: 'ks_komunikasi', kriteria: 'Komunikasi & Presentasi', deskripsi: 'Kejelasan penyampaian dan kemampuan presentasi', kategori: 'Konsultan' },
+    { id: 'ks_dampakHasil', kriteria: 'Dampak & Hasil Implementasi', deskripsi: 'Efektivitas rekomendasi dan dampak nyata bagi operasional', kategori: 'Konsultan' },
+    { id: 'ks_metodologi', kriteria: 'Metodologi Kerja', deskripsi: 'Kejelasan dan efektivitas metodologi/framework yang digunakan', kategori: 'Konsultan' },
+    { id: 'ks_responsivitas', kriteria: 'Ketersediaan & Responsivitas', deskripsi: 'Kemudahan dihubungi dan kecepatan respon terhadap pertanyaan', kategori: 'Konsultan' },
+    { id: 'ks_harga', kriteria: 'Harga & Kewajaran', deskripsi: 'Kewajaran profesional fee dibandingkan nilai yang diberikan', kategori: 'Konsultan' },
+    { id: 'ks_transferKnowledge', kriteria: 'Transfer Knowledge', deskripsi: 'Kemampuan mentransfer pengetahuan dan membangun kapasitas tim', kategori: 'Konsultan' },
+
+    // === ITSoftware (11 pertanyaan) ===
+    { id: 'it_kualitasProduk', kriteria: 'Kualitas Produk/Sistem', deskripsi: 'Fungsionalitas, keandalan, dan kualitas produk IT yang disediakan', kategori: 'ITSoftware' },
+    { id: 'it_stabilitas', kriteria: 'Stabilitas & Performa', deskripsi: 'Kestabilan sistem dan performa dalam penggunaan sehari-hari', kategori: 'ITSoftware' },
+    { id: 'it_keamanan', kriteria: 'Keamanan Sistem', deskripsi: 'Tingkat keamanan data, enkripsi, dan proteksi terhadap ancaman', kategori: 'ITSoftware' },
+    { id: 'it_dukunganTeknis', kriteria: 'Dukungan Teknis', deskripsi: 'Kecepatan dan kualitas dukungan teknis / troubleshooting', kategori: 'ITSoftware' },
+    { id: 'it_ketepatanWaktu', kriteria: 'Ketepatan Waktu Implementasi', deskripsi: 'Kepatuhan terhadap timeline implementasi dan deployment', kategori: 'ITSoftware' },
+    { id: 'it_ux', kriteria: 'User Experience & Interface', deskripsi: 'Kemudahan penggunaan dan kualitas antarmuka pengguna', kategori: 'ITSoftware' },
+    { id: 'it_dokumentasi', kriteria: 'Dokumentasi Teknis', deskripsi: 'Kelengkapan dan kejelasan dokumentasi teknis/manual', kategori: 'ITSoftware' },
+    { id: 'it_garansi', kriteria: 'Garansi & Pemeliharaan', deskripsi: 'Cakupan garansi dan kemudahan layanan maintenance', kategori: 'ITSoftware' },
+    { id: 'it_skalabilitas', kriteria: 'Skalabilitas Solusi', deskripsi: 'Kemampuan sistem untuk berkembang sesuai kebutuhan bisnis', kategori: 'ITSoftware' },
+    { id: 'it_harga', kriteria: 'Harga & Lisensi', deskripsi: 'Kewajaran harga, model lisensi, dan biaya operasional', kategori: 'ITSoftware' },
+    { id: 'it_training', kriteria: 'Training & Onboarding', deskripsi: 'Kualitas pelatihan dan pendampingan saat implementasi awal', kategori: 'ITSoftware' },
+
+    // === EventOrganizer (11 pertanyaan) ===
+    { id: 'eo_konsepAcara', kriteria: 'Konsep & Kreativitas Acara', deskripsi: 'Originalitas dan kesesuaian konsep acara dengan tujuan', kategori: 'EventOrganizer' },
+    { id: 'eo_eksekusi', kriteria: 'Eksekusi & Koordinasi Lapangan', deskripsi: 'Kelancaran pelaksanaan dan koordinasi tim di lapangan', kategori: 'EventOrganizer' },
+    { id: 'eo_ketepatanWaktu', kriteria: 'Ketepatan Waktu & Jadwal', deskripsi: 'Kepatuhan terhadap rundown dan timeline acara', kategori: 'EventOrganizer' },
+    { id: 'eo_venue', kriteria: 'Kualitas Venue & Logistik', deskripsi: 'Kesesuaian venue dan kelancaran logistik acara', kategori: 'EventOrganizer' },
+    { id: 'eo_anggaran', kriteria: 'Manajemen Anggaran', deskripsi: 'Transparansi dan efisiensi pengelolaan budget acara', kategori: 'EventOrganizer' },
+    { id: 'eo_komunikasi', kriteria: 'Komunikasi & Responsivitas', deskripsi: 'Proaktivitas dan kejelasan komunikasi selama persiapan-eksekusi', kategori: 'EventOrganizer' },
+    { id: 'eo_problemSolving', kriteria: 'Penanganan Masalah', deskripsi: 'Kecepatan dan efektivitas menangani kendala di lapangan', kategori: 'EventOrganizer' },
+    { id: 'eo_tim', kriteria: 'Kualitas Tim & SDM', deskripsi: 'Profesionalisme, jumlah, dan kompetensi tim yang diterjunkan', kategori: 'EventOrganizer' },
+    { id: 'eo_keamanan', kriteria: 'Keamanan & Keselamatan', deskripsi: 'Penerapan protokol keamanan dan keselamatan peserta', kategori: 'EventOrganizer' },
+    { id: 'eo_dokumentasi', kriteria: 'Dokumentasi Acara', deskripsi: 'Kelengkapan dokumentasi foto/video dan laporan pasca-acara', kategori: 'EventOrganizer' },
+    { id: 'eo_dampak', kriteria: 'Dampak & Kepuasan Peserta', deskripsi: 'Tingkat kepuasan peserta dan dampak acara terhadap tujuan', kategori: 'EventOrganizer' },
+
+    // === BrandAmbasador (11 pertanyaan) ===
+    { id: 'ba_kesesuaianImage', kriteria: 'Kesesuaian Image & Brand Values', deskripsi: 'Keselarasan image personal dengan nilai-nilai brand', kategori: 'BrandAmbasador' },
+    { id: 'ba_profesionalisme', kriteria: 'Profesionalisme & Etika', deskripsi: 'Sikap profesional, etika kerja, dan attitude positif', kategori: 'BrandAmbasador' },
+    { id: 'ba_pengaruh', kriteria: 'Pengaruh & Reputasi', deskripsi: 'Tingkat pengaruh dan reputasi positif di masyarakat', kategori: 'BrandAmbasador' },
+    { id: 'ba_engagement', kriteria: 'Engagement dengan Audiens', deskripsi: 'Kemampuan berinteraksi dan membangun koneksi dengan audiens', kategori: 'BrandAmbasador' },
+    { id: 'ba_kualitasKonten', kriteria: 'Kualitas Konten', deskripsi: 'Mutu konten yang diproduksi untuk kampanye brand', kategori: 'BrandAmbasador' },
+    { id: 'ba_ketepatanWaktu', kriteria: 'Ketepatan Waktu & Komitmen', deskripsi: 'Kepatuhan terhadap jadwal dan komitmen kontrak', kategori: 'BrandAmbasador' },
+    { id: 'ba_pemahamanProduk', kriteria: 'Pemahaman Produk/Brand', deskripsi: 'Kedalaman pemahaman tentang produk dan value proposition', kategori: 'BrandAmbasador' },
+    { id: 'ba_jangkauan', kriteria: 'Jangkauan & Reach', deskripsi: 'Luas jangkauan audiens yang dapat dijangkau', kategori: 'BrandAmbasador' },
+    { id: 'ba_kreativitas', kriteria: 'Kreativitas Eksekusi', deskripsi: 'Kemampuan mengemas pesan brand secara kreatif dan otentik', kategori: 'BrandAmbasador' },
+    { id: 'ba_harga', kriteria: 'Harga & ROI', deskripsi: 'Kewajaran endorsement fee dan return on investment', kategori: 'BrandAmbasador' },
+    { id: 'ba_dampakPenjualan', kriteria: 'Dampak Terhadap Penjualan', deskripsi: 'Pengaruh nyata terhadap peningkatan penjualan/konversi', kategori: 'BrandAmbasador' },
+
+    // === DigitalMarketing (11 pertanyaan) ===
+    { id: 'dm_strategi', kriteria: 'Strategi & Perencanaan', deskripsi: 'Kejelasan dan efektivitas strategi digital marketing', kategori: 'DigitalMarketing' },
+    { id: 'dm_kualitasKonten', kriteria: 'Kualitas Konten Digital', deskripsi: 'Mutu visual, copywriting, dan konten digital yang diproduksi', kategori: 'DigitalMarketing' },
+    { id: 'dm_seoSem', kriteria: 'Optimasi SEO/SEM', deskripsi: 'Efektivitas strategi SEO dan pengelolaan SEM/PPC', kategori: 'DigitalMarketing' },
+    { id: 'dm_mediaSosial', kriteria: 'Pengelolaan Media Sosial', deskripsi: 'Konsistensi, engagement, dan pertumbuhan akun media sosial', kategori: 'DigitalMarketing' },
+    { id: 'dm_analisisData', kriteria: 'Analisis Data & Reporting', deskripsi: 'Kedalaman analisis data dan kualitas laporan berkala', kategori: 'DigitalMarketing' },
+    { id: 'dm_targetAudiens', kriteria: 'Ketepatan Target Audiens', deskripsi: 'Akurasi targeting dan segmentasi audiens kampanye', kategori: 'DigitalMarketing' },
+    { id: 'dm_kreativitas', kriteria: 'Kreativitas Kampanye', deskripsi: 'Inovasi dan keunikan kampanye digital yang dijalankan', kategori: 'DigitalMarketing' },
+    { id: 'dm_ketepatanWaktu', kriteria: 'Ketepatan Waktu Eksekusi', deskripsi: 'Kepatuhan terhadap content calendar dan timeline kampanye', kategori: 'DigitalMarketing' },
+    { id: 'dm_roi', kriteria: 'ROI & Efektivitas Budget', deskripsi: 'Return on ad spend dan efisiensi penggunaan budget', kategori: 'DigitalMarketing' },
+    { id: 'dm_komunikasi', kriteria: 'Komunikasi & Koordinasi', deskripsi: 'Proaktivitas update progress dan kejelasan komunikasi', kategori: 'DigitalMarketing' },
+    { id: 'dm_inovasi', kriteria: 'Inovasi & Tren Digital', deskripsi: 'Kemampuan mengikuti dan memanfaatkan tren digital terbaru', kategori: 'DigitalMarketing' }
 ];
 
 // =====================================================
@@ -556,12 +651,15 @@ function initHeaderUser() {
 // CATEGORY CHIPS (Multi-Select Supported)
 // =====================================================
 const DEFAULT_CATEGORIES = [
-    { kode: 'it', nama: 'IT & Komputer', ikon: '💻' },
-    { kode: 'logistics', nama: 'Ekspedisi & Logistik', ikon: '🚚' },
-    { kode: 'branding', nama: 'Branding & Marketing', ikon: '📣' },
-    { kode: 'printing', nama: 'Percetakan & Custom', ikon: '🖨️' },
-    { kode: 'consultant', nama: 'Konsultan & Services', ikon: '💼' },
-    { kode: 'general', nama: 'General & ATK', ikon: '📦' }
+    { kode: 'BarangJasa', nama: 'Barang & Jasa Umum', ikon: '📦' },
+    { kode: 'Branding', nama: 'Branding & Marketing', ikon: '📣' },
+    { kode: 'KOLInfPodcast', nama: 'KOL, Influencer & Podcast', ikon: '🎙️' },
+    { kode: 'PhotoVideo', nama: 'Photo & Video Production', ikon: '📸' },
+    { kode: 'Konsultan', nama: 'Konsultan & Advisory', ikon: '💼' },
+    { kode: 'ITSoftware', nama: 'IT & Software', ikon: '💻' },
+    { kode: 'EventOrganizer', nama: 'Event Organizer', ikon: '🎪' },
+    { kode: 'BrandAmbasador', nama: 'Brand Ambassador', ikon: '🌟' },
+    { kode: 'DigitalMarketing', nama: 'Digital Marketing', ikon: '📱' }
 ];
 
 function initCategoryChips() {
@@ -1208,15 +1306,32 @@ function renderVendorPoPanel(vendorName) {
     }).join('');
 }
 
+function normalizeCategory(cat) {
+    if (!cat) return 'BarangJasa';
+    const c = cat.toString().trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (c.includes('brandambasador') || c.includes('brandambassador') || c === 'ba') return 'BrandAmbasador';
+    if (c.includes('digitalmarketing') || c.includes('digmar') || c.includes('ads') || c.includes('marketing')) return 'DigitalMarketing';
+    if (c.includes('eventorganizer') || c.includes('eo') || c.includes('event')) return 'EventOrganizer';
+    if (c.includes('itsoftware') || c.includes('software') || c === 'it' || c.includes('hardware') || c.includes('komputer')) return 'ITSoftware';
+    if (c.includes('kolinfpodcast') || c.includes('kol') || c.includes('influencer') || c.includes('podcast')) return 'KOLInfPodcast';
+    if (c.includes('photovideo') || c.includes('photo') || c.includes('video') || c.includes('ph') || c.includes('foto')) return 'PhotoVideo';
+    if (c.includes('konsultan') || c.includes('consultant') || c.includes('advisory')) return 'Konsultan';
+    if (c.includes('branding')) return 'Branding';
+    return 'BarangJasa';
+}
+
 function getVendorCategory(vendorName) {
+    if (!vendorName) return 'BarangJasa';
     if (vendorCategoryMap[vendorName]) {
-        return vendorCategoryMap[vendorName];
+        return normalizeCategory(vendorCategoryMap[vendorName]);
     }
-    const nameLower = vendorName.toLowerCase();
+    const nameLower = vendorName.toLowerCase().trim();
     for (let key in vendorCategoryMap) {
-        if (key.toLowerCase() === nameLower) return vendorCategoryMap[key];
+        if (key.toLowerCase().trim() === nameLower) {
+            return normalizeCategory(vendorCategoryMap[key]);
+        }
     }
-    return 'general';
+    return 'BarangJasa';
 }
 
 function processVendorData(vendorData) {
@@ -1238,50 +1353,27 @@ function renderDynamicForm(vendorName) {
     const container = document.getElementById('questionsContainer');
     if (!container) return;
 
-    const rawVendorCat = getVendorCategory(vendorName) || 'general';
-    const normVendorCat = rawVendorCat.toLowerCase().replace(/[^a-z0-9]/g, '');
-
-    // Gunakan kriteriaList dari server atau fallback ke DEFAULT_KRITERIA
+    const vendorCat = getVendorCategory(vendorName);
     const activePool = (kriteriaList && kriteriaList.length > 0) ? kriteriaList : DEFAULT_KRITERIA;
 
     // Filter kriteria:
-    // 1. Pertanyaan UMUM (berlaku untuk semua vendor)
-    // 2. Pertanyaan kategori yang cocok dengan vendor (IT, EKSPEDISI, BRANDING, PERCETAKAN, KONSULTAN, BARANG_JASA, dll.)
-    // 3. Pertanyaan vendor spesifik jika nama cocok
+    // 1. Prioritaskan pertanyaan vendor spesifik jika ada
+    // 2. Pertanyaan khusus kategori vendor (tepat 11 pertanyaan)
     let matchedKriteria = activePool.filter(k => {
         if (k.vendorSpesifik && k.vendorSpesifik.trim() !== '') {
             return k.vendorSpesifik.toLowerCase().trim() === vendorName.toLowerCase().trim();
         }
-
-        const kCat = (k.kategori || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-        if (kCat === 'umum' || kCat === 'all' || kCat === 'semua' || kCat === '') {
-            return true;
-        }
-
-        if (normVendorCat && (normVendorCat === kCat || normVendorCat.includes(kCat) || kCat.includes(normVendorCat))) {
-            return true;
-        }
-
-        return false;
+        return normalizeCategory(k.kategori) === vendorCat;
     });
 
-    // Fallback: Jika hanya pertanyaan umum (<= 3 pertanyaan), tambahkan pertanyaan spesifik BARANG JASA / General
-    // agar penilai memiliki minimal 5-6 kriteria evaluasi lengkap
-    if (matchedKriteria.length <= 3) {
-        const generalExtras = activePool.filter(k => {
-            const kCat = (k.kategori || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-            return kCat === 'barangjasa' || kCat === 'general' || kCat === 'barang';
-        });
-        generalExtras.forEach(ge => {
-            if (!matchedKriteria.some(m => m.id === ge.id)) {
-                matchedKriteria.push(ge);
-            }
-        });
+    // Fallback: jika kriteriaList dari server belum memiliki pertanyaan kategori ini, gunakan DEFAULT_KRITERIA
+    if (matchedKriteria.length === 0) {
+        matchedKriteria = DEFAULT_KRITERIA.filter(k => normalizeCategory(k.kategori) === vendorCat);
     }
 
-    // Jika masih kosong, gunakan DEFAULT_KRITERIA
+    // Fallback darurat ke BarangJasa jika masih kosong
     if (matchedKriteria.length === 0) {
-        matchedKriteria = DEFAULT_KRITERIA.filter(k => k.kategori === 'all' || k.kategori === 'general');
+        matchedKriteria = DEFAULT_KRITERIA.filter(k => k.kategori === 'BarangJasa');
     }
 
     ratings = {};
@@ -1431,10 +1523,12 @@ async function submitAssessment() {
     const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
     const avgR = Math.round(avg * 100) / 100;
 
+    const vendorKategori = getVendorCategory(selectedVendor) || 'BarangJasa';
     const payload = {
         namaPenilai: localStorage.getItem('ethos_nama'),
         namaVendor: selectedVendor,
         periodePenilaian: selectedPeriode,
+        kategori: vendorKategori,
         skor: ratings,
         rataRata: avgR,
         predikat: getPredikat(avgR),

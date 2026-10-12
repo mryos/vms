@@ -31,6 +31,106 @@ var SHEET_KONTRAK = 'Kontrak Vendor';
 var SHEET_PO_DEFAULT = 'Purchase Order';
 var SHEET_PO_ALT = 'PO';
 
+// ======================================================================
+// PETA KRITERIA PER KATEGORI (9 Kategori × 11 Pertanyaan)
+// Digunakan untuk membuat header kolom sheet "Penilaian - <Kategori>"
+// ======================================================================
+var CATEGORY_KRITERIA_MAP = {
+  'BarangJasa': [
+    'Kualitas Barang/Jasa', 'Kesesuaian Spesifikasi', 'Ketepatan Waktu Pengiriman',
+    'Kelengkapan Pesanan', 'Harga & Kewajaran', 'Pelayanan & Responsivitas',
+    'Garansi & Purna Jual', 'Ketersediaan Stok', 'Kemasan & Pengemasan',
+    'Fleksibilitas Pesanan', 'Dokumentasi & Administrasi'
+  ],
+  'Branding': [
+    'Kreativitas Konsep', 'Kesesuaian Brief', 'Kualitas Desain Visual',
+    'Konsistensi Brand Identity', 'Ketepatan Waktu Pengerjaan', 'Revisi & Fleksibilitas',
+    'Komunikasi & Koordinasi', 'Pemahaman Target Audiens', 'Kualitas Material Produksi',
+    'Harga & Nilai Tambah', 'Dampak Terhadap Brand Awareness'
+  ],
+  'KOLInfPodcast': [
+    'Relevansi Audiens', 'Kualitas Konten', 'Engagement Rate',
+    'Ketepatan Waktu Posting', 'Kesesuaian Brief & Pesan', 'Profesionalisme & Etika',
+    'Jangkauan & Reach', 'Kreativitas Eksekusi', 'Responsivitas Komunikasi',
+    'Harga & ROI', 'Dampak Terhadap Brand'
+  ],
+  'PhotoVideo': [
+    'Kualitas Visual & Teknis', 'Kreativitas Konsep', 'Kesesuaian Brief',
+    'Ketepatan Waktu Pengerjaan', 'Kualitas Editing & Post-Production', 'Profesionalisme Tim',
+    'Kelengkapan Peralatan', 'Revisi & Fleksibilitas', 'Komunikasi & Koordinasi',
+    'Harga & Kewajaran', 'Hasil Akhir & Deliverable'
+  ],
+  'Konsultan': [
+    'Keahlian & Kompetensi', 'Kualitas Analisa & Rekomendasi', 'Pemahaman Bisnis Klien',
+    'Ketepatan Waktu Deliverable', 'Kualitas Laporan', 'Komunikasi & Presentasi',
+    'Dampak & Hasil Implementasi', 'Metodologi Kerja', 'Ketersediaan & Responsivitas',
+    'Harga & Kewajaran', 'Transfer Knowledge'
+  ],
+  'ITSoftware': [
+    'Kualitas Produk/Sistem', 'Stabilitas & Performa', 'Keamanan Sistem',
+    'Dukungan Teknis', 'Ketepatan Waktu Implementasi', 'User Experience & Interface',
+    'Dokumentasi Teknis', 'Garansi & Pemeliharaan', 'Skalabilitas Solusi',
+    'Harga & Lisensi', 'Training & Onboarding'
+  ],
+  'EventOrganizer': [
+    'Konsep & Kreativitas Acara', 'Eksekusi & Koordinasi Lapangan', 'Ketepatan Waktu & Jadwal',
+    'Kualitas Venue & Logistik', 'Manajemen Anggaran', 'Komunikasi & Responsivitas',
+    'Penanganan Masalah', 'Kualitas Tim & SDM', 'Keamanan & Keselamatan',
+    'Dokumentasi Acara', 'Dampak & Kepuasan Peserta'
+  ],
+  'BrandAmbasador': [
+    'Kesesuaian Image & Brand Values', 'Profesionalisme & Etika', 'Pengaruh & Reputasi',
+    'Engagement dengan Audiens', 'Kualitas Konten', 'Ketepatan Waktu & Komitmen',
+    'Pemahaman Produk/Brand', 'Jangkauan & Reach', 'Kreativitas Eksekusi',
+    'Harga & ROI', 'Dampak Terhadap Penjualan'
+  ],
+  'DigitalMarketing': [
+    'Strategi & Perencanaan', 'Kualitas Konten Digital', 'Optimasi SEO/SEM',
+    'Pengelolaan Media Sosial', 'Analisis Data & Reporting', 'Ketepatan Target Audiens',
+    'Kreativitas Kampanye', 'Ketepatan Waktu Eksekusi', 'ROI & Efektivitas Budget',
+    'Komunikasi & Koordinasi', 'Inovasi & Tren Digital'
+  ]
+};
+
+// Normalisasi kategori vendor dari Daftar Vendor ke kode kategori standar
+var CATEGORY_NORMALIZE_MAP = {
+  'it': 'ITSoftware', 'software': 'ITSoftware', 'hardware': 'ITSoftware',
+  'itsoftware': 'ITSoftware', 'it software': 'ITSoftware', 'teknologi informasi': 'ITSoftware',
+  'branding': 'Branding', 'marketing': 'Branding', 'branding & marketing': 'Branding',
+  'kol': 'KOLInfPodcast', 'influencer': 'KOLInfPodcast', 'podcast': 'KOLInfPodcast',
+  'kolinfpodcast': 'KOLInfPodcast', 'kol influencer podcast': 'KOLInfPodcast',
+  'photo': 'PhotoVideo', 'video': 'PhotoVideo', 'photovideo': 'PhotoVideo',
+  'photo & video': 'PhotoVideo', 'foto': 'PhotoVideo', 'foto video': 'PhotoVideo',
+  'konsultan': 'Konsultan', 'consultant': 'Konsultan', 'advisory': 'Konsultan',
+  'konsultan & advisory': 'Konsultan', 'konsultan & services': 'Konsultan',
+  'event': 'EventOrganizer', 'eo': 'EventOrganizer', 'eventorganizer': 'EventOrganizer',
+  'event organizer': 'EventOrganizer',
+  'brand ambassador': 'BrandAmbasador', 'brandambasador': 'BrandAmbasador',
+  'ambassador': 'BrandAmbasador', 'ba': 'BrandAmbasador',
+  'digital marketing': 'DigitalMarketing', 'digitalmarketing': 'DigitalMarketing',
+  'digital': 'DigitalMarketing', 'dm': 'DigitalMarketing',
+  'barang jasa': 'BarangJasa', 'barangjasa': 'BarangJasa', 'barang & jasa': 'BarangJasa',
+  'barang_jasa': 'BarangJasa', 'general': 'BarangJasa', 'umum': 'BarangJasa',
+  'percetakan': 'BarangJasa', 'konveksi': 'BarangJasa', 'printing': 'BarangJasa',
+  'atk': 'BarangJasa', 'furniture': 'BarangJasa', 'logistik': 'BarangJasa',
+  'ekspedisi': 'BarangJasa'
+};
+
+function normalizeCategoryCode(rawCategory) {
+  if (!rawCategory) return 'BarangJasa';
+  var clean = rawCategory.toString().trim().toLowerCase();
+  if (CATEGORY_NORMALIZE_MAP[clean]) return CATEGORY_NORMALIZE_MAP[clean];
+  for (var key in CATEGORY_NORMALIZE_MAP) {
+    if (clean.indexOf(key) !== -1 || key.indexOf(clean) !== -1) {
+      return CATEGORY_NORMALIZE_MAP[key];
+    }
+  }
+  for (var catKey in CATEGORY_KRITERIA_MAP) {
+    if (catKey.toLowerCase() === clean) return catKey;
+  }
+  return 'BarangJasa';
+}
+
 // GID sheet Akses Penilai (dari URL spreadsheet: gid=1971078762)
 var GID_AKSES_PENILAI = 1971078762;
 
@@ -467,6 +567,73 @@ function doPost(e) {
     }
 
     sheet.appendRow(newRow);
+
+    // === JUGA TULIS KE SHEET KATEGORI: "Penilaian - <Kategori>" ===
+    try {
+      var kategoriRaw = payload.kategori || '';
+      if (!kategoriRaw) {
+        var allVendorsData = getAllVendors(ss);
+        for (var v = 0; v < allVendorsData.length; v++) {
+          if (allVendorsData[v].nama === namaVendor) {
+            kategoriRaw = allVendorsData[v].kategori;
+            break;
+          }
+        }
+      }
+      var normKategori = normalizeCategoryCode(kategoriRaw);
+      var catSheetName = 'Penilaian - ' + normKategori;
+      var catSheet = ss.getSheetByName(catSheetName);
+
+      if (!catSheet) {
+        catSheet = ss.insertSheet(catSheetName);
+        var catHeaders = ['Timestamp', 'Nama Penilai', 'Nama Vendor', 'Periode Penilaian'];
+        var catKriteria = CATEGORY_KRITERIA_MAP[normKategori] || [];
+        for (var q = 0; q < catKriteria.length; q++) {
+          catHeaders.push(catKriteria[q] + ' (1-5)');
+        }
+        catHeaders.push('Rata-rata Skor');
+        catHeaders.push('Predikat');
+        catHeaders.push('Catatan');
+        catSheet.appendRow(catHeaders);
+        styleHeaders(catSheet, catHeaders.length);
+      }
+
+      var catLastCol = catSheet.getLastColumn();
+      var catHeaderVals = catSheet.getRange(1, 1, 1, catLastCol).getValues()[0].map(function(h) { return h.toString().trim(); });
+      var catRow = [];
+      for (var ch = 0; ch < catHeaderVals.length; ch++) {
+        var chLower = catHeaderVals[ch].toLowerCase();
+        if (chLower.indexOf('timestamp') !== -1 || chLower.indexOf('tanggal') !== -1) {
+          catRow.push(timestamp);
+        } else if (chLower.indexOf('penilai') !== -1) {
+          catRow.push(namaPenilai);
+        } else if (chLower.indexOf('vendor') !== -1) {
+          catRow.push(namaVendor);
+        } else if (chLower.indexOf('periode') !== -1) {
+          catRow.push(periodePenilaian);
+        } else if (chLower.indexOf('rata') !== -1 || chLower === 'skor' || chLower.indexOf('avg') !== -1) {
+          catRow.push(avgSkor);
+        } else if (chLower.indexOf('predikat') !== -1) {
+          catRow.push(predikat);
+        } else if (chLower.indexOf('catatan') !== -1 || chLower.indexOf('notes') !== -1) {
+          catRow.push(catatan);
+        } else {
+          var foundVal = '';
+          for (var sk in skor) {
+            var skLower = sk.toLowerCase();
+            if (chLower === skLower || chLower.indexOf(skLower) !== -1 || skLower.indexOf(chLower.replace(/ \(1-5\)/, '')) !== -1) {
+              foundVal = parseFloat(skor[sk]) || '';
+              break;
+            }
+          }
+          catRow.push(foundVal);
+        }
+      }
+      catSheet.appendRow(catRow);
+    } catch (catError) {
+      Logger.log('Gagal menulis ke sheet kategori: ' + catError.toString());
+    }
+
     return createJsonResponse({ status: 'success', message: 'Penilaian vendor berhasil disimpan.' });
 
   } catch (error) {
@@ -1359,6 +1526,72 @@ function getVendorScoreSummary(ss) {
     }
   }
 
+  // === JUGA SCAN SHEET "Penilaian - *" UNTUK AGREGASI ===
+  var allSheets = ss.getSheets();
+  for (var si = 0; si < allSheets.length; si++) {
+    var sName = allSheets[si].getName();
+    if (sName.indexOf('Penilaian - ') !== 0) continue; // Hanya sheet kategori
+    if (allSheets[si].getLastRow() < 2) continue;
+
+    var catData = allSheets[si].getDataRange().getValues();
+    var catHeaders = catData[0].map(function(h) { return h ? h.toString().trim().toLowerCase() : ''; });
+    var catIdxVendor = getHeaderIndex(catHeaders, ['nama vendor', 'vendor', 'rekanan']);
+    var catIdxAvg = getHeaderIndex(catHeaders, ['rata-rata skor', 'rata-rata', 'skor', 'avg']);
+    var catIdxPred = getHeaderIndex(catHeaders, ['predikat', 'status']);
+    var catIdxPeriode = getHeaderIndex(catHeaders, ['periode penilaian', 'periode']);
+    var catIdxPenilai = getHeaderIndex(catHeaders, ['nama penilai', 'penilai']);
+    var catIdxTimestamp = getHeaderIndex(catHeaders, ['timestamp', 'tanggal']);
+    var catIdxCatatan = getHeaderIndex(catHeaders, ['catatan', 'notes']);
+
+    if (catIdxVendor === -1) continue;
+
+    for (var ci = 1; ci < catData.length; ci++) {
+      var catVendor = catData[ci][catIdxVendor] ? catData[ci][catIdxVendor].toString().trim() : '';
+      if (!catVendor) continue;
+
+      var catScore = 0;
+      if (catIdxAvg !== -1 && catData[ci][catIdxAvg] !== '' && catData[ci][catIdxAvg] !== null) {
+        catScore = typeof catData[ci][catIdxAvg] === 'number' ? catData[ci][catIdxAvg] : (parseFloat(catData[ci][catIdxAvg].toString().replace(',', '.')) || 0);
+      }
+      if (catScore === 0) {
+        var cSum = 0, cCnt = 0;
+        for (var cc = 0; cc < catHeaders.length; cc++) {
+          if (cc !== catIdxVendor && cc !== catIdxAvg && cc !== catIdxPred && cc !== catIdxPeriode && cc !== catIdxPenilai && cc !== catIdxTimestamp && cc !== catIdxCatatan) {
+            var cv = typeof catData[ci][cc] === 'number' ? catData[ci][cc] : (parseFloat((catData[ci][cc] || '').toString().replace(',', '.')) || 0);
+            if (cv >= 1 && cv <= 5) { cSum += cv; cCnt++; }
+          }
+        }
+        if (cCnt > 0) catScore = Math.round((cSum / cCnt) * 100) / 100;
+      }
+
+      if (catScore > 0) {
+        var catPredikat = catIdxPred !== -1 && catData[ci][catIdxPred] ? catData[ci][catIdxPred].toString().trim() : getPredikat(catScore);
+        var catPeriode = catIdxPeriode !== -1 && catData[ci][catIdxPeriode] ? catData[ci][catIdxPeriode].toString().trim() : 'General';
+        var catPenilai = catIdxPenilai !== -1 && catData[ci][catIdxPenilai] ? catData[ci][catIdxPenilai].toString().trim() : '-';
+        var catTimestamp = catIdxTimestamp !== -1 && catData[ci][catIdxTimestamp] ? formatDate(catData[ci][catIdxTimestamp]) : '-';
+        var catCatatan = catIdxCatatan !== -1 && catData[ci][catIdxCatatan] ? catData[ci][catIdxCatatan].toString().trim() : '';
+
+        // Cek duplikasi: jangan hitung jika sudah ada entry sama dari sheet master
+        var isDuplicate = result.evaluationsList.some(function(ev) {
+          return ev.vendor === catVendor && ev.periode === catPeriode && ev.penilai === catPenilai && Math.abs(ev.score - catScore) < 0.01;
+        });
+        if (isDuplicate) continue;
+
+        if (!result.summary[catVendor]) {
+          result.summary[catVendor] = { totalScore: 0, count: 0, avgScore: 0, predikat: 'Cukup', periodeScores: [] };
+        }
+        result.summary[catVendor].totalScore += catScore;
+        result.summary[catVendor].count++;
+        result.summary[catVendor].periodeScores.push({ periode: catPeriode, score: catScore, predikat: catPredikat });
+
+        result.evaluationsList.push({
+          timestamp: catTimestamp, penilai: catPenilai, vendor: catVendor,
+          periode: catPeriode, score: catScore, predikat: catPredikat, catatan: catCatatan
+        });
+      }
+    }
+  }
+
   for (var vKey in result.summary) {
     var v = result.summary[vKey];
     v.avgScore = Math.round((v.totalScore / v.count) * 100) / 100;
@@ -1563,12 +1796,15 @@ function initAllDatabaseSheets(ss) {
     var h = ['Kode', 'Nama Kategori', 'Ikon'];
     sheetKategori.appendRow(h);
     var rows = [
-      ['IT', 'Teknologi Informasi', '💻'],
-      ['EKSPEDISI', 'Ekspedisi & Logistik', '🚚'],
-      ['BRANDING', 'Branding & Marketing', '📣'],
-      ['PERCETAKAN', 'Percetakan & Custom', '🖨️'],
-      ['KONSULTAN', 'Konsultan & Services', '💼'],
-      ['BARANG_JASA', 'Barang & Jasa Umum', '📦']
+      ['BarangJasa', 'Barang & Jasa Umum', '📦'],
+      ['Branding', 'Branding & Marketing', '📣'],
+      ['KOLInfPodcast', 'KOL, Influencer & Podcast', '🎙️'],
+      ['PhotoVideo', 'Photo & Video Production', '📸'],
+      ['Konsultan', 'Konsultan & Advisory', '💼'],
+      ['ITSoftware', 'IT & Software', '💻'],
+      ['EventOrganizer', 'Event Organizer', '🎪'],
+      ['BrandAmbasador', 'Brand Ambassador', '🌟'],
+      ['DigitalMarketing', 'Digital Marketing', '📱']
     ];
     for (var i = 0; i < rows.length; i++) sheetKategori.appendRow(rows[i]);
     styleHeaders(sheetKategori, h.length);
@@ -1609,4 +1845,59 @@ function setupSheetPenilaianHeaders(sheet) {
   ];
   sheet.appendRow(headers);
   styleHeaders(sheet, headers.length);
+}
+
+/**
+ * Membuat 9 sheet penilaian kategori sekaligus di spreadsheet
+ */
+function createCategorySheets() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var created = [];
+  var skipped = [];
+
+  for (var catKey in CATEGORY_KRITERIA_MAP) {
+    var sheetName = 'Penilaian - ' + catKey;
+    var existing = ss.getSheetByName(sheetName);
+    if (existing) {
+      skipped.push(sheetName);
+      continue;
+    }
+
+    var sheet = ss.insertSheet(sheetName);
+    var headers = ['Timestamp', 'Nama Penilai', 'Nama Vendor', 'Periode Penilaian'];
+    var kriteria = CATEGORY_KRITERIA_MAP[catKey];
+    for (var i = 0; i < kriteria.length; i++) {
+      headers.push(kriteria[i] + ' (1-5)');
+    }
+    headers.push('Rata-rata Skor');
+    headers.push('Predikat');
+    headers.push('Catatan');
+
+    sheet.appendRow(headers);
+    styleHeaders(sheet, headers.length);
+    sheet.setColumnWidth(1, 160);
+    sheet.setColumnWidth(2, 150);
+    sheet.setColumnWidth(3, 250);
+    sheet.setColumnWidth(4, 140);
+    created.push(sheetName);
+  }
+
+  var msg = 'Selesai!\n';
+  if (created.length > 0) msg += 'Dibuat: ' + created.join(', ') + '\n';
+  if (skipped.length > 0) msg += 'Sudah ada: ' + skipped.join(', ');
+  try {
+    SpreadsheetApp.getUi().alert(msg);
+  } catch (e) {
+    Logger.log(msg);
+  }
+}
+
+function onOpen() {
+  try {
+    SpreadsheetApp.getUi()
+      .createMenu('⚡ Evaluasi Vendor')
+      .addItem('Buat / Pastikan 9 Sheet Kategori Penilaian', 'createCategorySheets')
+      .addItem('Inisialisasi Seluruh Sheet Sistem', 'initAllDatabaseSheets')
+      .addToUi();
+  } catch (e) {}
 }
