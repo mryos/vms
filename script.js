@@ -338,6 +338,11 @@ async function refreshPoStatsFromServer(pin) {
         if (data.status === 'success') {
             if (data.allVendors && data.allVendors.length > 0) {
                 allMasterVendors = data.allVendors.map(v => typeof v === 'object' ? v.nama : v);
+                data.allVendors.forEach(v => {
+                    if (typeof v === 'object' && v.nama && v.kategori) {
+                        vendorCategoryMap[v.nama] = v.kategori;
+                    }
+                });
             }
 
             // Update userAssignedVendors jika bukan admin
@@ -445,6 +450,11 @@ async function processPinLogin(pin) {
             if (data.status === 'success') {
                 if (data.allVendors && data.allVendors.length > 0) {
                     allMasterVendors = data.allVendors.map(v => typeof v === 'object' ? v.nama : v);
+                    data.allVendors.forEach(v => {
+                        if (typeof v === 'object' && v.nama && v.kategori) {
+                            vendorCategoryMap[v.nama] = v.kategori;
+                        }
+                    });
                 }
 
                 currentPin = pin;
@@ -1322,12 +1332,20 @@ function normalizeCategory(cat) {
 
 function getVendorCategory(vendorName) {
     if (!vendorName) return 'BarangJasa';
+    // 1. Direct match
     if (vendorCategoryMap[vendorName]) {
         return normalizeCategory(vendorCategoryMap[vendorName]);
     }
+    // 2. Case-insensitive exact match
     const nameLower = vendorName.toLowerCase().trim();
     for (let key in vendorCategoryMap) {
         if (key.toLowerCase().trim() === nameLower) {
+            return normalizeCategory(vendorCategoryMap[key]);
+        }
+    }
+    // 3. Smart vendor matching (ignores PT/CV, punctuation, spaces)
+    for (let key in vendorCategoryMap) {
+        if (isSameVendor(key, vendorName)) {
             return normalizeCategory(vendorCategoryMap[key]);
         }
     }
