@@ -466,63 +466,6 @@ function doPost(e) {
     }
 
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = getPenilaianVendorSheet(ss);
-
-    if (!sheet) {
-      sheet = ss.insertSheet(SHEET_PENILAIAN_VENDOR);
-      setupSheetPenilaianHeaders(sheet);
-    }
-
-    var lastCol = sheet.getLastColumn();
-    var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return h.toString().trim(); });
-
-    // Pastikan kolom Rata-rata Skor ada
-    var idxRataRata = -1;
-    for (var h = 0; h < headers.length; h++) {
-      var hL = headers[h].toLowerCase();
-      if (hL.indexOf('rata') !== -1 || hL === 'skor' || hL.indexOf('avg') !== -1) {
-        idxRataRata = h;
-        break;
-      }
-    }
-    if (idxRataRata === -1) {
-      sheet.insertColumnAfter(lastCol);
-      sheet.getRange(1, lastCol + 1).setValue('Rata-rata Skor');
-      headers.push('Rata-rata Skor');
-      idxRataRata = headers.length - 1;
-    }
-
-    // Pastikan setiap kriteria yang dinilai ada kolomnya di sheet
-    for (var key in skor) {
-      var headerIndex = -1;
-      var keyStr = key.toLowerCase();
-
-      for (var h = 0; h < headers.length; h++) {
-        var hStr = headers[h].toString().toLowerCase();
-        if (hStr === keyStr || hStr.indexOf(keyStr) !== -1 || keyStr.indexOf(hStr) !== -1) {
-          headerIndex = h;
-          break;
-        }
-      }
-
-      if (headerIndex === -1) {
-        // Kolom baru disisipkan tepat sebelum kolom Rata-rata Skor
-        sheet.insertColumnBefore(idxRataRata + 1);
-        var displayHeader = key.charAt(0).toUpperCase() + key.slice(1);
-        if (displayHeader.indexOf('(1-5)') === -1) displayHeader += ' (1-5)';
-
-        var newColRange = sheet.getRange(1, idxRataRata + 1);
-        newColRange.setValue(displayHeader);
-        newColRange.setFontWeight('bold').setBackground('#0a2e5c').setFontColor('#ffffff');
-
-        headers.splice(idxRataRata, 0, displayHeader);
-        idxRataRata++;
-      }
-    }
-
-    // Muat ulang header terbaru setelah sinkronisasi kolom
-    lastCol = sheet.getLastColumn();
-    headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return h.toString().trim(); });
 
     // Hitung rata-rata skor
     var totalSkor = 0;
@@ -536,57 +479,39 @@ function doPost(e) {
     }
     var avgSkor = countSkor > 0 ? Math.round((totalSkor / countSkor) * 100) / 100 : 0;
     var predikat = getPredikat(avgSkor);
-
-    // Buat baris data baru sesuai urutan kolom header
     var timestamp = new Date();
-    var newRow = [];
 
-    for (var h = 0; h < headers.length; h++) {
-      var hNameLower = headers[h].toLowerCase();
-
-      if (hNameLower.indexOf('timestamp') !== -1 || hNameLower.indexOf('tanggal') !== -1 || hNameLower === 'waktu') {
-        newRow.push(timestamp);
-      } else if (hNameLower.indexOf('penilai') !== -1 || hNameLower.indexOf('assessor') !== -1) {
-        newRow.push(namaPenilai);
-      } else if (hNameLower.indexOf('vendor') !== -1 || hNameLower.indexOf('rekanan') !== -1) {
-        newRow.push(namaVendor);
-      } else if (hNameLower.indexOf('periode') !== -1 || hNameLower.indexOf('kuartal') !== -1) {
-        newRow.push(periodePenilaian);
-      } else if (hNameLower.indexOf('rata') !== -1 || hNameLower === 'skor' || hNameLower === 'nilai akhir' || hNameLower.indexOf('avg') !== -1) {
-        newRow.push(avgSkor);
-      } else if (hNameLower.indexOf('predikat') !== -1 || hNameLower === 'status') {
-        newRow.push(predikat);
-      } else if (hNameLower.indexOf('catatan') !== -1 || hNameLower.indexOf('keterangan') !== -1 || hNameLower.indexOf('notes') !== -1) {
-        newRow.push(catatan);
-      } else {
-        // Ambil nilai skor yang sesuai
-        var scoreVal = '';
-        for (var key in skor) {
-          var keyStr = key.toLowerCase();
-          if (hNameLower === keyStr || hNameLower.indexOf(keyStr) !== -1 || keyStr.indexOf(hNameLower) !== -1) {
-            scoreVal = parseFloat(skor[key]) || '';
-            break;
-          }
+    // === Deteksi kategori vendor ===
+    var kategoriRaw = payload.kategori || '';
+    if (!kategoriRaw) {
+      var allVendorsData = getAllVendors(ss);
+      for (var v = 0; v < allVendorsData.length; v++) {
+        if (allVendorsData[v].nama === namaVendor) {
+          kategoriRaw = allVendorsData[v].kategori;
+          break;
         }
-        newRow.push(scoreVal);
       }
     }
+    var normKategori = normalizeCategoryCode(kategoriRaw);
 
-    sheet.appendRow(newRow);
+    // ============================================================
+    // 1. TULIS KE MASTER "Penilaian Vendor" (RINGKASAN SAJA - 8 kolom)
+    //    Kolom: Timestamp | Nama Penilai | Nama Vendor | Kategori |
+    //           Periode Penilaian | Rata-rata Skor | Predikat | Catatan
+    //    Detail skor per-pertanyaan disimpan di sheet kategori masing-masing
+    // ============================================================
+    var sheet = getPenilaianVendorSheet(ss);
+    if (!sheet) {
+      sheet = ss.insertSheet(SHEET_PENILAIAN_VENDOR);
+      setupSheetPenilaianHeaders(sheet);
+    }
+    var masterRow = [timestamp, namaPenilai, namaVendor, normKategori, periodePenilaian, avgSkor, predikat, catatan];
+    sheet.appendRow(masterRow);
 
-    // === JUGA TULIS KE SHEET KATEGORI: "Penilaian - <Kategori>" ===
+    // ============================================================
+    // 2. TULIS KE SHEET KATEGORI: "Penilaian - <Kategori>" (DETAIL SKOR)
+    // ============================================================
     try {
-      var kategoriRaw = payload.kategori || '';
-      if (!kategoriRaw) {
-        var allVendorsData = getAllVendors(ss);
-        for (var v = 0; v < allVendorsData.length; v++) {
-          if (allVendorsData[v].nama === namaVendor) {
-            kategoriRaw = allVendorsData[v].kategori;
-            break;
-          }
-        }
-      }
-      var normKategori = normalizeCategoryCode(kategoriRaw);
       var catSheetName = 'Penilaian - ' + normKategori;
       var catSheet = ss.getSheetByName(catSheetName);
 
@@ -1911,7 +1836,7 @@ function setupSheetAksesHeaders(sheet) {
 
 function setupSheetPenilaianHeaders(sheet) {
   var headers = [
-    'Timestamp', 'Nama Penilai', 'Nama Vendor', 'Periode Penilaian',
+    'Timestamp', 'Nama Penilai', 'Nama Vendor', 'Kategori', 'Periode Penilaian',
     'Rata-rata Skor', 'Predikat', 'Catatan'
   ];
   sheet.appendRow(headers);
