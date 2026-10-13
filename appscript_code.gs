@@ -495,17 +495,40 @@ function doPost(e) {
     var normKategori = normalizeCategoryCode(kategoriRaw);
 
     // ============================================================
-    // 1. TULIS KE MASTER "Penilaian Vendor" (RINGKASAN SAJA - 8 kolom)
-    //    Kolom: Timestamp | Nama Penilai | Nama Vendor | Kategori |
-    //           Periode Penilaian | Rata-rata Skor | Predikat | Catatan
-    //    Detail skor per-pertanyaan disimpan di sheet kategori masing-masing
+    // ============================================================
+    // 1. TULIS KE MASTER "Penilaian Vendor" (RINGKASAN SAJA)
+    //    Memetakan nilai secara dinamis sesuai nama header kolom di sheet
     // ============================================================
     var sheet = getPenilaianVendorSheet(ss);
     if (!sheet) {
       sheet = ss.insertSheet(SHEET_PENILAIAN_VENDOR);
       setupSheetPenilaianHeaders(sheet);
     }
-    var masterRow = [timestamp, namaPenilai, namaVendor, normKategori, periodePenilaian, avgSkor, predikat, catatan];
+
+    var mHeaders = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0];
+    var masterRow = [];
+    for (var mi = 0; mi < mHeaders.length; mi++) {
+      var mhLower = (mHeaders[mi] || '').toString().toLowerCase().trim();
+      if (mhLower.indexOf('timestamp') !== -1 || mhLower.indexOf('tanggal') !== -1 || mhLower === 'waktu') {
+        masterRow.push(timestamp);
+      } else if (mhLower.indexOf('penilai') !== -1 || mhLower.indexOf('assessor') !== -1) {
+        masterRow.push(namaPenilai);
+      } else if (mhLower.indexOf('vendor') !== -1 || mhLower.indexOf('rekanan') !== -1) {
+        masterRow.push(namaVendor);
+      } else if (mhLower.indexOf('kategori') !== -1) {
+        masterRow.push(normKategori);
+      } else if (mhLower.indexOf('periode') !== -1 || mhLower.indexOf('kuartal') !== -1) {
+        masterRow.push(periodePenilaian);
+      } else if (mhLower.indexOf('rata') !== -1 || mhLower === 'skor' || mhLower.indexOf('avg') !== -1) {
+        masterRow.push(avgSkor);
+      } else if (mhLower.indexOf('predikat') !== -1 || mhLower === 'status') {
+        masterRow.push(predikat);
+      } else if (mhLower.indexOf('catatan') !== -1 || mhLower.indexOf('notes') !== -1 || mhLower.indexOf('keterangan') !== -1) {
+        masterRow.push(catatan);
+      } else {
+        masterRow.push('');
+      }
+    }
     sheet.appendRow(masterRow);
 
     // ============================================================
