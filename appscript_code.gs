@@ -550,9 +550,11 @@ function doPost(e) {
           catRow.push(catatan);
         } else {
           var foundVal = '';
+          var cleanHeader = chLower.replace(/\s*\([0-9-]+\)\s*$/, '').replace(/[^a-z0-9]/g, '');
           for (var sk in skor) {
-            var skLower = sk.toLowerCase();
-            if (chLower === skLower || chLower.indexOf(skLower) !== -1 || skLower.indexOf(chLower.replace(/ \(1-5\)/, '')) !== -1) {
+            var skLower = sk.toLowerCase().trim();
+            var cleanSk = skLower.replace(/\s*\([0-9-]+\)\s*$/, '').replace(/[^a-z0-9]/g, '');
+            if (chLower === skLower || cleanHeader === cleanSk || (cleanHeader.length >= 4 && cleanSk.length >= 4 && (cleanHeader.indexOf(cleanSk) !== -1 || cleanSk.indexOf(cleanHeader) !== -1))) {
               foundVal = parseFloat(skor[sk]) || '';
               break;
             }

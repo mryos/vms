@@ -1589,12 +1589,24 @@ async function submitAssessment() {
     const avgR = Math.round(avg * 100) / 100;
 
     const vendorKategori = getVendorCategory(selectedVendor) || 'BarangJasa';
+
+    // Buat format skor yang menyertakan ID dan Nama Kriteria asli agar matching kolom di sheet pasti cocok
+    const combinedSkor = {};
+    for (let key in ratings) {
+        const val = ratings[key];
+        combinedSkor[key] = val; // misal: bj_kualitasBarang: 4
+        const kObj = (kriteriaList || []).find(k => k.id === key) || DEFAULT_KRITERIA.find(k => k.id === key);
+        if (kObj && kObj.kriteria) {
+            combinedSkor[kObj.kriteria] = val; // misal: "Kualitas Barang/Jasa": 4
+        }
+    }
+
     const payload = {
         namaPenilai: localStorage.getItem('ethos_nama'),
         namaVendor: selectedVendor,
         periodePenilaian: selectedPeriode,
         kategori: vendorKategori,
-        skor: ratings,
+        skor: combinedSkor,
         rataRata: avgR,
         predikat: getPredikat(avgR),
         catatan: document.getElementById('catatan').value.trim()
