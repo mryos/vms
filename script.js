@@ -1408,23 +1408,54 @@ function renderDynamicForm(vendorName) {
         ratings[k.id] = 0;
         const desc = k.deskripsi || ('Penilaian ' + k.kriteria);
         return `
-        <div class="q-card">
+        <div class="q-card" id="qcard_${esc(k.id)}">
             <div class="q-label">
                 <span class="q-num">${idx + 1}</span>
                 ${esc(k.kriteria)}
             </div>
             <div class="q-desc">${esc(desc)}</div>
-            <div class="stars" data-name="${esc(k.id)}">
-                <span class="star" data-v="1">&#9733;</span>
-                <span class="star" data-v="2">&#9733;</span>
-                <span class="star" data-v="3">&#9733;</span>
-                <span class="star" data-v="4">&#9733;</span>
-                <span class="star" data-v="5">&#9733;</span>
+            <div class="stars" data-name="${esc(k.id)}" data-label="${esc(k.kriteria)}">
+                <span class="star" data-v="1" title="1 - Sangat Kurang">&#9733;</span>
+                <span class="star" data-v="2" title="2 - Kurang">&#9733;</span>
+                <span class="star" data-v="3" title="3 - Cukup">&#9733;</span>
+                <span class="star" data-v="4" title="4 - Baik">&#9733;</span>
+                <span class="star" data-v="5" title="5 - Sangat Baik">&#9733;</span>
+                <span class="star-score-badge" id="badge_${esc(k.id)}"></span>
             </div>
         </div>`;
     }).join('');
 
     initDynamicStars();
+}
+
+function setStarRating(group, val) {
+    const name = group.dataset.name;
+    const numericVal = parseInt(val) || 0;
+    ratings[name] = numericVal;
+
+    const stars = group.querySelectorAll('.star');
+    stars.forEach(s => {
+        s.classList.remove('hover');
+        s.classList.toggle('active', parseInt(s.dataset.v) <= numericVal);
+    });
+
+    const badge = group.querySelector('.star-score-badge');
+    if (badge) {
+        if (numericVal > 0) {
+            const predikatMap = {
+                1: '1 / 5 (Sangat Kurang)',
+                2: '2 / 5 (Kurang)',
+                3: '3 / 5 (Cukup)',
+                4: '4 / 5 (Baik)',
+                5: '5 / 5 (Sangat Baik)'
+            };
+            badge.textContent = predikatMap[numericVal] || `${numericVal} / 5`;
+            badge.classList.add('show');
+        } else {
+            badge.textContent = '';
+            badge.classList.remove('show');
+        }
+    }
 }
 
 function initDynamicStars() {
@@ -1433,6 +1464,7 @@ function initDynamicStars() {
         const stars = group.querySelectorAll('.star');
 
         stars.forEach(star => {
+            // Mouse hover visual feedback
             star.addEventListener('mouseenter', () => {
                 const val = parseInt(star.dataset.v);
                 stars.forEach(s => {
@@ -1440,33 +1472,37 @@ function initDynamicStars() {
                 });
             });
 
-            star.addEventListener('click', (e) => {
-                e.stopPropagation();
+            // Click listener (Desktop & Mobile)
+            const handleSelect = (e) => {
+                if (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
                 const val = parseInt(star.dataset.v);
-                ratings[name] = val;
-                stars.forEach(s => {
-                    s.classList.remove('hover');
-                    s.classList.toggle('active', parseInt(s.dataset.v) <= val);
-                });
-            });
+                setStarRating(group, val);
+            };
+
+            star.addEventListener('click', handleSelect);
+            star.addEventListener('touchend', handleSelect, { passive: false });
         });
 
+        // Mouse leave restore current selection
         group.addEventListener('mouseleave', () => {
+            const currentVal = ratings[name] || 0;
             stars.forEach(s => {
                 s.classList.remove('hover');
-                s.classList.toggle('active', parseInt(s.dataset.v) <= ratings[name]);
+                s.classList.toggle('active', parseInt(s.dataset.v) <= currentVal);
             });
         });
     });
 }
 
 function autoSuggestRating(categoryName, value) {
-    ratings[categoryName] = value;
     const group = document.querySelector(`.stars[data-name="${categoryName}"]`);
     if (group) {
-        group.querySelectorAll('.star').forEach(s => {
-            s.classList.toggle('active', parseInt(s.dataset.v) <= value);
-        });
+        setStarRating(group, value);
+    } else {
+        ratings[categoryName] = value;
     }
 }
 
@@ -1522,13 +1558,16 @@ async function submitAssessment() {
 
     for (let i = 0; i < activeKeys.length; i++) {
         const key = activeKeys[i];
-        if (ratings[key] === 0) {
-            const kObj = kriteriaList.find(k => k.id === key);
-            const label = kObj ? kObj.kriteria : key;
-            
-            showToast('Mohon beri rating: ' + label, 'error');
+        if (!ratings[key] || ratings[key] === 0) {
+            const kObj = (kriteriaList || []).find(k => k.id === key) || DEFAULT_KRITERIA.find(k => k.id === key);
             const el = document.querySelector(`.stars[data-name="${key}"]`);
+            const label = el ? (el.dataset.label || (kObj ? kObj.kriteria : key)) : (kObj ? kObj.kriteria : key);
+            
+            showToast(`Mohon beri rating pada: "${label}"`, 'error');
+            
             if (el) {
+                const card = el.closest('.q-card') || el;
+                card.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 el.style.animation = 'none';
                 el.offsetHeight;
                 el.style.animation = 'shake 0.4s ease';

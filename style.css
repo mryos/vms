@@ -800,17 +800,23 @@ body {
 /* ============ STARS ============ */
 .stars {
     display: flex;
+    align-items: center;
     gap: 0.35rem;
     padding-left: 1.9rem;
+    touch-action: manipulation;
 }
 
 .star {
-    font-size: 2rem;
+    font-size: 2.1rem;
     color: #dde3ec;
     cursor: pointer;
-    transition: all 0.12s cubic-bezier(0.175,0.885,0.32,1.275);
+    transition: transform 0.12s cubic-bezier(0.175,0.885,0.32,1.275), color 0.12s ease;
     user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
     line-height: 1;
+    display: inline-block;
+    padding: 2px;
 }
 
 .star:hover { transform: scale(1.18); }
@@ -821,7 +827,25 @@ body {
 }
 
 .star.active {
-    text-shadow: 0 2px 8px rgba(245,158,11,0.3);
+    text-shadow: 0 2px 8px rgba(245,158,11,0.35);
+}
+
+.star-score-badge {
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin-left: 0.75rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: 9999px;
+    background: rgba(245, 158, 11, 0.15);
+    color: #d97706;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    display: none;
+    align-items: center;
+    animation: fadeIn 0.2s ease;
+}
+
+.star-score-badge.show {
+    display: inline-flex;
 }
 
 /* ============ SUBMIT BUTTON (modal) ============ */
