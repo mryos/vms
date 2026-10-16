@@ -14,6 +14,7 @@ let slicerState = {
     compliance: 'all', // 'all' | 'comply' | 'not-comply'
     tier: 'all' // 'all' | 'high' | 'good' | 'poor'
 };
+let catalogSearchQuery = '';
 
 document.addEventListener('DOMContentLoaded', () => {
     checkAdminAccess();
@@ -108,6 +109,7 @@ function applyTabFilter(tab) {
     const evalSec = document.getElementById('sectionEvaluations');
     const perfSec = document.getElementById('sectionPerformance');
     const ordersCol = document.getElementById('sectionOrders');
+    const catalogSec = document.getElementById('sectionCatalog');
 
     if (tab === 'all') {
         if (chartsSec) chartsSec.style.display = 'grid';
@@ -115,24 +117,36 @@ function applyTabFilter(tab) {
         if (evalSec) evalSec.style.display = 'block';
         if (perfSec) perfSec.style.display = 'grid';
         if (ordersCol) ordersCol.style.display = 'flex';
+        if (catalogSec) catalogSec.style.display = 'none';
     } else if (tab === 'clm') {
         if (chartsSec) chartsSec.style.display = 'grid';
         if (contractsSec) contractsSec.style.display = 'block';
         if (evalSec) evalSec.style.display = 'block';
         if (perfSec) perfSec.style.display = 'none';
         if (ordersCol) ordersCol.style.display = 'none';
+        if (catalogSec) catalogSec.style.display = 'none';
     } else if (tab === 'performance') {
         if (chartsSec) chartsSec.style.display = 'grid';
         if (contractsSec) contractsSec.style.display = 'none';
         if (evalSec) evalSec.style.display = 'block';
         if (perfSec) perfSec.style.display = 'grid';
         if (ordersCol) ordersCol.style.display = 'none';
+        if (catalogSec) catalogSec.style.display = 'none';
     } else if (tab === 'orders') {
         if (chartsSec) chartsSec.style.display = 'none';
         if (contractsSec) contractsSec.style.display = 'none';
         if (evalSec) evalSec.style.display = 'none';
         if (perfSec) perfSec.style.display = 'grid';
         if (ordersCol) ordersCol.style.display = 'flex';
+        if (catalogSec) catalogSec.style.display = 'none';
+    } else if (tab === 'catalog') {
+        if (chartsSec) chartsSec.style.display = 'none';
+        if (contractsSec) contractsSec.style.display = 'none';
+        if (evalSec) evalSec.style.display = 'none';
+        if (perfSec) perfSec.style.display = 'none';
+        if (ordersCol) ordersCol.style.display = 'none';
+        if (catalogSec) catalogSec.style.display = 'block';
+        renderProductCatalog();
     }
 }
 
@@ -197,6 +211,23 @@ function initSlicers(kategoriList, periodList) {
         evalSearchEl.dataset.bound = 'true';
         evalSearchEl.addEventListener('input', () => {
             filterAndRenderDashboard();
+        });
+    }
+
+    const catSearchEl = document.getElementById('catalogSearchInput');
+    if (catSearchEl && !catSearchEl.dataset.bound) {
+        catSearchEl.dataset.bound = 'true';
+        catSearchEl.addEventListener('input', (e) => {
+            catalogSearchQuery = (e.target.value || '').toLowerCase().trim();
+            renderProductCatalog();
+        });
+    }
+
+    const exportCatalogBtn = document.getElementById('btnExportCatalogCsv');
+    if (exportCatalogBtn && !exportCatalogBtn.dataset.bound) {
+        exportCatalogBtn.dataset.bound = 'true';
+        exportCatalogBtn.addEventListener('click', () => {
+            exportCatalogToCSV();
         });
     }
 }
@@ -475,6 +506,7 @@ function renderDashboard(vendors, scoreSummary, cc, poStats, kategori, evaluatio
     renderTopVendors(scoreSummary, vendors, kategori);
     renderPendingVendors(vendors, scoreSummary, kategori);
     renderPoPerformance(poStats);
+    renderProductCatalog();
 
     // 5. Update Status & Filter Counters
     updateFilterCountSummary(vendors, cc, evaluations);
@@ -1321,4 +1353,98 @@ function renderComplianceChart(cc) {
             }
         }]
     });
+}
+
+// =====================================================
+// KATALOG PRODUK (ADMIN PIN 9999 ONLY)
+// =====================================================
+function renderProductCatalog() {
+    const tableBody = document.getElementById('catalogTableBody');
+    const badgeCount = document.getElementById('catalogBadgeCount');
+    if (!tableBody) return;
+
+    let orders = (dashboardData && Array.isArray(dashboardData.allRawOrders)) ? dashboardData.allRawOrders : [];
+
+    // Filter pencarian
+    if (catalogSearchQuery) {
+        orders = orders.filter(o => {
+            const p = (o.product || '').toLowerCase();
+            const v = (o.vendor || '').toLowerCase();
+            const po = (o.poNum || '').toLowerCase();
+            const st = (o.status || '').toLowerCase();
+            return p.includes(catalogSearchQuery) || v.includes(catalogSearchQuery) || po.includes(catalogSearchQuery) || st.includes(catalogSearchQuery);
+        });
+    }
+
+    if (badgeCount) {
+        badgeCount.textContent = `${orders.length} Item`;
+    }
+
+    if (orders.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="7" class="text-center text-gray-400 py-8">Tidak ada data produk/pesanan yang ditemukan.</td></tr>`;
+        return;
+    }
+
+    tableBody.innerHTML = orders.map((o, idx) => {
+        let statusBadge = '';
+        const statusLower = (o.status || '').toLowerCase();
+        if (statusLower.includes('tepat') || statusLower === 'selesai') {
+            statusBadge = `<span class="tremor-badge bg-emerald-50 text-emerald-700 border-emerald-200">✅ ${esc(o.status)}</span>`;
+        } else if (statusLower.includes('terlambat')) {
+            statusBadge = `<span class="tremor-badge bg-rose-50 text-rose-700 border-rose-200">⚠️ ${esc(o.status)}</span>`;
+        } else {
+            statusBadge = `<span class="tremor-badge bg-blue-50 text-blue-700 border-blue-200">⏳ ${esc(o.status || 'Proses')}</span>`;
+        }
+
+        return `
+            <tr class="hover:bg-gray-50/80 transition-colors">
+                <td class="text-xs text-gray-400 font-mono">${idx + 1}</td>
+                <td class="text-xs font-semibold text-gray-900 font-mono">${esc(o.poNum || '-')}</td>
+                <td class="text-xs font-semibold text-gray-900">${esc(o.product || '-')}</td>
+                <td class="text-xs text-gray-600">${esc(o.vendor || '-')}</td>
+                <td class="text-xs text-gray-500">${esc(o.expectedDate || '-')}</td>
+                <td class="text-xs text-gray-500">${esc(o.effectiveDate || '-')}</td>
+                <td class="text-xs">${statusBadge}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function exportCatalogToCSV() {
+    let orders = (dashboardData && Array.isArray(dashboardData.allRawOrders)) ? dashboardData.allRawOrders : [];
+    if (catalogSearchQuery) {
+        orders = orders.filter(o => {
+            const p = (o.product || '').toLowerCase();
+            const v = (o.vendor || '').toLowerCase();
+            const po = (o.poNum || '').toLowerCase();
+            const st = (o.status || '').toLowerCase();
+            return p.includes(catalogSearchQuery) || v.includes(catalogSearchQuery) || po.includes(catalogSearchQuery) || st.includes(catalogSearchQuery);
+        });
+    }
+
+    if (orders.length === 0) {
+        showToast('Tidak ada data katalog untuk diekspor.', 'warning');
+        return;
+    }
+
+    const headers = ['No', 'No PO', 'Nama Produk / Jasa', 'Vendor', 'Tgl Expected', 'Tgl Realisasi', 'Status'];
+    const rows = orders.map((o, idx) => [
+        idx + 1,
+        `"${(o.poNum || '').replace(/"/g, '""')}"`,
+        `"${(o.product || '').replace(/"/g, '""')}"`,
+        `"${(o.vendor || '').replace(/"/g, '""')}"`,
+        `"${(o.expectedDate || '').replace(/"/g, '""')}"`,
+        `"${(o.effectiveDate || '').replace(/"/g, '""')}"`,
+        `"${(o.status || '').replace(/"/g, '""')}"`
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `Katalog_Produk_Ethos_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('Katalog Produk berhasil diunduh (CSV).', 'success');
 }
