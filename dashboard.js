@@ -15,6 +15,7 @@ let slicerState = {
     tier: 'all' // 'all' | 'high' | 'good' | 'poor'
 };
 let catalogSearchQuery = '';
+let catalogViewMode = 'group'; // 'group' | 'raw'
 
 document.addEventListener('DOMContentLoaded', () => {
     checkAdminAccess();
@@ -228,6 +229,35 @@ function initSlicers(kategoriList, periodList) {
         exportCatalogBtn.dataset.bound = 'true';
         exportCatalogBtn.addEventListener('click', () => {
             exportCatalogToCSV();
+        });
+    }
+
+    const btnModeGroup = document.getElementById('catViewModeGroup');
+    const btnModeRaw = document.getElementById('catViewModeRaw');
+    if (btnModeGroup && !btnModeGroup.dataset.bound) {
+        btnModeGroup.dataset.bound = 'true';
+        btnModeGroup.addEventListener('click', () => {
+            catalogViewMode = 'group';
+            btnModeGroup.className = 'px-2.5 py-1 rounded-md bg-white text-gray-800 shadow-2xs border border-gray-200/60 transition';
+            if (btnModeRaw) btnModeRaw.className = 'px-2.5 py-1 rounded-md text-gray-500 hover:text-gray-800 transition';
+            const grpEl = document.getElementById('catalogGroupedContainer');
+            const rawEl = document.getElementById('catalogRawContainer');
+            if (grpEl) grpEl.style.display = 'block';
+            if (rawEl) rawEl.style.display = 'none';
+            renderProductCatalog();
+        });
+    }
+    if (btnModeRaw && !btnModeRaw.dataset.bound) {
+        btnModeRaw.dataset.bound = 'true';
+        btnModeRaw.addEventListener('click', () => {
+            catalogViewMode = 'raw';
+            btnModeRaw.className = 'px-2.5 py-1 rounded-md bg-white text-gray-800 shadow-2xs border border-gray-200/60 transition';
+            if (btnModeGroup) btnModeGroup.className = 'px-2.5 py-1 rounded-md text-gray-500 hover:text-gray-800 transition';
+            const grpEl = document.getElementById('catalogGroupedContainer');
+            const rawEl = document.getElementById('catalogRawContainer');
+            if (grpEl) grpEl.style.display = 'none';
+            if (rawEl) rawEl.style.display = 'block';
+            renderProductCatalog();
         });
     }
 }
@@ -1359,15 +1389,97 @@ function renderComplianceChart(cc) {
 // KATALOG PRODUK (ADMIN PIN 9999 ONLY)
 // =====================================================
 function renderProductCatalog() {
-    const tableBody = document.getElementById('catalogTableBody');
+    const groupedTbody = document.getElementById('catalogGroupedTableBody');
+    const rawTbody = document.getElementById('catalogRawTableBody');
     const badgeCount = document.getElementById('catalogBadgeCount');
-    if (!tableBody) return;
+    if (!groupedTbody && !rawTbody) return;
 
-    let orders = (dashboardData && Array.isArray(dashboardData.allRawOrders)) ? dashboardData.allRawOrders : [];
+    let allOrders = (dashboardData && Array.isArray(dashboardData.allRawOrders)) ? dashboardData.allRawOrders : [];
 
-    // Filter pencarian
+    // 1. Ekstrak dan Kelompokkan Data per Produk
+    const productMap = {};
+    let totalOnTimeAll = 0;
+
+    allOrders.forEach(o => {
+        const rawName = (o.product || 'Lain-lain').trim();
+        const key = rawName.toLowerCase();
+        if (!productMap[key]) {
+            productMap[key] = {
+                productName: rawName,
+                totalOrders: 0,
+                onTimeOrders: 0,
+                lateOrders: 0,
+                vendorsCount: {},
+                orders: []
+            };
+        }
+        productMap[key].totalOrders++;
+        if (o.isOnTime) {
+            productMap[key].onTimeOrders++;
+            totalOnTimeAll++;
+        } else {
+            productMap[key].lateOrders++;
+        }
+
+        const vName = (o.vendor || 'Unknown').trim();
+        productMap[key].vendorsCount[vName] = (productMap[key].vendorsCount[vName] || 0) + 1;
+        productMap[key].orders.push(o);
+    });
+
+    let groupedProducts = Object.values(productMap).map(p => {
+        const vendorEntries = Object.entries(p.vendorsCount)
+            .map(([vendor, count]) => ({
+                vendor,
+                count,
+                percentage: p.totalOrders > 0 ? Math.round((count / p.totalOrders) * 100) : 0
+            }))
+            .sort((a, b) => b.count - a.count);
+
+        const onTimeRate = p.totalOrders > 0 ? Math.round((p.onTimeOrders / p.totalOrders) * 100) : 100;
+        return {
+            ...p,
+            topVendors: vendorEntries,
+            top3Vendors: vendorEntries.slice(0, 3),
+            onTimeRate
+        };
+    }).sort((a, b) => b.totalOrders - a.totalOrders);
+
+    // 2. Update KPI Mini Cards di Bagian Atas Katalog
+    const elTotProd = document.getElementById('catStatTotalProducts');
+    const elTotOrd = document.getElementById('catStatTotalOrders');
+    const elTopProd = document.getElementById('catStatTopProduct');
+    const elTopProdMeta = document.getElementById('catStatTopProductMeta');
+    const elOnTimeRate = document.getElementById('catStatOnTimeRate');
+
+    if (elTotProd) elTotProd.textContent = groupedProducts.length;
+    if (elTotOrd) elTotOrd.textContent = allOrders.length;
+    if (elTopProd) {
+        if (groupedProducts.length > 0) {
+            elTopProd.textContent = groupedProducts[0].productName;
+            if (elTopProdMeta) elTopProdMeta.textContent = `${groupedProducts[0].totalOrders} pesanan dipesan`;
+        } else {
+            elTopProd.textContent = '-';
+            if (elTopProdMeta) elTopProdMeta.textContent = 'Belum ada data';
+        }
+    }
+    if (elOnTimeRate) {
+        const overallRate = allOrders.length > 0 ? Math.round((totalOnTimeAll / allOrders.length) * 100) : 100;
+        elOnTimeRate.textContent = `${overallRate}%`;
+    }
+
+    // 3. Filter berdasarkan Pencarian (Live Search)
+    let filteredGrouped = groupedProducts;
+    let filteredOrders = allOrders;
+
     if (catalogSearchQuery) {
-        orders = orders.filter(o => {
+        filteredGrouped = groupedProducts.filter(p => {
+            const matchName = p.productName.toLowerCase().includes(catalogSearchQuery);
+            const matchVendor = p.topVendors.some(v => v.vendor.toLowerCase().includes(catalogSearchQuery));
+            const matchPo = p.orders.some(o => (o.poNum || '').toLowerCase().includes(catalogSearchQuery));
+            return matchName || matchVendor || matchPo;
+        });
+
+        filteredOrders = allOrders.filter(o => {
             const p = (o.product || '').toLowerCase();
             const v = (o.vendor || '').toLowerCase();
             const po = (o.poNum || '').toLowerCase();
@@ -1376,75 +1488,285 @@ function renderProductCatalog() {
         });
     }
 
+    // Update Badge Counter
     if (badgeCount) {
-        badgeCount.textContent = `${orders.length} Item`;
+        badgeCount.textContent = catalogViewMode === 'group'
+            ? `${filteredGrouped.length} Ragam Produk`
+            : `${filteredOrders.length} Pesanan PO`;
     }
 
-    if (orders.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="7" class="text-center text-gray-400 py-8">Tidak ada data produk/pesanan yang ditemukan.</td></tr>`;
-        return;
-    }
-
-    tableBody.innerHTML = orders.map((o, idx) => {
-        let statusBadge = '';
-        const statusLower = (o.status || '').toLowerCase();
-        if (statusLower.includes('tepat') || statusLower === 'selesai') {
-            statusBadge = `<span class="tremor-badge bg-emerald-50 text-emerald-700 border-emerald-200">✅ ${esc(o.status)}</span>`;
-        } else if (statusLower.includes('terlambat')) {
-            statusBadge = `<span class="tremor-badge bg-rose-50 text-rose-700 border-rose-200">⚠️ ${esc(o.status)}</span>`;
+    // 4. Render Mode Grouped (Agregasi Produk & Top 3 Penyuplai)
+    if (groupedTbody) {
+        if (filteredGrouped.length === 0) {
+            groupedTbody.innerHTML = `<tr><td colspan="6" class="text-center text-gray-400 py-8">Tidak ada produk atau penyuplai yang cocok dengan filter "${esc(catalogSearchQuery)}".</td></tr>`;
         } else {
-            statusBadge = `<span class="tremor-badge bg-blue-50 text-blue-700 border-blue-200">⏳ ${esc(o.status || 'Proses')}</span>`;
-        }
+            groupedTbody.innerHTML = filteredGrouped.map((item, idx) => {
+                // Medals / Badges untuk Top 3 Penyuplai
+                const rankIcons = ['🥇', '🥈', '🥉'];
+                const rankTextColors = ['text-amber-800', 'text-slate-700', 'text-amber-900'];
+                const rankBgColors = ['bg-amber-50/80 border-amber-200/70', 'bg-slate-50 border-slate-200', 'bg-orange-50/70 border-orange-200/60'];
 
-        return `
-            <tr class="hover:bg-gray-50/80 transition-colors">
-                <td class="text-xs text-gray-400 font-mono">${idx + 1}</td>
-                <td class="text-xs font-semibold text-gray-900 font-mono">${esc(o.poNum || '-')}</td>
-                <td class="text-xs font-semibold text-gray-900">${esc(o.product || '-')}</td>
-                <td class="text-xs text-gray-600">${esc(o.vendor || '-')}</td>
-                <td class="text-xs text-gray-500">${esc(o.expectedDate || '-')}</td>
-                <td class="text-xs text-gray-500">${esc(o.effectiveDate || '-')}</td>
-                <td class="text-xs">${statusBadge}</td>
-            </tr>
-        `;
-    }).join('');
+                const topVendorsHtml = item.top3Vendors.map((v, rIdx) => {
+                    const icon = rankIcons[rIdx] || '•';
+                    const textColor = rankTextColors[rIdx] || 'text-gray-700';
+                    const bgColor = rankBgColors[rIdx] || 'bg-gray-50 border-gray-200';
+                    return `
+                        <div class="flex items-center justify-between gap-2 p-1.5 rounded-lg border ${bgColor} text-xs mb-1">
+                            <div class="flex items-center gap-1.5 min-w-0">
+                                <span>${icon}</span>
+                                <span class="font-semibold ${textColor} truncate" title="${esc(v.vendor)}">${esc(v.vendor)}</span>
+                            </div>
+                            <span class="shrink-0 font-mono text-[11px] font-semibold text-gray-600 bg-white px-2 py-0.5 rounded shadow-2xs border border-gray-100">
+                                ${v.count} PO · <strong class="text-blue-600">${v.percentage}%</strong>
+                            </span>
+                        </div>
+                    `;
+                }).join('');
+
+                const otherVendorsCount = item.topVendors.length - item.top3Vendors.length;
+                const otherVendorsNotice = otherVendorsCount > 0
+                    ? `<div class="text-[11px] text-gray-400 font-medium pl-1 mt-0.5">+ ${otherVendorsCount} vendor penyuplai lainnya</div>`
+                    : '';
+
+                // On-Time Delivery Badge
+                let onTimeBadge = '';
+                if (item.onTimeRate >= 90) {
+                    onTimeBadge = `<span class="tremor-badge bg-emerald-50 text-emerald-700 border-emerald-200 font-semibold">✅ ${item.onTimeRate}%</span>`;
+                } else if (item.onTimeRate >= 75) {
+                    onTimeBadge = `<span class="tremor-badge bg-blue-50 text-blue-700 border-blue-200 font-semibold">👍 ${item.onTimeRate}%</span>`;
+                } else {
+                    onTimeBadge = `<span class="tremor-badge bg-rose-50 text-rose-700 border-rose-200 font-semibold">⚠️ ${item.onTimeRate}%</span>`;
+                }
+
+                // Sub-table untuk rincian PO produk ini
+                const poRowsHtml = item.orders.map(o => {
+                    let stBadge = '';
+                    const stLower = (o.status || '').toLowerCase();
+                    if (stLower.includes('tepat') || stLower === 'selesai') {
+                        stBadge = `<span class="px-2 py-0.5 text-[11px] font-semibold rounded bg-emerald-50 text-emerald-700 border border-emerald-200">✅ Selesai</span>`;
+                    } else if (stLower.includes('terlambat')) {
+                        stBadge = `<span class="px-2 py-0.5 text-[11px] font-semibold rounded bg-rose-50 text-rose-700 border border-rose-200">⚠️ Terlambat</span>`;
+                    } else {
+                        stBadge = `<span class="px-2 py-0.5 text-[11px] font-semibold rounded bg-blue-50 text-blue-700 border border-blue-200">⏳ Proses</span>`;
+                    }
+                    return `
+                        <tr class="border-b border-gray-100 text-xs">
+                            <td class="py-1.5 px-3 font-mono font-semibold text-gray-800">${esc(o.poNum || '-')}</td>
+                            <td class="py-1.5 px-3 text-gray-700">${esc(o.vendor || '-')}</td>
+                            <td class="py-1.5 px-3 text-gray-500">${esc(o.expectedDate || '-')}</td>
+                            <td class="py-1.5 px-3 text-gray-500">${esc(o.effectiveDate || '-')}</td>
+                            <td class="py-1.5 px-3">${stBadge}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+                return `
+                    <tr class="hover:bg-gray-50/70 transition-colors border-b border-gray-100 align-top">
+                        <td class="text-xs text-gray-400 font-mono pt-3.5">${idx + 1}</td>
+                        <td class="pt-3">
+                            <div class="flex items-start gap-2.5">
+                                <span class="text-xl">📦</span>
+                                <div>
+                                    <h4 class="text-sm font-bold text-gray-900 leading-tight">${esc(item.productName)}</h4>
+                                    <p class="text-[11px] text-gray-500 mt-0.5">Disuplai oleh ${item.topVendors.length} rekanan vendor</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-center pt-3">
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                                ${item.totalOrders} PO
+                            </span>
+                        </td>
+                        <td class="pt-2 pb-2">
+                            ${topVendorsHtml}
+                            ${otherVendorsNotice}
+                        </td>
+                        <td class="text-center pt-3">
+                            ${onTimeBadge}
+                            <div class="w-20 mx-auto bg-gray-200 rounded-full h-1.5 mt-1.5 overflow-hidden">
+                                <div class="${item.onTimeRate >= 90 ? 'bg-emerald-500' : (item.onTimeRate >= 75 ? 'bg-blue-500' : 'bg-rose-500')} h-1.5 rounded-full" style="width: ${item.onTimeRate}%"></div>
+                            </div>
+                        </td>
+                        <td class="text-center pt-3">
+                            <button onclick="toggleProductPoDetail(${idx})" class="px-2.5 py-1 text-xs font-semibold rounded-lg border border-gray-200 text-blue-600 hover:bg-blue-50 transition shadow-2xs">
+                                Rincian (${item.totalOrders})
+                            </button>
+                        </td>
+                    </tr>
+                    <tr id="productPoRow_${idx}" style="display: none;" class="bg-gray-50/60 border-b border-gray-200">
+                        <td colspan="6" class="p-3">
+                            <div class="bg-white rounded-xl border border-gray-200 p-3 shadow-xs">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h5 class="text-xs font-bold text-gray-800">📋 Daftar PO untuk Produk: <span class="text-blue-600">${esc(item.productName)}</span></h5>
+                                    <span class="text-[11px] text-gray-400">${item.orders.length} riwayat pesanan</span>
+                                </div>
+                                <div class="table-scroll-container max-h-48 overflow-y-auto">
+                                    <table class="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr class="text-[11px] text-gray-500 uppercase border-b border-gray-200 bg-gray-50/70">
+                                                <th class="py-1 px-3">No. PO</th>
+                                                <th class="py-1 px-3">Vendor</th>
+                                                <th class="py-1 px-3">Tgl Expected</th>
+                                                <th class="py-1 px-3">Tgl Realisasi</th>
+                                                <th class="py-1 px-3">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${poRowsHtml}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+    }
+
+    // 5. Render Mode Raw (Log Seluruh PO)
+    if (rawTbody) {
+        if (filteredOrders.length === 0) {
+            rawTbody.innerHTML = `<tr><td colspan="7" class="text-center text-gray-400 py-8">Tidak ada data pesanan PO yang ditemukan.</td></tr>`;
+        } else {
+            rawTbody.innerHTML = filteredOrders.map((o, idx) => {
+                let statusBadge = '';
+                const statusLower = (o.status || '').toLowerCase();
+                if (statusLower.includes('tepat') || statusLower === 'selesai') {
+                    statusBadge = `<span class="tremor-badge bg-emerald-50 text-emerald-700 border-emerald-200">✅ ${esc(o.status)}</span>`;
+                } else if (statusLower.includes('terlambat')) {
+                    statusBadge = `<span class="tremor-badge bg-rose-50 text-rose-700 border-rose-200">⚠️ ${esc(o.status)}</span>`;
+                } else {
+                    statusBadge = `<span class="tremor-badge bg-blue-50 text-blue-700 border-blue-200">⏳ ${esc(o.status || 'Proses')}</span>`;
+                }
+
+                return `
+                    <tr class="hover:bg-gray-50/80 transition-colors">
+                        <td class="text-xs text-gray-400 font-mono">${idx + 1}</td>
+                        <td class="text-xs font-semibold text-gray-900 font-mono">${esc(o.poNum || '-')}</td>
+                        <td class="text-xs font-semibold text-gray-900">${esc(o.product || '-')}</td>
+                        <td class="text-xs text-gray-600">${esc(o.vendor || '-')}</td>
+                        <td class="text-xs text-gray-500">${esc(o.expectedDate || '-')}</td>
+                        <td class="text-xs text-gray-500">${esc(o.effectiveDate || '-')}</td>
+                        <td class="text-xs">${statusBadge}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+    }
+}
+
+function toggleProductPoDetail(idx) {
+    const row = document.getElementById(`productPoRow_${idx}`);
+    if (!row) return;
+    if (row.style.display === 'none' || row.style.display === '') {
+        row.style.display = 'table-row';
+    } else {
+        row.style.display = 'none';
+    }
 }
 
 function exportCatalogToCSV() {
-    let orders = (dashboardData && Array.isArray(dashboardData.allRawOrders)) ? dashboardData.allRawOrders : [];
-    if (catalogSearchQuery) {
-        orders = orders.filter(o => {
-            const p = (o.product || '').toLowerCase();
-            const v = (o.vendor || '').toLowerCase();
-            const po = (o.poNum || '').toLowerCase();
-            const st = (o.status || '').toLowerCase();
-            return p.includes(catalogSearchQuery) || v.includes(catalogSearchQuery) || po.includes(catalogSearchQuery) || st.includes(catalogSearchQuery);
+    let allOrders = (dashboardData && Array.isArray(dashboardData.allRawOrders)) ? dashboardData.allRawOrders : [];
+
+    if (catalogViewMode === 'group') {
+        // Ekspor data Agregasi Produk & Top 3 Penyuplai
+        const productMap = {};
+        allOrders.forEach(o => {
+            const rawName = (o.product || 'Lain-lain').trim();
+            const key = rawName.toLowerCase();
+            if (!productMap[key]) {
+                productMap[key] = { productName: rawName, totalOrders: 0, onTimeOrders: 0, vendorsCount: {} };
+            }
+            productMap[key].totalOrders++;
+            if (o.isOnTime) productMap[key].onTimeOrders++;
+            const vName = (o.vendor || 'Unknown').trim();
+            productMap[key].vendorsCount[vName] = (productMap[key].vendorsCount[vName] || 0) + 1;
         });
+
+        let list = Object.values(productMap).map(p => {
+            const vendorEntries = Object.entries(p.vendorsCount)
+                .map(([vendor, count]) => ({ vendor, count, pct: Math.round((count / p.totalOrders) * 100) }))
+                .sort((a, b) => b.count - a.count);
+            return {
+                ...p,
+                top3: vendorEntries.slice(0, 3),
+                onTimePct: p.totalOrders > 0 ? Math.round((p.onTimeOrders / p.totalOrders) * 100) : 100
+            };
+        }).sort((a, b) => b.totalOrders - a.totalOrders);
+
+        if (catalogSearchQuery) {
+            list = list.filter(p => p.productName.toLowerCase().includes(catalogSearchQuery));
+        }
+
+        if (list.length === 0) {
+            showToast('Tidak ada data analisis katalog untuk diekspor.', 'warning');
+            return;
+        }
+
+        const headers = ['No', 'Produk / Jasa', 'Total Pemesanan (PO)', 'Top Penyuplai #1', 'Penyuplai #2', 'Penyuplai #3', 'Ketepatan Waktu (%)'];
+        const rows = list.map((item, idx) => {
+            const v1 = item.top3[0] ? `${item.top3[0].vendor} (${item.top3[0].count} PO - ${item.top3[0].pct}%)` : '-';
+            const v2 = item.top3[1] ? `${item.top3[1].vendor} (${item.top3[1].count} PO - ${item.top3[1].pct}%)` : '-';
+            const v3 = item.top3[2] ? `${item.top3[2].vendor} (${item.top3[2].count} PO - ${item.top3[2].pct}%)` : '-';
+            return [
+                idx + 1,
+                `"${item.productName.replace(/"/g, '""')}"`,
+                item.totalOrders,
+                `"${v1.replace(/"/g, '""')}"`,
+                `"${v2.replace(/"/g, '""')}"`,
+                `"${v3.replace(/"/g, '""')}"`,
+                `${item.onTimePct}%`
+            ];
+        });
+
+        const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement('a');
+        link.setAttribute('href', encodedUri);
+        link.setAttribute('download', `Katalog_Top3_Vendor_Penyuplai_${new Date().toISOString().slice(0, 10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast('Katalog Analisis Top 3 Penyuplai berhasil diunduh (CSV).', 'success');
+
+    } else {
+        // Ekspor Raw Orders
+        let orders = allOrders;
+        if (catalogSearchQuery) {
+            orders = orders.filter(o => {
+                const p = (o.product || '').toLowerCase();
+                const v = (o.vendor || '').toLowerCase();
+                const po = (o.poNum || '').toLowerCase();
+                const st = (o.status || '').toLowerCase();
+                return p.includes(catalogSearchQuery) || v.includes(catalogSearchQuery) || po.includes(catalogSearchQuery) || st.includes(catalogSearchQuery);
+            });
+        }
+
+        if (orders.length === 0) {
+            showToast('Tidak ada data pesanan PO untuk diekspor.', 'warning');
+            return;
+        }
+
+        const headers = ['No', 'No PO', 'Nama Produk / Jasa', 'Vendor', 'Tgl Expected', 'Tgl Realisasi', 'Status'];
+        const rows = orders.map((o, idx) => [
+            idx + 1,
+            `"${(o.poNum || '').replace(/"/g, '""')}"`,
+            `"${(o.product || '').replace(/"/g, '""')}"`,
+            `"${(o.vendor || '').replace(/"/g, '""')}"`,
+            `"${(o.expectedDate || '').replace(/"/g, '""')}"`,
+            `"${(o.effectiveDate || '').replace(/"/g, '""')}"`,
+            `"${(o.status || '').replace(/"/g, '""')}"`
+        ]);
+
+        const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement('a');
+        link.setAttribute('href', encodedUri);
+        link.setAttribute('download', `Katalog_Log_PO_${new Date().toISOString().slice(0, 10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast('Log Pesanan PO berhasil diunduh (CSV).', 'success');
     }
-
-    if (orders.length === 0) {
-        showToast('Tidak ada data katalog untuk diekspor.', 'warning');
-        return;
-    }
-
-    const headers = ['No', 'No PO', 'Nama Produk / Jasa', 'Vendor', 'Tgl Expected', 'Tgl Realisasi', 'Status'];
-    const rows = orders.map((o, idx) => [
-        idx + 1,
-        `"${(o.poNum || '').replace(/"/g, '""')}"`,
-        `"${(o.product || '').replace(/"/g, '""')}"`,
-        `"${(o.vendor || '').replace(/"/g, '""')}"`,
-        `"${(o.expectedDate || '').replace(/"/g, '""')}"`,
-        `"${(o.effectiveDate || '').replace(/"/g, '""')}"`,
-        `"${(o.status || '').replace(/"/g, '""')}"`
-    ]);
-
-    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Katalog_Produk_Ethos_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showToast('Katalog Produk berhasil diunduh (CSV).', 'success');
 }
