@@ -186,16 +186,27 @@ async function loadCatalogData() {
         if (data.status === 'success') {
             catalogData = data;
 
-            // Pastikan setiap order diberi tag periode asal dari periods[pKey].rawOrders
+            // Pastikan setiap order diberi tag periode asal & sinkronkan allRawOrders
+            const compiledAllOrders = [];
             if (catalogData.periods) {
                 for (const pk in catalogData.periods) {
                     const pObj = catalogData.periods[pk];
+                    const pLabel = (pObj && (pObj.label || pObj.id)) ? (pObj.label || pObj.id) : pk;
                     if (pObj && Array.isArray(pObj.rawOrders)) {
                         pObj.rawOrders.forEach(o => {
-                            if (!o.periode) o.periode = pObj.label || pk;
+                            o.periode = pLabel;
+                            compiledAllOrders.push(o);
                         });
                     }
                 }
+            }
+
+            if (compiledAllOrders.length > 0) {
+                catalogData.allRawOrders = compiledAllOrders;
+            } else if (Array.isArray(catalogData.allRawOrders)) {
+                catalogData.allRawOrders.forEach(o => {
+                    if (!o.periode) o.periode = 'Semua Periode';
+                });
             }
 
             // Inisialisasi opsi filter periode
@@ -229,10 +240,73 @@ function populatePeriodFilterOptions() {
 
     const currentVal = catalogPeriodFilter;
     select.innerHTML = `<option value="all">📅 Semua Periode</option>` +
-        periodList.map(p => `<option value="${esc(p)}">📅 ${esc(p)}</option>`).join('');
+        periodList.map(p => {
+            const count = (catalogData.periods && catalogData.periods[p] && Array.isArray(catalogData.periods[p].rawOrders))
+                ? catalogData.periods[p].rawOrders.length
+                : 0;
+            const countLabel = count > 0 ? ` (${count} PO)` : '';
+            return `<option value="${esc(p)}">📅 ${esc(p)}${countLabel}</option>`;
+        }).join('');
 
     select.value = periodList.includes(currentVal) ? currentVal : 'all';
     catalogPeriodFilter = select.value;
+}
+
+/**
+ * Mengambil daftar pesanan PO sesuai filter periode yang aktif
+ */
+function getCatalogOrders() {
+    if (!catalogData) return [];
+
+    // Jika filter adalah "all", kembalikan seluruh pesanan
+    if (catalogPeriodFilter === 'all') {
+        if (Array.isArray(catalogData.allRawOrders) && catalogData.allRawOrders.length > 0) {
+            return catalogData.allRawOrders;
+        }
+        const fallbackList = [];
+        if (catalogData.periods) {
+            for (const pk in catalogData.periods) {
+                const pObj = catalogData.periods[pk];
+                if (pObj && Array.isArray(pObj.rawOrders)) {
+                    fallbackList.push(...pObj.rawOrders);
+                }
+            }
+        }
+        return fallbackList;
+    }
+
+    // Jika periode spesifik dipilih (misal: "Q1 2026", "Q2 2026")
+    // 1. Ambil langsung dari catalogData.periods[catalogPeriodFilter]
+    if (catalogData.periods && catalogData.periods[catalogPeriodFilter] && Array.isArray(catalogData.periods[catalogPeriodFilter].rawOrders)) {
+        return catalogData.periods[catalogPeriodFilter].rawOrders;
+    }
+
+    // 2. Pencocokan toleran key/label/id tanpa case & spasi
+    if (catalogData.periods) {
+        const cleanFilter = catalogPeriodFilter.toLowerCase().replace(/\s+/g, '');
+        for (const pk in catalogData.periods) {
+            const pObj = catalogData.periods[pk];
+            const cleanKey = pk.toLowerCase().replace(/\s+/g, '');
+            const cleanLabel = (pObj?.label || '').toLowerCase().replace(/\s+/g, '');
+            const cleanId = (pObj?.id || '').toLowerCase().replace(/\s+/g, '');
+            if (cleanKey === cleanFilter || cleanLabel === cleanFilter || cleanId === cleanFilter) {
+                if (Array.isArray(pObj.rawOrders)) {
+                    return pObj.rawOrders;
+                }
+            }
+        }
+    }
+
+    // 3. Fallback: filter dari allRawOrders
+    if (Array.isArray(catalogData.allRawOrders)) {
+        const cleanFilter = catalogPeriodFilter.toLowerCase().replace(/\s+/g, '');
+        return catalogData.allRawOrders.filter(o => {
+            if (!o.periode) return false;
+            return o.periode.toLowerCase().replace(/\s+/g, '') === cleanFilter;
+        });
+    }
+
+    return [];
 }
 
 // =====================================================
@@ -243,12 +317,8 @@ function renderCatalog() {
     const rawTbody = document.getElementById('catalogRawTableBody');
     const badgeCount = document.getElementById('catalogBadgeCount');
 
-    let allOrders = (catalogData && Array.isArray(catalogData.allRawOrders)) ? catalogData.allRawOrders : [];
-
-    // 1. Saring data berdasarkan Filter Periode (jika bukan 'all')
-    if (catalogPeriodFilter !== 'all') {
-        allOrders = allOrders.filter(o => o.periode === catalogPeriodFilter);
-    }
+    // 1. Ambil data pesanan sesuai periode yang dipilih
+    const allOrders = getCatalogOrders();
 
     // 2. Ekstrak dan Kelompokkan Data per Produk
     const productMap = {};
@@ -624,12 +694,7 @@ function toggleProductPoDetail(idx) {
 // EXPORT CSV (BERSIFAT FILTERED & PERIODE-AWARE)
 // =====================================================
 function exportCatalogToCSV() {
-    let allOrders = (catalogData && Array.isArray(catalogData.allRawOrders)) ? catalogData.allRawOrders : [];
-
-    // Filter Periode
-    if (catalogPeriodFilter !== 'all') {
-        allOrders = allOrders.filter(o => o.periode === catalogPeriodFilter);
-    }
+    let allOrders = getCatalogOrders();
 
     if (catalogViewMode === 'group') {
         const productMap = {};

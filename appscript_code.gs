@@ -333,6 +333,8 @@ function doGet(e) {
     var allRawOrders = [];
     for (var pk in periods) {
       if (periods[pk].rawOrders && periods[pk].rawOrders.length > 0) {
+        var pLbl = periods[pk].label || pk;
+        periods[pk].rawOrders.forEach(function(o) { if (!o.periode) o.periode = pLbl; });
         allRawOrders = allRawOrders.concat(periods[pk].rawOrders);
       }
     }
@@ -921,7 +923,8 @@ function partitionPoSheetByDate(sheet, masterMap) {
       expectedDate: expDate ? formatDate(expDate) : '-',
       effectiveDate: (effDate && effDate.toString().trim() !== '-') ? formatDate(effDate) : 'Belum Diterima',
       status: status,
-      isOnTime: isOnTime
+      isOnTime: isOnTime,
+      periode: pId
     };
 
     grp.rawOrders.push(orderObj);
