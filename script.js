@@ -594,7 +594,7 @@ function updateHeaderUser(name, pin) {
 
 /**
  * Kontrol tampilan berbasis role / PIN:
- * - Admin (PIN 9999): Tampilkan KPI Cards (poInsightsBanner), Filter Panel (filterControlsCard), dan Link Dashboard
+ * - Admin (PIN 9999): Tampilkan KPI Cards (poInsightsBanner), Filter Panel (filterControlsCard), Link Dashboard & Katalog
  * - Penilai Biasa (Selain 9999): Sembunyikan semuanya, hanya tampilkan daftar vendor yang harus dinilai
  */
 function updateRoleBasedView(pin) {
@@ -613,6 +613,16 @@ function updateRoleBasedView(pin) {
     const dashLink = document.getElementById('dashboardNavLink');
     if (dashLink) {
         dashLink.style.display = isAdmin ? 'inline-flex' : 'none';
+    }
+
+    const katalogLink = document.getElementById('katalogNavLink');
+    if (katalogLink) {
+        katalogLink.style.display = isAdmin ? 'inline-flex' : 'none';
+    }
+
+    const adminNav = document.getElementById('adminQuickNav');
+    if (adminNav) {
+        adminNav.style.display = isAdmin ? 'flex' : 'none';
     }
 }
 
@@ -636,6 +646,10 @@ function doLogout() {
     viewMode = 'all';
     poStats = { totalOrders: 0, totalOnTime: 0, overallOnTimePct: 0, vendorMap: {} };
     allMasterVendors = [...DEFAULT_VENDORS];
+
+    updateRoleBasedView('');
+    const el = document.getElementById('headerUser');
+    if (el) el.textContent = '👤 Penilai';
 
     const searchInput = document.getElementById('searchInput');
     if (searchInput) searchInput.value = '';
