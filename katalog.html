@@ -61,6 +61,61 @@
             border: 1px solid transparent;
         }
 
+        .tremor-select {
+            appearance: none;
+            background-color: #ffffff;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            padding: 0.4rem 2rem 0.4rem 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #111827;
+            cursor: pointer;
+            box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%234b5563' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1rem;
+            transition: all 0.15s ease;
+        }
+        .tremor-select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+        .page-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 2rem;
+            height: 2rem;
+            padding: 0 0.5rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #4b5563;
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .page-btn:hover:not(:disabled) {
+            background: #f3f4f6;
+            color: #111827;
+            border-color: #d1d5db;
+        }
+        .page-btn.active {
+            background: #2563eb;
+            color: #ffffff;
+            border-color: #2563eb;
+            box-shadow: 0 1px 2px 0 rgb(37 99 235 / 0.2);
+        }
+        .page-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
         .table-scroll-container {
             width: 100%;
             overflow-x: auto;
@@ -87,7 +142,7 @@
         }
 
         .tremor-table td {
-            padding: 0.875rem 1rem;
+            padding: 0.75rem 1rem;
             border-bottom: 1px solid #f1f5f9;
             color: #1e293b;
         }
@@ -231,6 +286,18 @@
                 </div>
                 
                 <div class="flex items-center gap-2.5 flex-wrap">
+                    <!-- Period Filter -->
+                    <select id="catalogPeriodSelect" class="tremor-select text-xs py-1.5 pl-3 pr-7 rounded-lg border border-gray-200 focus:outline-none focus:border-blue-500 shadow-2xs" title="Filter Kuartal / Periode">
+                        <option value="all">📅 Semua Periode</option>
+                    </select>
+
+                    <!-- Sort Selector -->
+                    <select id="catalogSortSelect" class="tremor-select text-xs py-1.5 pl-3 pr-7 rounded-lg border border-gray-200 focus:outline-none focus:border-blue-500 shadow-2xs" title="Urutkan Data">
+                        <option value="po-desc">🔢 PO Terbanyak</option>
+                        <option value="name-asc">🔤 Nama Produk (A - Z)</option>
+                        <option value="ontime-desc">⏱️ On-Time Tertinggi</option>
+                    </select>
+
                     <!-- Mode Switcher -->
                     <div class="inline-flex rounded-lg border border-gray-200 p-0.5 bg-gray-50 text-xs font-semibold">
                         <button id="catViewModeGroup" class="px-2.5 py-1.5 rounded-md bg-white text-gray-800 shadow-2xs border border-gray-200/60 transition">
@@ -243,7 +310,7 @@
 
                     <!-- Search Box -->
                     <div class="relative">
-                        <input type="text" id="catalogSearchInput" placeholder="Cari produk, vendor, No. PO..." class="tremor-input text-xs pl-8 pr-3 py-1.5 w-64 rounded-lg border border-gray-200 focus:outline-none focus:border-blue-500 shadow-2xs">
+                        <input type="text" id="catalogSearchInput" placeholder="Cari produk, vendor, No. PO..." class="tremor-input text-xs pl-8 pr-3 py-1.5 w-60 rounded-lg border border-gray-200 focus:outline-none focus:border-blue-500 shadow-2xs">
                         <svg class="w-4 h-4 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                     </div>
                 </div>
@@ -256,9 +323,9 @@
                         <tr>
                             <th class="w-10">#</th>
                             <th>Produk / Jasa</th>
-                            <th class="text-center w-28">Total PO</th>
-                            <th class="w-96">Top 3 Vendor Penyuplai</th>
-                            <th class="w-36 text-center">Ketepatan Waktu</th>
+                            <th class="text-center w-24">Total PO</th>
+                            <th>Top 3 Vendor Penyuplai</th>
+                            <th class="w-32 text-center">Ketepatan Waktu</th>
                             <th class="w-24 text-center">Detail</th>
                         </tr>
                     </thead>
@@ -286,6 +353,26 @@
                         <tr><td colspan="7" class="text-center text-gray-400 py-12">Memuat log pemesanan...</td></tr>
                     </tbody>
                 </table>
+            </div>
+
+            <!-- ========== PAGINATION BAR ========== -->
+            <div id="catalogPagination" class="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t border-gray-100 bg-gray-50/50 rounded-b-2xl">
+                <div class="flex items-center gap-3 flex-wrap">
+                    <span class="text-xs text-gray-500 font-medium" id="paginationInfo">Menampilkan 0 - 0 dari 0 item</span>
+                    <div class="flex items-center gap-1.5 text-xs text-gray-500">
+                        <span>Tampilkan:</span>
+                        <select id="pageSizeSelect" class="tremor-select text-xs py-1 pl-2.5 pr-6 rounded-md border border-gray-200 bg-white shadow-2xs">
+                            <option value="10">10</option>
+                            <option value="25" selected>25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                        <span>per halaman</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1.5 flex-wrap" id="paginationNav">
+                    <!-- Dynamic page buttons rendered by JS -->
+                </div>
             </div>
         </div>
 

@@ -8,7 +8,11 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxZPk7gIhZ75OPAgdS8P
 // =====================================================
 let catalogData = null;
 let catalogSearchQuery = '';
+let catalogPeriodFilter = 'all'; // 'all' | 'Q1 2026' | 'Q2 2026' | etc.
+let catalogSortBy = 'po-desc'; // 'po-desc' | 'name-asc' | 'ontime-desc'
 let catalogViewMode = 'group'; // 'group' | 'raw'
+let currentPage = 1;
+let pageSize = 25; // default 25 item per halaman
 
 document.addEventListener('DOMContentLoaded', () => {
     checkAdminAccess();
@@ -87,21 +91,58 @@ function adminLogout() {
 }
 
 function initControls() {
+    // 1. Search Box
     const searchInput = document.getElementById('catalogSearchInput');
     if (searchInput && !searchInput.dataset.bound) {
         searchInput.dataset.bound = 'true';
         searchInput.addEventListener('input', (e) => {
             catalogSearchQuery = (e.target.value || '').toLowerCase().trim();
+            currentPage = 1;
             renderCatalog();
         });
     }
 
+    // 2. Period Filter
+    const periodSelect = document.getElementById('catalogPeriodSelect');
+    if (periodSelect && !periodSelect.dataset.bound) {
+        periodSelect.dataset.bound = 'true';
+        periodSelect.addEventListener('change', (e) => {
+            catalogPeriodFilter = e.target.value;
+            currentPage = 1;
+            renderCatalog();
+        });
+    }
+
+    // 3. Sort Selector
+    const sortSelect = document.getElementById('catalogSortSelect');
+    if (sortSelect && !sortSelect.dataset.bound) {
+        sortSelect.dataset.bound = 'true';
+        sortSelect.addEventListener('change', (e) => {
+            catalogSortBy = e.target.value;
+            currentPage = 1;
+            renderCatalog();
+        });
+    }
+
+    // 4. Page Size Selector
+    const sizeSelect = document.getElementById('pageSizeSelect');
+    if (sizeSelect && !sizeSelect.dataset.bound) {
+        sizeSelect.dataset.bound = 'true';
+        sizeSelect.addEventListener('change', (e) => {
+            pageSize = parseInt(e.target.value, 10) || 25;
+            currentPage = 1;
+            renderCatalog();
+        });
+    }
+
+    // 5. Mode Switcher (Group vs Raw)
     const btnModeGroup = document.getElementById('catViewModeGroup');
     const btnModeRaw = document.getElementById('catViewModeRaw');
     if (btnModeGroup && !btnModeGroup.dataset.bound) {
         btnModeGroup.dataset.bound = 'true';
         btnModeGroup.addEventListener('click', () => {
             catalogViewMode = 'group';
+            currentPage = 1;
             btnModeGroup.className = 'px-2.5 py-1.5 rounded-md bg-white text-gray-800 shadow-2xs border border-gray-200/60 transition';
             if (btnModeRaw) btnModeRaw.className = 'px-2.5 py-1.5 rounded-md text-gray-500 hover:text-gray-800 transition';
             const grpEl = document.getElementById('catalogGroupedContainer');
@@ -116,6 +157,7 @@ function initControls() {
         btnModeRaw.dataset.bound = 'true';
         btnModeRaw.addEventListener('click', () => {
             catalogViewMode = 'raw';
+            currentPage = 1;
             btnModeRaw.className = 'px-2.5 py-1.5 rounded-md bg-white text-gray-800 shadow-2xs border border-gray-200/60 transition';
             if (btnModeGroup) btnModeGroup.className = 'px-2.5 py-1.5 rounded-md text-gray-500 hover:text-gray-800 transition';
             const grpEl = document.getElementById('catalogGroupedContainer');
@@ -143,7 +185,24 @@ async function loadCatalogData() {
 
         if (data.status === 'success') {
             catalogData = data;
+
+            // Pastikan setiap order diberi tag periode asal dari periods[pKey].rawOrders
+            if (catalogData.periods) {
+                for (const pk in catalogData.periods) {
+                    const pObj = catalogData.periods[pk];
+                    if (pObj && Array.isArray(pObj.rawOrders)) {
+                        pObj.rawOrders.forEach(o => {
+                            if (!o.periode) o.periode = pObj.label || pk;
+                        });
+                    }
+                }
+            }
+
+            // Inisialisasi opsi filter periode
+            populatePeriodFilterOptions();
+
             if (syncStatusEl) syncStatusEl.textContent = `Tersinkronisasi (${new Date().toLocaleTimeString('id-ID')})`;
+            currentPage = 1;
             renderCatalog();
             showToast('Data katalog produk berhasil diperbarui.', 'success');
         } else {
@@ -157,6 +216,25 @@ async function loadCatalogData() {
     }
 }
 
+function populatePeriodFilterOptions() {
+    const select = document.getElementById('catalogPeriodSelect');
+    if (!select || !catalogData) return;
+
+    let periodList = [];
+    if (Array.isArray(catalogData.periodList) && catalogData.periodList.length > 0) {
+        periodList = catalogData.periodList;
+    } else if (catalogData.periods) {
+        periodList = Object.keys(catalogData.periods);
+    }
+
+    const currentVal = catalogPeriodFilter;
+    select.innerHTML = `<option value="all">📅 Semua Periode</option>` +
+        periodList.map(p => `<option value="${esc(p)}">📅 ${esc(p)}</option>`).join('');
+
+    select.value = periodList.includes(currentVal) ? currentVal : 'all';
+    catalogPeriodFilter = select.value;
+}
+
 // =====================================================
 // RENDERING FUNCTIONS
 // =====================================================
@@ -167,7 +245,12 @@ function renderCatalog() {
 
     let allOrders = (catalogData && Array.isArray(catalogData.allRawOrders)) ? catalogData.allRawOrders : [];
 
-    // 1. Ekstrak dan Kelompokkan Data per Produk
+    // 1. Saring data berdasarkan Filter Periode (jika bukan 'all')
+    if (catalogPeriodFilter !== 'all') {
+        allOrders = allOrders.filter(o => o.periode === catalogPeriodFilter);
+    }
+
+    // 2. Ekstrak dan Kelompokkan Data per Produk
     const productMap = {};
     let totalOnTimeAll = 0;
 
@@ -213,9 +296,9 @@ function renderCatalog() {
             top3Vendors: vendorEntries.slice(0, 3),
             onTimeRate
         };
-    }).sort((a, b) => b.totalOrders - a.totalOrders);
+    });
 
-    // 2. Update KPI Mini Cards di Bagian Atas
+    // 3. Update KPI Mini Cards di Bagian Atas
     const elTotProd = document.getElementById('catStatTotalProducts');
     const elTotOrd = document.getElementById('catStatTotalOrders');
     const elTopProd = document.getElementById('catStatTopProduct');
@@ -226,8 +309,10 @@ function renderCatalog() {
     if (elTotOrd) elTotOrd.textContent = allOrders.length;
     if (elTopProd) {
         if (groupedProducts.length > 0) {
-            elTopProd.textContent = groupedProducts[0].productName;
-            if (elTopProdMeta) elTopProdMeta.textContent = `${groupedProducts[0].totalOrders} pesanan tercatat`;
+            // Temukan produk dengan pesanan terbanyak
+            const topProdSorted = [...groupedProducts].sort((a, b) => b.totalOrders - a.totalOrders);
+            elTopProd.textContent = topProdSorted[0].productName;
+            if (elTopProdMeta) elTopProdMeta.textContent = `${topProdSorted[0].totalOrders} pesanan tercatat`;
         } else {
             elTopProd.textContent = '-';
             if (elTopProdMeta) elTopProdMeta.textContent = 'Belum ada data';
@@ -238,7 +323,7 @@ function renderCatalog() {
         elOnTimeRate.textContent = `${overallRate}%`;
     }
 
-    // 3. Filter berdasarkan Pencarian (Live Search)
+    // 4. Filter Pencarian (Live Search)
     let filteredGrouped = groupedProducts;
     let filteredOrders = allOrders;
 
@@ -259,6 +344,18 @@ function renderCatalog() {
         });
     }
 
+    // 5. Sorting Cerdas
+    if (catalogSortBy === 'name-asc') {
+        filteredGrouped.sort((a, b) => a.productName.localeCompare(b.productName));
+        filteredOrders.sort((a, b) => (a.product || '').localeCompare(b.product || ''));
+    } else if (catalogSortBy === 'ontime-desc') {
+        filteredGrouped.sort((a, b) => b.onTimeRate - a.onTimeRate || b.totalOrders - a.totalOrders);
+        filteredOrders.sort((a, b) => (b.isOnTime ? 1 : 0) - (a.isOnTime ? 1 : 0));
+    } else {
+        // Default: po-desc
+        filteredGrouped.sort((a, b) => b.totalOrders - a.totalOrders);
+    }
+
     // Update Badge Counter
     if (badgeCount) {
         badgeCount.textContent = catalogViewMode === 'group'
@@ -266,36 +363,48 @@ function renderCatalog() {
             : `${filteredOrders.length} Pesanan PO`;
     }
 
-    // 4. Render Mode Grouped (Agregasi Produk & Top 3 Penyuplai)
-    if (groupedTbody) {
-        if (filteredGrouped.length === 0) {
-            groupedTbody.innerHTML = `<tr><td colspan="6" class="text-center text-gray-400 py-12">Tidak ada produk atau penyuplai yang cocok dengan filter "${esc(catalogSearchQuery)}".</td></tr>`;
-        } else {
-            groupedTbody.innerHTML = filteredGrouped.map((item, idx) => {
-                const rankIcons = ['🥇', '🥈', '🥉'];
-                const rankTextColors = ['text-amber-800', 'text-slate-700', 'text-amber-900'];
-                const rankBgColors = ['bg-amber-50/80 border-amber-200/70', 'bg-slate-50 border-slate-200', 'bg-orange-50/70 border-orange-200/60'];
+    // 6. Pagination Slicing
+    const totalItems = (catalogViewMode === 'group' ? filteredGrouped.length : filteredOrders.length);
+    const totalPages = Math.ceil(totalItems / pageSize) || 1;
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
 
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = Math.min(startIndex + pageSize, totalItems);
+
+    const pagedGrouped = filteredGrouped.slice(startIndex, endIndex);
+    const pagedOrders = filteredOrders.slice(startIndex, endIndex);
+
+    renderPaginationUI(totalItems, totalPages, startIndex, endIndex);
+
+    // 7. Render Mode Grouped (Agregasi Produk & Top 3 Penyuplai Format Kompak)
+    if (groupedTbody) {
+        if (pagedGrouped.length === 0) {
+            groupedTbody.innerHTML = `<tr><td colspan="6" class="text-center text-gray-400 py-12">Tidak ada produk atau penyuplai yang cocok dengan kriteria filter.</td></tr>`;
+        } else {
+            groupedTbody.innerHTML = pagedGrouped.map((item, idx) => {
+                const globalIdx = startIndex + idx;
+                const rankIcons = ['🥇', '🥈', '🥉'];
+                const rankBorderColors = ['border-amber-300 bg-amber-50/70 text-amber-950', 'border-slate-300 bg-slate-50 text-slate-800', 'border-orange-300 bg-orange-50/70 text-orange-950'];
+
+                // Top 3 vendor dalam 1 baris badge horizontal yang ringkas
                 const topVendorsHtml = item.top3Vendors.map((v, rIdx) => {
                     const icon = rankIcons[rIdx] || '•';
-                    const textColor = rankTextColors[rIdx] || 'text-gray-700';
-                    const bgColor = rankBgColors[rIdx] || 'bg-gray-50 border-gray-200';
+                    const colorClass = rankBorderColors[rIdx] || 'border-gray-200 bg-gray-50 text-gray-800';
                     return `
-                        <div class="flex items-center justify-between gap-2 p-1.5 rounded-lg border ${bgColor} text-xs mb-1">
-                            <div class="flex items-center gap-1.5 min-w-0">
-                                <span>${icon}</span>
-                                <span class="font-semibold ${textColor} truncate" title="${esc(v.vendor)}">${esc(v.vendor)}</span>
-                            </div>
-                            <span class="shrink-0 font-mono text-[11px] font-semibold text-gray-600 bg-white px-2 py-0.5 rounded shadow-2xs border border-gray-100">
-                                ${v.count} PO · <strong class="text-blue-600">${v.percentage}%</strong>
+                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border ${colorClass} text-xs shadow-2xs" title="${esc(v.vendor)}">
+                            <span>${icon}</span>
+                            <span class="font-semibold text-gray-900 truncate max-w-[150px] sm:max-w-[200px]">${esc(v.vendor)}</span>
+                            <span class="font-mono text-[11px] font-semibold text-blue-700 bg-white px-1.5 py-0.2 rounded border border-gray-200/80">
+                                ${v.count} PO · ${v.percentage}%
                             </span>
-                        </div>
+                        </span>
                     `;
                 }).join('');
 
                 const otherVendorsCount = item.topVendors.length - item.top3Vendors.length;
                 const otherVendorsNotice = otherVendorsCount > 0
-                    ? `<div class="text-[11px] text-gray-400 font-medium pl-1 mt-0.5">+ ${otherVendorsCount} vendor penyuplai lainnya</div>`
+                    ? `<span class="inline-flex items-center text-[11px] text-gray-500 font-medium bg-gray-100 px-2 py-0.5 rounded-md whitespace-nowrap">+${otherVendorsCount} vendor lain</span>`
                     : '';
 
                 // On-Time Delivery Badge
@@ -320,60 +429,62 @@ function renderCatalog() {
                         stBadge = `<span class="px-2 py-0.5 text-[11px] font-semibold rounded bg-blue-50 text-blue-700 border border-blue-200">⏳ Proses</span>`;
                     }
                     return `
-                        <tr class="border-b border-gray-100 text-xs">
-                            <td class="py-1.5 px-3 font-mono font-semibold text-gray-800">${esc(o.poNum || '-')}</td>
-                            <td class="py-1.5 px-3 text-gray-700">${esc(o.vendor || '-')}</td>
-                            <td class="py-1.5 px-3 text-gray-500">${esc(o.expectedDate || '-')}</td>
-                            <td class="py-1.5 px-3 text-gray-500">${esc(o.effectiveDate || '-')}</td>
-                            <td class="py-1.5 px-3">${stBadge}</td>
+                        <tr class="border-b border-gray-100 text-xs hover:bg-gray-50/50">
+                            <td class="py-1 px-3 font-mono font-semibold text-gray-800">${esc(o.poNum || '-')}</td>
+                            <td class="py-1 px-3 text-gray-700">${esc(o.vendor || '-')}</td>
+                            <td class="py-1 px-3 text-gray-500 font-mono text-[11px]">${esc(o.expectedDate || '-')}</td>
+                            <td class="py-1 px-3 text-gray-500 font-mono text-[11px]">${esc(o.effectiveDate || '-')}</td>
+                            <td class="py-1 px-3">${stBadge}</td>
                         </tr>
                     `;
                 }).join('');
 
                 return `
-                    <tr class="hover:bg-gray-50/70 transition-colors border-b border-gray-100 align-top">
-                        <td class="text-xs text-gray-400 font-mono pt-3.5">${idx + 1}</td>
-                        <td class="pt-3">
-                            <div class="flex items-start gap-2.5">
-                                <span class="text-xl">📦</span>
-                                <div>
-                                    <h4 class="text-sm font-bold text-gray-900 leading-tight">${esc(item.productName)}</h4>
-                                    <p class="text-[11px] text-gray-500 mt-0.5">Disuplai oleh ${item.topVendors.length} rekanan vendor</p>
+                    <tr class="hover:bg-gray-50/60 transition-colors border-b border-gray-100 align-middle">
+                        <td class="text-xs text-gray-400 font-mono">${globalIdx + 1}</td>
+                        <td>
+                            <div class="flex items-center gap-2">
+                                <span class="text-base">📦</span>
+                                <div class="min-w-0">
+                                    <h4 class="text-xs sm:text-sm font-bold text-gray-900 leading-snug truncate max-w-[240px]" title="${esc(item.productName)}">${esc(item.productName)}</h4>
+                                    <span class="text-[10px] text-gray-400">${item.topVendors.length} vendor penyuplai</span>
                                 </div>
                             </div>
                         </td>
-                        <td class="text-center pt-3">
-                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                        <td class="text-center">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
                                 ${item.totalOrders} PO
                             </span>
                         </td>
-                        <td class="pt-2 pb-2">
-                            ${topVendorsHtml}
-                            ${otherVendorsNotice}
-                        </td>
-                        <td class="text-center pt-3">
-                            ${onTimeBadge}
-                            <div class="w-20 mx-auto bg-gray-200 rounded-full h-1.5 mt-1.5 overflow-hidden">
-                                <div class="${item.onTimeRate >= 90 ? 'bg-emerald-500' : (item.onTimeRate >= 75 ? 'bg-blue-500' : 'bg-rose-500')} h-1.5 rounded-full" style="width: ${item.onTimeRate}%"></div>
+                        <td>
+                            <div class="flex items-center gap-1.5 flex-wrap py-1">
+                                ${topVendorsHtml}
+                                ${otherVendorsNotice}
                             </div>
                         </td>
-                        <td class="text-center pt-3">
-                            <button onclick="toggleProductPoDetail(${idx})" class="px-2.5 py-1 text-xs font-semibold rounded-lg border border-gray-200 text-blue-600 hover:bg-blue-50 transition shadow-2xs">
+                        <td class="text-center">
+                            ${onTimeBadge}
+                        </td>
+                        <td class="text-center">
+                            <button onclick="toggleProductPoDetail(${globalIdx})" class="px-2 py-1 text-xs font-semibold rounded-lg border border-gray-200 text-blue-600 hover:bg-blue-50 transition shadow-2xs whitespace-nowrap">
                                 Rincian (${item.totalOrders})
                             </button>
                         </td>
                     </tr>
-                    <tr id="productPoRow_${idx}" style="display: none;" class="bg-gray-50/60 border-b border-gray-200">
+                    <tr id="productPoRow_${globalIdx}" style="display: none;" class="bg-gray-50/70 border-b border-gray-200">
                         <td colspan="6" class="p-3">
                             <div class="bg-white rounded-xl border border-gray-200 p-3 shadow-xs">
                                 <div class="flex items-center justify-between mb-2">
-                                    <h5 class="text-xs font-bold text-gray-800">📋 Daftar PO untuk Produk: <span class="text-blue-600">${esc(item.productName)}</span></h5>
-                                    <span class="text-[11px] text-gray-400">${item.orders.length} riwayat pesanan</span>
+                                    <h5 class="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                                        <span>📋 Rincian Pesanan:</span>
+                                        <span class="text-blue-600">${esc(item.productName)}</span>
+                                    </h5>
+                                    <span class="text-[11px] text-gray-400">${item.orders.length} riwayat transaksi PO</span>
                                 </div>
-                                <div class="table-scroll-container max-h-48 overflow-y-auto">
+                                <div class="table-scroll-container max-h-56 overflow-y-auto">
                                     <table class="w-full text-left border-collapse">
                                         <thead>
-                                            <tr class="text-[11px] text-gray-500 uppercase border-b border-gray-200 bg-gray-50/70">
+                                            <tr class="text-[10px] text-gray-500 uppercase border-b border-gray-200 bg-gray-50/90 sticky top-0">
                                                 <th class="py-1 px-3">No. PO</th>
                                                 <th class="py-1 px-3">Vendor</th>
                                                 <th class="py-1 px-3">Tgl Expected</th>
@@ -394,12 +505,13 @@ function renderCatalog() {
         }
     }
 
-    // 5. Render Mode Raw (Log Seluruh PO)
+    // 8. Render Mode Raw (Log Seluruh PO Format Kompak)
     if (rawTbody) {
-        if (filteredOrders.length === 0) {
+        if (pagedOrders.length === 0) {
             rawTbody.innerHTML = `<tr><td colspan="7" class="text-center text-gray-400 py-12">Tidak ada data pesanan PO yang ditemukan.</td></tr>`;
         } else {
-            rawTbody.innerHTML = filteredOrders.map((o, idx) => {
+            rawTbody.innerHTML = pagedOrders.map((o, idx) => {
+                const globalIdx = startIndex + idx;
                 let statusBadge = '';
                 const statusLower = (o.status || '').toLowerCase();
                 if (statusLower.includes('tepat') || statusLower === 'selesai') {
@@ -412,17 +524,89 @@ function renderCatalog() {
 
                 return `
                     <tr class="hover:bg-gray-50/80 transition-colors">
-                        <td class="text-xs text-gray-400 font-mono">${idx + 1}</td>
+                        <td class="text-xs text-gray-400 font-mono">${globalIdx + 1}</td>
                         <td class="text-xs font-semibold text-gray-900 font-mono">${esc(o.poNum || '-')}</td>
                         <td class="text-xs font-semibold text-gray-900">${esc(o.product || '-')}</td>
                         <td class="text-xs text-gray-600">${esc(o.vendor || '-')}</td>
-                        <td class="text-xs text-gray-500">${esc(o.expectedDate || '-')}</td>
-                        <td class="text-xs text-gray-500">${esc(o.effectiveDate || '-')}</td>
+                        <td class="text-xs text-gray-500 font-mono text-[11px]">${esc(o.expectedDate || '-')}</td>
+                        <td class="text-xs text-gray-500 font-mono text-[11px]">${esc(o.effectiveDate || '-')}</td>
                         <td class="text-xs">${statusBadge}</td>
                     </tr>
                 `;
             }).join('');
         }
+    }
+}
+
+// =====================================================
+// PAGINATION UI & ACTIONS
+// =====================================================
+function renderPaginationUI(totalItems, totalPages, startIndex, endIndex) {
+    const infoEl = document.getElementById('paginationInfo');
+    const navEl = document.getElementById('paginationNav');
+    if (!infoEl || !navEl) return;
+
+    const unit = (catalogViewMode === 'group' ? 'produk' : 'pesanan');
+    infoEl.innerHTML = totalItems === 0
+        ? `Tidak ada data ${unit}`
+        : `Menampilkan <strong class="text-gray-900">${startIndex + 1} - ${endIndex}</strong> dari <strong class="text-gray-900">${totalItems}</strong> ${unit}`;
+
+    if (totalPages <= 1) {
+        navEl.innerHTML = '';
+        return;
+    }
+
+    let buttonsHtml = '';
+
+    // Tombol Sebelumnya
+    buttonsHtml += `
+        <button onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''} class="page-btn">
+            ‹ Prev
+        </button>
+    `;
+
+    // Tombol Halaman (Maksimal 5 tombol angka dinamis)
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = Math.min(totalPages, startPage + 4);
+    if (endPage - startPage < 4) {
+        startPage = Math.max(1, endPage - 4);
+    }
+
+    if (startPage > 1) {
+        buttonsHtml += `<button onclick="goToPage(1)" class="page-btn">1</button>`;
+        if (startPage > 2) buttonsHtml += `<span class="text-xs text-gray-400 px-1">…</span>`;
+    }
+
+    for (let p = startPage; p <= endPage; p++) {
+        buttonsHtml += `
+            <button onclick="goToPage(${p})" class="page-btn ${p === currentPage ? 'active' : ''}">
+                ${p}
+            </button>
+        `;
+    }
+
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) buttonsHtml += `<span class="text-xs text-gray-400 px-1">…</span>`;
+        buttonsHtml += `<button onclick="goToPage(${totalPages})" class="page-btn">${totalPages}</button>`;
+    }
+
+    // Tombol Berikutnya
+    buttonsHtml += `
+        <button onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''} class="page-btn">
+            Next ›
+        </button>
+    `;
+
+    navEl.innerHTML = buttonsHtml;
+}
+
+function goToPage(page) {
+    currentPage = page;
+    renderCatalog();
+    // Scroll mulus kembali ke atas tabel
+    const tableCard = document.getElementById('catalogGroupedContainer');
+    if (tableCard) {
+        tableCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 }
 
@@ -436,8 +620,16 @@ function toggleProductPoDetail(idx) {
     }
 }
 
+// =====================================================
+// EXPORT CSV (BERSIFAT FILTERED & PERIODE-AWARE)
+// =====================================================
 function exportCatalogToCSV() {
     let allOrders = (catalogData && Array.isArray(catalogData.allRawOrders)) ? catalogData.allRawOrders : [];
+
+    // Filter Periode
+    if (catalogPeriodFilter !== 'all') {
+        allOrders = allOrders.filter(o => o.periode === catalogPeriodFilter);
+    }
 
     if (catalogViewMode === 'group') {
         const productMap = {};
@@ -462,10 +654,19 @@ function exportCatalogToCSV() {
                 top3: vendorEntries.slice(0, 3),
                 onTimePct: p.totalOrders > 0 ? Math.round((p.onTimeOrders / p.totalOrders) * 100) : 100
             };
-        }).sort((a, b) => b.totalOrders - a.totalOrders);
+        });
 
         if (catalogSearchQuery) {
             list = list.filter(p => p.productName.toLowerCase().includes(catalogSearchQuery));
+        }
+
+        // Sorting
+        if (catalogSortBy === 'name-asc') {
+            list.sort((a, b) => a.productName.localeCompare(b.productName));
+        } else if (catalogSortBy === 'ontime-desc') {
+            list.sort((a, b) => b.onTimePct - a.onTimePct || b.totalOrders - a.totalOrders);
+        } else {
+            list.sort((a, b) => b.totalOrders - a.totalOrders);
         }
 
         if (list.length === 0) {
@@ -489,11 +690,12 @@ function exportCatalogToCSV() {
             ];
         });
 
+        const periodLabel = catalogPeriodFilter === 'all' ? 'Semua_Periode' : catalogPeriodFilter.replace(/[^a-zA-Z0-9]/g, '_');
         const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement('a');
         link.setAttribute('href', encodedUri);
-        link.setAttribute('download', `Katalog_Top3_Vendor_Penyuplai_${new Date().toISOString().slice(0, 10)}.csv`);
+        link.setAttribute('download', `Katalog_Top3_Vendor_${periodLabel}_${new Date().toISOString().slice(0, 10)}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -527,11 +729,12 @@ function exportCatalogToCSV() {
             `"${(o.status || '').replace(/"/g, '""')}"`
         ]);
 
+        const periodLabel = catalogPeriodFilter === 'all' ? 'Semua_Periode' : catalogPeriodFilter.replace(/[^a-zA-Z0-9]/g, '_');
         const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement('a');
         link.setAttribute('href', encodedUri);
-        link.setAttribute('download', `Katalog_Log_PO_${new Date().toISOString().slice(0, 10)}.csv`);
+        link.setAttribute('download', `Katalog_Log_PO_${periodLabel}_${new Date().toISOString().slice(0, 10)}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
