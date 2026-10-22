@@ -181,7 +181,7 @@
     <header class="sticky top-0 z-30 border-b border-gray-200 bg-white/95 backdrop-blur-md shadow-xs">
         <div class="mx-auto max-w-7xl px-4 lg:px-8">
             <div class="flex h-16 items-center justify-between">
-                <a href="dashboard.html" class="flex items-center gap-3 no-underline">
+                <a id="headerLogoLink" href="katalog.html" class="flex items-center gap-3 no-underline">
                     <img src="assets/logo-ethos.png" alt="PT Ethos Kreatif Indonesia" class="h-9 w-auto object-contain">
                     <div class="border-l border-gray-200 pl-3">
                         <div class="text-sm font-extrabold text-gray-900 leading-tight">Katalog Produk &amp; Penyuplai</div>
@@ -189,11 +189,11 @@
                     </div>
                 </a>
                 <div class="flex items-center gap-2.5 sm:gap-3 flex-wrap">
-                    <a href="dashboard.html" class="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-xs hover:bg-gray-50 transition">
+                    <a id="navLinkDashboard" href="dashboard.html" class="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-xs hover:bg-gray-50 transition">
                         <svg class="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
                         Dashboard Kinerja
                     </a>
-                    <a href="index.html" class="hidden sm:inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-xs hover:bg-gray-50 transition">
+                    <a id="navLinkForm" href="index.html" class="hidden sm:inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-xs hover:bg-gray-50 transition">
                         <svg class="w-3.5 h-3.5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                         Form Penilaian
                     </a>
@@ -385,17 +385,17 @@
         </div>
     </footer>
 
-    <!-- Admin Authentication Overlay (PIN 9999 Only) -->
+    <!-- Admin / User Authentication Overlay -->
     <div id="adminAuthOverlay" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-md p-4" style="display: none;">
         <div class="w-full max-w-md bg-white rounded-2xl border border-gray-200 shadow-2xl p-6 sm:p-8 text-center">
             <div class="flex justify-center mb-4">
                 <img src="assets/logo-ethos.png" alt="PT Ethos Kreatif Indonesia" class="h-12 w-auto object-contain">
             </div>
-            <h2 class="text-xl font-bold text-gray-900 mb-1">Akses Terbatas: Administrator</h2>
-            <p class="text-sm text-gray-500 mb-5">Halaman Katalog Produk hanya dapat diakses oleh Administrator dengan <strong>PIN 9999</strong>.</p>
+            <h2 class="text-xl font-bold text-gray-900 mb-1">Akses Katalog Produk</h2>
+            <p class="text-sm text-gray-500 mb-5">Halaman ini dapat diakses oleh Administrator (<strong>PIN 9999</strong>) atau User Khusus Katalog (<strong>PIN 8899</strong>).</p>
             
             <div class="mb-4">
-                <input type="password" id="adminPinInput" class="w-full text-center tracking-widest text-xl font-mono px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm" placeholder="Masukkan PIN 9999" autofocus autocomplete="off">
+                <input type="password" id="adminPinInput" class="w-full text-center tracking-widest text-xl font-mono px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm" placeholder="Masukkan PIN 9999 / 8899" autofocus autocomplete="off">
             </div>
 
             <div id="adminPinError" class="text-red-600 text-xs font-semibold mb-4" style="display: none;"></div>

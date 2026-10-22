@@ -23,6 +23,12 @@ function checkAdminAccess() {
     const savedPin = localStorage.getItem('ethos_pin');
     const authOverlay = document.getElementById('adminAuthOverlay');
     
+    // Khusus pengguna PIN 8899: dilarang akses dashboard, otomatis dialihkan ke katalog
+    if (savedPin === '8899') {
+        window.location.href = 'katalog.html';
+        return;
+    }
+
     // Hanya PIN 9999 yang boleh mengakses Dashboard
     if (savedPin === '9999') {
         if (authOverlay) authOverlay.style.display = 'none';
@@ -46,11 +52,17 @@ function initAdminAuth() {
         if (pin === '9999') {
             localStorage.setItem('ethos_pin', '9999');
             localStorage.setItem('ethos_nama', 'Administrator');
+            localStorage.removeItem('ethos_role');
             if (errEl) errEl.style.display = 'none';
             if (authOverlay) authOverlay.style.display = 'none';
             initHeader();
             initTabs();
             loadDashboardData();
+        } else if (pin === '8899') {
+            if (errEl) {
+                errEl.innerHTML = '❌ Akses Ditolak. PIN 8899 hanya diizinkan mengakses <strong>Katalog Produk</strong>.<br><a href="katalog.html" class="underline font-bold text-blue-600 mt-1 inline-block">Buka Katalog Produk &rarr;</a>';
+                errEl.style.display = 'block';
+            }
         } else {
             if (errEl) {
                 errEl.textContent = '❌ PIN salah. Akses Dashboard hanya untuk Administrator (PIN: 9999).';

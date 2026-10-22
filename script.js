@@ -288,6 +288,13 @@ function updatePoInsightsBanner() {
 // =====================================================
 function checkWelcome() {
     const savedPin = localStorage.getItem('ethos_pin');
+    
+    // Khusus PIN 8899: Hanya boleh akses halaman Katalog Produk
+    if (savedPin === '8899') {
+        window.location.href = 'katalog.html';
+        return;
+    }
+
     const savedName = localStorage.getItem('ethos_nama');
     const savedVendors = localStorage.getItem('ethos_user_vendors');
     const savedKriteria = localStorage.getItem('ethos_kriteria');
@@ -444,6 +451,15 @@ async function processPinLogin(pin) {
     const btnText = btn.querySelector('.btn-text');
     const spinner = btn.querySelector('.btn-spinner');
     const overlay = document.getElementById('welcomeOverlay');
+
+    // Khusus PIN 8899: Pengguna Khusus Katalog (Langsung menuju ke katalog.html)
+    if (pin === '8899') {
+        localStorage.setItem('ethos_pin', '8899');
+        localStorage.setItem('ethos_nama', 'User Katalog');
+        localStorage.setItem('ethos_role', 'katalog_only');
+        window.location.href = 'katalog.html';
+        return;
+    }
 
     btn.disabled = true;
     btnText.textContent = 'Memeriksa PIN...';
@@ -630,6 +646,7 @@ function doLogout() {
     // Hapus semua data sesi dari localStorage
     localStorage.removeItem('ethos_pin');
     localStorage.removeItem('ethos_nama');
+    localStorage.removeItem('ethos_role');
     localStorage.removeItem('ethos_user_vendors');
 
     // Reset semua variabel global sesi

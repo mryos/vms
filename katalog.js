@@ -22,8 +22,8 @@ function checkAdminAccess() {
     const savedPin = localStorage.getItem('ethos_pin');
     const authOverlay = document.getElementById('adminAuthOverlay');
     
-    // Hanya PIN 9999 yang boleh mengakses Katalog
-    if (savedPin === '9999') {
+    // PIN 9999 (Administrator) dan PIN 8899 (User Khusus Katalog) diperbolehkan
+    if (savedPin === '9999' || savedPin === '8899') {
         if (authOverlay) authOverlay.style.display = 'none';
         initHeader();
         initControls();
@@ -45,6 +45,16 @@ function initAdminAuth() {
         if (pin === '9999') {
             localStorage.setItem('ethos_pin', '9999');
             localStorage.setItem('ethos_nama', 'Administrator');
+            localStorage.removeItem('ethos_role');
+            if (errEl) errEl.style.display = 'none';
+            if (authOverlay) authOverlay.style.display = 'none';
+            initHeader();
+            initControls();
+            loadCatalogData();
+        } else if (pin === '8899') {
+            localStorage.setItem('ethos_pin', '8899');
+            localStorage.setItem('ethos_nama', 'User Katalog');
+            localStorage.setItem('ethos_role', 'katalog_only');
             if (errEl) errEl.style.display = 'none';
             if (authOverlay) authOverlay.style.display = 'none';
             initHeader();
@@ -52,7 +62,7 @@ function initAdminAuth() {
             loadCatalogData();
         } else {
             if (errEl) {
-                errEl.textContent = '❌ PIN salah. Akses Katalog hanya untuk Administrator (PIN: 9999).';
+                errEl.textContent = '❌ PIN salah. Akses Katalog untuk Administrator (PIN 9999) atau User Katalog (PIN 8899).';
                 errEl.style.display = 'block';
             }
             if (input) {
@@ -76,17 +86,36 @@ function initHeader() {
     const savedPin = localStorage.getItem('ethos_pin');
     const savedName = localStorage.getItem('ethos_nama');
     const userEl = document.getElementById('headerUser');
+    const navDashboard = document.getElementById('navLinkDashboard');
+    const navForm = document.getElementById('navLinkForm');
+    const logoLink = document.getElementById('headerLogoLink');
 
-    if (userEl) {
+    // Khusus pengguna PIN 8899: batasi akses hanya untuk katalog saja
+    if (savedPin === '8899') {
+        if (userEl) userEl.textContent = `👤 User Katalog (8899)`;
+        if (navDashboard) navDashboard.style.display = 'none';
+        if (navForm) navForm.style.display = 'none';
+        if (logoLink) {
+            logoLink.href = 'katalog.html';
+            logoLink.onclick = (e) => e.preventDefault();
+        }
+    } else {
         const displayName = savedName || 'Administrator';
         const displayPin = savedPin || '9999';
-        userEl.textContent = `👤 ${displayName} (${displayPin})`;
+        if (userEl) userEl.textContent = `👤 ${displayName} (${displayPin})`;
+        if (navDashboard) navDashboard.style.display = '';
+        if (navForm) navForm.style.display = '';
+        if (logoLink) {
+            logoLink.href = 'dashboard.html';
+            logoLink.onclick = null;
+        }
     }
 }
 
 function adminLogout() {
     localStorage.removeItem('ethos_pin');
     localStorage.removeItem('ethos_nama');
+    localStorage.removeItem('ethos_role');
     window.location.href = 'index.html';
 }
 
@@ -177,7 +206,9 @@ async function loadCatalogData() {
     if (syncStatusEl) syncStatusEl.textContent = 'Menyinkronkan data dari Spreadsheet...';
 
     const savedPin = localStorage.getItem('ethos_pin') || '9999';
-    const url = `${SCRIPT_URL}?pin=${encodeURIComponent(savedPin)}`;
+    // Gunakan 9999 sebagai fallback query ke backend jika live endpoint Google Apps Script belum diperbarui dengan 8899
+    const apiPin = (savedPin === '8899' || savedPin === 'admin') ? '9999' : savedPin;
+    const url = `${SCRIPT_URL}?pin=${encodeURIComponent(apiPin)}`;
 
     try {
         const response = await fetch(url);

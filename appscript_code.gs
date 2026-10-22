@@ -341,11 +341,12 @@ function doGet(e) {
 
     // Jika ada request verifikasi PIN
     if (pin) {
-      if (pin === '9999' || pin === 'admin') {
+      if (pin === '9999' || pin === 'admin' || pin === '8899') {
         return createJsonResponse({
           status: 'success',
           pin: pin,
-          namaPenilai: 'Administrator',
+          namaPenilai: pin === '8899' ? 'User Katalog' : 'Administrator',
+          role: pin === '8899' ? 'katalog_only' : 'admin',
           vendors: baseVendors,
           allVendors: allMasterVendors,
           kategori: kategoriList,
