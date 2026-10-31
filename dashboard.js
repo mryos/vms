@@ -954,7 +954,7 @@ function renderContractTable(cc) {
     if (!tableBody) return;
 
     if (!cc || !cc.list || cc.list.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text3); padding:2rem;">Belum ada data kontrak vendor terdaftar di sheet 'Kontrak Vendor'.</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text3); padding:2rem;">Belum ada data kontrak vendor terdaftar di sheet 'Kontrak Vendor'.</td></tr>`;
         const badgeCount = document.getElementById('contractBadgeCount');
         if (badgeCount) badgeCount.textContent = `0 Kontrak`;
         renderContractPaginationUI(0, 1, 0, 0);
@@ -1020,7 +1020,7 @@ function renderContractTable(cc) {
     }
 
     if (totalItems === 0) {
-        tableBody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:#94a3b8; padding:2rem;">Tidak ada kontrak pada kategori masa berlaku ini.</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#94a3b8; padding:2rem;">Tidak ada kontrak pada kategori masa berlaku ini.</td></tr>`;
         renderContractPaginationUI(0, 1, 0, 0);
         return;
     }
@@ -1044,32 +1044,17 @@ function renderContractTable(cc) {
         const cleanVendor = (c.vendor || '').replace(/\r?\n|\r/g, ' ').trim();
         const cleanJenis = (c.jenisPekerjaan || '-').replace(/\r?\n|\r/g, ' ').trim();
 
-        const days = getContractDaysRemaining(c.tglSelesai);
-        let expiryBadge = '';
-        if (days !== null) {
-            if (days < 0) {
-                expiryBadge = `<div class="mt-0.5"><span class="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">🔴 Lewat ${Math.abs(days)} hari</span></div>`;
-            } else if (days <= 30) {
-                expiryBadge = `<div class="mt-0.5"><span class="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-300">🟡 Sisa ${days} hari</span></div>`;
-            } else if (days <= 90) {
-                expiryBadge = `<div class="mt-0.5"><span class="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-semibold bg-orange-50 text-orange-700 border border-orange-200">🟠 Sisa ${days} hari</span></div>`;
-            } else {
-                expiryBadge = `<div class="mt-0.5"><span class="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">🟢 Aktif (${days} hari)</span></div>`;
-            }
-        }
-
         return `
         <tr class="hover:bg-blue-50/40 transition-colors">
             <td style="font-weight:700; color:#2563eb; font-size:0.78rem; white-space:nowrap;">#${esc(c.noKontrak)}</td>
             <td>
-                <div style="font-weight:600; color:#0f172a; max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${esc(cleanVendor)}">${esc(cleanVendor)}</div>
+                <div style="font-weight:600; color:#0f172a; max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${esc(cleanVendor)}">${esc(cleanVendor)}</div>
             </td>
             <td>
-                <div style="font-size:0.78rem; color:#475569; max-width:160px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${esc(cleanJenis)}">${esc(cleanJenis)}</div>
+                <div style="font-size:0.78rem; color:#475569; max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${esc(cleanJenis)}">${esc(cleanJenis)}</div>
             </td>
             <td style="font-size:0.75rem; color:#64748b; white-space:nowrap;">
-                <div>${esc(c.tglMulai || '-')} &ndash; ${esc(c.tglSelesai || '-')}</div>
-                ${expiryBadge}
+                ${esc(c.tglMulai || '-')} &ndash; ${esc(c.tglSelesai || '-')}
             </td>
             <td>
                 <span class="predikat-badge" style="background:${docColor}15; color:${docColor}; border:1px solid ${docColor}30; font-size:0.68rem; font-weight:600; padding:1px 6px;">
@@ -1081,11 +1066,6 @@ function renderContractTable(cc) {
                 <span class="predikat-badge" style="background:${statusColor}15; color:${statusColor}; border:1px solid ${statusColor}30; font-size:0.7rem; font-weight:700; padding:1px 6px;">
                     ${isComply ? '✓ Comply' : '✗ Not Comply'}
                 </span>
-            </td>
-            <td style="text-align:center; white-space:nowrap;">
-                <button onclick="openVendorScorecard('${esc(cleanVendor)}')" class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition shadow-2xs" title="Cetak Rapor Kinerja ${esc(cleanVendor)}">
-                    <span>📄 Rapor</span>
-                </button>
             </td>
         </tr>`;
     }).join('');
