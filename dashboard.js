@@ -1657,6 +1657,27 @@ function renderKraljicMatrix(vendors, scoreSummary, poStats, cc, kategori) {
 // =====================================================
 // VENDOR SCORECARD OFFICIAL PDF (FITUR 5)
 // =====================================================
+function calculateDeliveryDeviation(expDate, effDate) {
+    if (!expDate || !effDate || effDate === 'Belum Diterima' || effDate === '-' || expDate === '-') {
+        return { text: 'Belum Diterima', color: 'text-amber-600 font-medium', isLate: false };
+    }
+    const dExp = new Date(expDate);
+    const dEff = new Date(effDate);
+    if (isNaN(dExp.getTime()) || isNaN(dEff.getTime())) {
+        return { text: '-', color: 'text-gray-400', isLate: false };
+    }
+    const diffDays = Math.round((dEff - dExp) / (1000 * 60 * 60 * 24));
+    if (diffDays < 0) {
+        return { text: `${Math.abs(diffDays)} hari lebih cepat`, color: 'text-emerald-700 font-semibold', isLate: false };
+    } else if (diffDays === 0) {
+        return { text: 'Tepat hari-H', color: 'text-blue-700 font-semibold', isLate: false };
+    } else if (diffDays === 1) {
+        return { text: 'Tepat waktu (H+1)', color: 'text-emerald-700 font-semibold', isLate: false };
+    } else {
+        return { text: `Terlambat ${diffDays} hari`, color: 'text-rose-700 font-bold', isLate: true };
+    }
+}
+
 function openVendorScorecard(vendorName) {
     if (!vendorName) return;
 
@@ -1679,6 +1700,133 @@ function openVendorScorecard(vendorName) {
     const latePo = poData ? (poData.latePo || 0) : 0;
     const onTimeRatePct = poData ? (poData.onTimeRatePct || 100) : 100;
     const totalSpend = poData ? (poData.totalValue || 0) : (contractData ? contractData.nilai : 0);
+
+    const onTimePct = totalPo > 0 ? Math.round((onTimePo / totalPo) * 100) : 100;
+    const latePct = totalPo > 0 ? Math.round((latePo / totalPo) * 100) : 0;
+
+    // Kumpulkan seluruh data riwayat pesanan PO milik vendor ini
+    const vNameLower = vendorName.toLowerCase().trim();
+    let vendorOrders = [];
+    if (dashboardData && Array.isArray(dashboardData.allRawOrders)) {
+        vendorOrders = dashboardData.allRawOrders.filter(o => (o.vendor || '').toLowerCase().trim() === vNameLower);
+    }
+    if (vendorOrders.length === 0 && dashboardData && dashboardData.periods) {
+        for (const pk in dashboardData.periods) {
+            const pObj = dashboardData.periods[pk];
+            if (pObj && Array.isArray(pObj.rawOrders)) {
+                vendorOrders.push(...pObj.rawOrders.filter(o => (o.vendor || '').toLowerCase().trim() === vNameLower));
+            }
+        }
+    }
+    if (vendorOrders.length === 0 && poData && Array.isArray(poData.recentOrders)) {
+        vendorOrders = [...poData.recentOrders];
+    }
+
+    // Hitung komoditas / produk utama yang disuplai
+    const productFrequency = {};
+    vendorOrders.forEach(o => {
+        const pName = (o.product || '').trim();
+        if (pName && pName !== '-') {
+            productFrequency[pName] = (productFrequency[pName] || 0) + 1;
+        }
+    });
+    const topProducts = Object.entries(productFrequency)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 4);
+
+    let topProductsHtml = '';
+    if (topProducts.length > 0) {
+        topProductsHtml = `
+            <div class="mb-3 p-2.5 bg-blue-50/40 rounded-lg border border-blue-100 text-xs">
+                <span class="text-[11px] font-bold text-gray-700 uppercase tracking-wider block mb-1.5">📦 Komoditas / Produk Utama yang Disuplai:</span>
+                <div class="flex flex-wrap gap-1.5">
+                    ${topProducts.map(([pName, count]) => `
+                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-white text-gray-800 border border-gray-200 shadow-2xs">
+                            <span class="font-bold text-blue-600">${count}x PO</span>
+                            <span class="text-gray-700 truncate max-w-[260px]" title="${esc(pName)}">${esc(pName)}</span>
+                        </span>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    // Riwayat Log Pesanan PO Detail
+    let recentOrdersTableHtml = '';
+    if (vendorOrders.length > 0) {
+        const displayLimit = 10;
+        const visibleOrders = vendorOrders.slice(0, displayLimit);
+        const remainingCount = vendorOrders.length - displayLimit;
+
+        const renderPoRow = (o) => {
+            const dev = calculateDeliveryDeviation(o.expectedDate, o.effectiveDate);
+            const isFinishedOnTime = o.isOnTime;
+            const statusBadge = isFinishedOnTime
+                ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">✅ Tepat Waktu</span>`
+                : (o.status && o.status.toLowerCase().includes('proses') 
+                    ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">⏳ Proses</span>`
+                    : `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">⚠️ Terlambat</span>`);
+
+            return `
+                <tr class="hover:bg-gray-50 border-b border-gray-100 text-[11px]">
+                    <td class="py-1.5 px-2.5 font-mono font-bold text-blue-700 whitespace-nowrap">${esc(o.poNum || '-')}</td>
+                    <td class="py-1.5 px-2.5 text-gray-900 font-medium max-w-[240px] truncate" title="${esc(o.product || '-')}">${esc(o.product || '-')}</td>
+                    <td class="py-1.5 px-2.5 font-mono text-gray-600 whitespace-nowrap">${esc(o.expectedDate || '-')}</td>
+                    <td class="py-1.5 px-2.5 font-mono text-gray-600 whitespace-nowrap">${esc(o.effectiveDate || '-')}</td>
+                    <td class="py-1.5 px-2.5 whitespace-nowrap ${dev.color}">${esc(dev.text)}</td>
+                    <td class="py-1.5 px-2.5 text-center whitespace-nowrap">${statusBadge}</td>
+                </tr>
+            `;
+        };
+
+        const rowsHtml = visibleOrders.map(renderPoRow).join('');
+        let hiddenRowsHtml = '';
+        if (remainingCount > 0) {
+            hiddenRowsHtml = vendorOrders.slice(displayLimit).map(renderPoRow).join('');
+        }
+
+        recentOrdersTableHtml = `
+            <div class="mt-2.5">
+                <div class="flex items-center justify-between mb-1.5">
+                    <span class="text-[11px] font-bold text-gray-700 uppercase tracking-wider">
+                        📋 Riwayat Transaksi Pemesanan (Log Detail PO):
+                    </span>
+                    <span class="text-[10px] text-gray-500 font-medium">
+                        Menampilkan ${visibleOrders.length} dari ${vendorOrders.length} pesanan tercatat
+                    </span>
+                </div>
+                <div class="border border-gray-200 rounded-lg overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-gray-100 text-gray-700 font-bold uppercase text-[10px]">
+                            <tr>
+                                <th class="py-1.5 px-2.5 border-b border-gray-200">No. PO</th>
+                                <th class="py-1.5 px-2.5 border-b border-gray-200">Komoditas / Produk</th>
+                                <th class="py-1.5 px-2.5 border-b border-gray-200">Tgl Expected</th>
+                                <th class="py-1.5 px-2.5 border-b border-gray-200">Tgl Realisasi</th>
+                                <th class="py-1.5 px-2.5 border-b border-gray-200">Deviasi Lead-Time</th>
+                                <th class="py-1.5 px-2.5 border-b border-gray-200 text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            ${rowsHtml}
+                        </tbody>
+                        ${remainingCount > 0 ? `
+                        <tbody id="scorecardExtraPoRows" style="display: none;" class="divide-y divide-gray-100">
+                            ${hiddenRowsHtml}
+                        </tbody>
+                        ` : ''}
+                    </table>
+                </div>
+                ${remainingCount > 0 ? `
+                    <div class="text-center mt-2 no-print">
+                        <button type="button" onclick="toggleScorecardExtraPo()" id="btnToggleExtraPo" class="px-3 py-1 rounded text-[11px] font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 transition">
+                            ▼ Tampilkan Seluruh (${vendorOrders.length}) Riwayat Pesanan
+                        </button>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }
 
     // Rekomendasi Sourcing
     let recBadge = '';
@@ -1780,13 +1928,20 @@ function openVendorScorecard(vendorName) {
             <p class="text-xs text-gray-600 leading-relaxed">${recDesc}</p>
         </div>
 
-        <!-- 4. LOGISTIK & RIWAYAT PEMESANAN (PO) -->
+        <!-- 4. LOGISTIK & RIWAYAT PEMESANAN (PO SLA) -->
         <div class="mb-6">
-            <h3 class="text-xs font-bold text-gray-800 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-                <span>📦</span>
-                <span>Rekam Jejak Pemesanan &amp; Logistik (PO SLA)</span>
-            </h3>
-            <table class="w-full text-xs text-left border-collapse border border-gray-200 rounded-lg overflow-hidden">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>📦</span>
+                    <span>Rekam Jejak Pemesanan &amp; Logistik (PO SLA)</span>
+                </h3>
+                <span class="text-[11px] font-semibold text-gray-500">
+                    SLA Standar Minimum: &ge;80%
+                </span>
+            </div>
+
+            <!-- Ringkasan KPI Grid Komprehensif -->
+            <table class="w-full text-xs text-left border-collapse border border-gray-200 rounded-lg overflow-hidden mb-2.5">
                 <thead class="bg-gray-100 text-gray-700 font-bold uppercase text-[10px]">
                     <tr>
                         <th class="py-2 px-3 border border-gray-200">Total Transaksi PO</th>
@@ -1799,13 +1954,37 @@ function openVendorScorecard(vendorName) {
                 <tbody class="text-gray-900">
                     <tr>
                         <td class="py-2 px-3 border border-gray-200 font-bold">${totalPo} Pesanan</td>
-                        <td class="py-2 px-3 border border-gray-200 text-center text-emerald-700 font-semibold">✅ ${onTimePo} PO</td>
-                        <td class="py-2 px-3 border border-gray-200 text-center text-rose-700 font-semibold">⚠️ ${latePo} PO</td>
+                        <td class="py-2 px-3 border border-gray-200 text-center text-emerald-700 font-semibold">✅ ${onTimePo} PO (${onTimePct}%)</td>
+                        <td class="py-2 px-3 border border-gray-200 text-center text-rose-700 font-semibold">⚠️ ${latePo} PO (${latePct}%)</td>
                         <td class="py-2 px-3 border border-gray-200 text-center font-bold font-mono text-sm ${onTimeRatePct >= 80 ? 'text-emerald-600' : 'text-rose-600'}">${onTimeRatePct}%</td>
                         <td class="py-2 px-3 border border-gray-200 text-right font-mono font-bold">${totalSpend > 0 ? formatRupiah(totalSpend) : '-'}</td>
                     </tr>
                 </tbody>
             </table>
+
+            <!-- Visual Progress Bar Ketepatan Waktu -->
+            <div class="p-2.5 bg-gray-50 rounded-lg border border-gray-200 mb-2.5">
+                <div class="flex items-center justify-between text-xs font-semibold mb-1">
+                    <span class="text-gray-700">Distribusi Pemenuhan Waktu Pengiriman:</span>
+                    <span class="${onTimeRatePct >= 80 ? 'text-emerald-700' : 'text-rose-700'} font-bold">
+                        ${onTimeRatePct >= 80 ? '🟢 Memenuhi Standar SLA Layanan' : '🔴 Di Bawah Target SLA Minimal (80%)'}
+                    </span>
+                </div>
+                <div class="w-full bg-gray-200 h-2.5 rounded-full overflow-hidden flex">
+                    <div style="width: ${onTimePct}%" class="bg-emerald-500 h-full" title="Tepat Waktu: ${onTimePct}%"></div>
+                    <div style="width: ${latePct}%" class="bg-rose-500 h-full" title="Terlambat: ${latePct}%"></div>
+                </div>
+                <div class="flex items-center justify-between text-[10px] text-gray-500 mt-1 font-medium">
+                    <span>✅ Tepat Waktu: <strong>${onTimePo} PO (${onTimePct}%)</strong></span>
+                    <span>⚠️ Terlambat: <strong>${latePo} PO (${latePct}%)</strong></span>
+                </div>
+            </div>
+
+            <!-- Top Komoditas yang Disuplai -->
+            ${topProductsHtml}
+
+            <!-- Log Detail Transaksi PO -->
+            ${recentOrdersTableHtml}
         </div>
 
         <!-- 5. CATATAN & AREA PERBAIKAN -->
@@ -1855,6 +2034,19 @@ function openVendorScorecard(vendorName) {
 function closeVendorScorecard() {
     const modal = document.getElementById('vendorScorecardModal');
     if (modal) modal.style.display = 'none';
+}
+
+function toggleScorecardExtraPo() {
+    const extraRows = document.getElementById('scorecardExtraPoRows');
+    const btn = document.getElementById('btnToggleExtraPo');
+    if (!extraRows || !btn) return;
+    if (extraRows.style.display === 'none') {
+        extraRows.style.display = 'table-row-group';
+        btn.textContent = '▲ Sembunyikan Riwayat Tambahan';
+    } else {
+        extraRows.style.display = 'none';
+        btn.textContent = '▼ Tampilkan Seluruh Riwayat Pesanan';
+    }
 }
 
 
