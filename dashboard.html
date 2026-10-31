@@ -125,6 +125,39 @@ tailwind.config = {
     font-size: 0.72rem; font-weight: 700; line-height: 1.25rem;
   }
 
+  /* Pagination Buttons */
+  .page-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    height: 2rem;
+    padding: 0 0.5rem;
+    border-radius: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #4b5563;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .page-btn:hover:not(:disabled) {
+    background: #f3f4f6;
+    color: #111827;
+    border-color: #d1d5db;
+  }
+  .page-btn.active {
+    background: #2563eb;
+    color: #ffffff;
+    border-color: #2563eb;
+    box-shadow: 0 1px 2px 0 rgb(37 99 235 / 0.2);
+  }
+  .page-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
   /* Progress bars */
   .progress-bar-container {
     background: #e2e8f0; height: 6px; border-radius: 9999px; overflow: hidden;
@@ -642,6 +675,26 @@ tailwind.config = {
                         <tr><td colspan="8" class="text-center text-gray-400 py-8">Memuat data kontrak vendor...</td></tr>
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Contract Pagination Bar -->
+            <div id="contractPagination" class="flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 border-t border-gray-100 bg-gray-50/60 rounded-b-xl mt-2">
+                <div class="flex items-center gap-3 flex-wrap">
+                    <span class="text-xs text-gray-500 font-medium" id="contractPaginationInfo">Menampilkan 0 - 0 dari 0 kontrak</span>
+                    <div class="flex items-center gap-1.5 text-xs text-gray-500">
+                        <span>Tampilkan:</span>
+                        <select id="contractPageSizeSelect" onchange="changeContractPageSize(this.value)" class="tremor-select text-xs py-1 pl-2.5 pr-6 rounded-md border border-gray-200 bg-white shadow-2xs">
+                            <option value="5">5</option>
+                            <option value="10" selected>10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                        </select>
+                        <span>per halaman</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1.5 flex-wrap" id="contractPaginationNav">
+                    <!-- Dynamic page buttons rendered by JS -->
+                </div>
             </div>
         </div>
 

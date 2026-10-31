@@ -9,6 +9,9 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxZPk7gIhZ75OPAgdS8P
 let dashboardData = null;
 let activeTab = 'all';
 let contractExpiryFilter = 'all'; // 'all' | 'expired' | 'critical' | 'warning' | 'safe'
+let contractCurrentPage = 1;
+let contractPageSize = 10;
+let lastContractComplianceData = null;
 let slicerState = {
     period: 'all',
     category: 'all',
@@ -213,6 +216,7 @@ function initSlicers(kategoriList, periodList) {
     if (contractSearchEl && !contractSearchEl.dataset.bound) {
         contractSearchEl.dataset.bound = 'true';
         contractSearchEl.addEventListener('input', () => {
+            contractCurrentPage = 1;
             filterAndRenderDashboard();
         });
     }
@@ -915,6 +919,7 @@ function getContractDaysRemaining(dateStr) {
 
 function filterContractsByExpiry(filter) {
     contractExpiryFilter = filter;
+    contractCurrentPage = 1;
     
     // Update button styles
     const btnIds = {
@@ -936,22 +941,23 @@ function filterContractsByExpiry(filter) {
         }
     }
     
-    if (dashboardData && dashboardData.contractCompliance) {
+    if (lastContractComplianceData) {
+        renderContractTable(lastContractComplianceData);
+    } else if (dashboardData && dashboardData.contractCompliance) {
         renderContractTable(dashboardData.contractCompliance);
     }
 }
 
 function renderContractTable(cc) {
+    lastContractComplianceData = cc;
     const tableBody = document.getElementById('contractTableBody');
     if (!tableBody) return;
 
-    const badgeCount = document.getElementById('contractBadgeCount');
-    if (badgeCount && cc && Array.isArray(cc.list)) {
-        badgeCount.textContent = `${cc.list.length} Kontrak`;
-    }
-
     if (!cc || !cc.list || cc.list.length === 0) {
         tableBody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text3); padding:2rem;">Belum ada data kontrak vendor terdaftar di sheet 'Kontrak Vendor'.</td></tr>`;
+        const badgeCount = document.getElementById('contractBadgeCount');
+        if (badgeCount) badgeCount.textContent = `0 Kontrak`;
+        renderContractPaginationUI(0, 1, 0, 0);
         return;
     }
 
@@ -1007,12 +1013,28 @@ function renderContractTable(cc) {
         });
     }
 
-    if (displayList.length === 0) {
+    const totalItems = displayList.length;
+    const badgeCount = document.getElementById('contractBadgeCount');
+    if (badgeCount) {
+        badgeCount.textContent = `${totalItems} Kontrak`;
+    }
+
+    if (totalItems === 0) {
         tableBody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:#94a3b8; padding:2rem;">Tidak ada kontrak pada kategori masa berlaku ini.</td></tr>`;
+        renderContractPaginationUI(0, 1, 0, 0);
         return;
     }
 
-    tableBody.innerHTML = displayList.map(c => {
+    // Paginasi Kontrak
+    const totalPages = Math.ceil(totalItems / contractPageSize) || 1;
+    if (contractCurrentPage > totalPages) contractCurrentPage = totalPages;
+    if (contractCurrentPage < 1) contractCurrentPage = 1;
+
+    const startIndex = (contractCurrentPage - 1) * contractPageSize;
+    const endIndex = Math.min(startIndex + contractPageSize, totalItems);
+    const pagedList = displayList.slice(startIndex, endIndex);
+
+    tableBody.innerHTML = pagedList.map(c => {
         const isComply = c.status && c.status.toLowerCase() === 'comply';
         const statusColor = isComply ? '#10b981' : '#ef4444';
         
@@ -1067,6 +1089,85 @@ function renderContractTable(cc) {
             </td>
         </tr>`;
     }).join('');
+
+    renderContractPaginationUI(totalItems, totalPages, startIndex, endIndex);
+}
+
+function renderContractPaginationUI(totalItems, totalPages, startIndex, endIndex) {
+    const infoEl = document.getElementById('contractPaginationInfo');
+    const navEl = document.getElementById('contractPaginationNav');
+    if (!infoEl || !navEl) return;
+
+    infoEl.innerHTML = totalItems === 0
+        ? `Tidak ada data kontrak`
+        : `Menampilkan <strong class="text-gray-900">${startIndex + 1} - ${endIndex}</strong> dari <strong class="text-gray-900">${totalItems}</strong> kontrak`;
+
+    if (totalPages <= 1) {
+        navEl.innerHTML = '';
+        return;
+    }
+
+    let buttonsHtml = '';
+
+    // Tombol Sebelumnya (Prev)
+    buttonsHtml += `
+        <button onclick="goToContractPage(${contractCurrentPage - 1})" ${contractCurrentPage === 1 ? 'disabled' : ''} class="page-btn">
+            ‹ Prev
+        </button>
+    `;
+
+    // Tombol Angka Halaman
+    let startPage = Math.max(1, contractCurrentPage - 2);
+    let endPage = Math.min(totalPages, startPage + 4);
+    if (endPage - startPage < 4) {
+        startPage = Math.max(1, endPage - 4);
+    }
+
+    if (startPage > 1) {
+        buttonsHtml += `<button onclick="goToContractPage(1)" class="page-btn">1</button>`;
+        if (startPage > 2) buttonsHtml += `<span class="text-xs text-gray-400 px-1">…</span>`;
+    }
+
+    for (let p = startPage; p <= endPage; p++) {
+        buttonsHtml += `
+            <button onclick="goToContractPage(${p})" class="page-btn ${p === contractCurrentPage ? 'active' : ''}">
+                ${p}
+            </button>
+        `;
+    }
+
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) buttonsHtml += `<span class="text-xs text-gray-400 px-1">…</span>`;
+        buttonsHtml += `<button onclick="goToContractPage(${totalPages})" class="page-btn">${totalPages}</button>`;
+    }
+
+    // Tombol Berikutnya (Next)
+    buttonsHtml += `
+        <button onclick="goToContractPage(${contractCurrentPage + 1})" ${contractCurrentPage === totalPages ? 'disabled' : ''} class="page-btn">
+            Next ›
+        </button>
+    `;
+
+    navEl.innerHTML = buttonsHtml;
+}
+
+function goToContractPage(page) {
+    contractCurrentPage = page;
+    if (lastContractComplianceData) {
+        renderContractTable(lastContractComplianceData);
+    }
+    const section = document.getElementById('sectionContracts');
+    if (section) {
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+function changeContractPageSize(newSize) {
+    contractPageSize = parseInt(newSize, 10) || 10;
+    contractCurrentPage = 1;
+    if (lastContractComplianceData) {
+        renderContractTable(lastContractComplianceData);
+    }
 }
 
 function renderEvaluationsTable(evaluations) {
