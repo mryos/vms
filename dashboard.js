@@ -8,6 +8,7 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxZPk7gIhZ75OPAgdS8P
 // =====================================================
 let dashboardData = null;
 let activeTab = 'all';
+let contractExpiryFilter = 'all'; // 'all' | 'expired' | 'critical' | 'warning' | 'safe'
 let slicerState = {
     period: 'all',
     category: 'all',
@@ -120,6 +121,7 @@ function applyTabFilter(tab) {
     const evalSec = document.getElementById('sectionEvaluations');
     const perfSec = document.getElementById('sectionPerformance');
     const ordersCol = document.getElementById('sectionOrders');
+    const kraljicSec = document.getElementById('sectionKraljic');
 
     if (tab === 'all') {
         if (chartsSec) chartsSec.style.display = 'grid';
@@ -127,24 +129,35 @@ function applyTabFilter(tab) {
         if (evalSec) evalSec.style.display = 'block';
         if (perfSec) perfSec.style.display = 'grid';
         if (ordersCol) ordersCol.style.display = 'flex';
+        if (kraljicSec) kraljicSec.style.display = 'block';
     } else if (tab === 'clm') {
         if (chartsSec) chartsSec.style.display = 'grid';
         if (contractsSec) contractsSec.style.display = 'block';
         if (evalSec) evalSec.style.display = 'block';
         if (perfSec) perfSec.style.display = 'none';
         if (ordersCol) ordersCol.style.display = 'none';
+        if (kraljicSec) kraljicSec.style.display = 'none';
+    } else if (tab === 'kraljic') {
+        if (chartsSec) chartsSec.style.display = 'none';
+        if (contractsSec) contractsSec.style.display = 'none';
+        if (evalSec) evalSec.style.display = 'none';
+        if (perfSec) perfSec.style.display = 'none';
+        if (ordersCol) ordersCol.style.display = 'none';
+        if (kraljicSec) kraljicSec.style.display = 'block';
     } else if (tab === 'performance') {
         if (chartsSec) chartsSec.style.display = 'grid';
         if (contractsSec) contractsSec.style.display = 'none';
         if (evalSec) evalSec.style.display = 'block';
         if (perfSec) perfSec.style.display = 'grid';
         if (ordersCol) ordersCol.style.display = 'none';
+        if (kraljicSec) kraljicSec.style.display = 'none';
     } else if (tab === 'orders') {
         if (chartsSec) chartsSec.style.display = 'none';
         if (contractsSec) contractsSec.style.display = 'none';
         if (evalSec) evalSec.style.display = 'none';
         if (perfSec) perfSec.style.display = 'grid';
         if (ordersCol) ordersCol.style.display = 'flex';
+        if (kraljicSec) kraljicSec.style.display = 'none';
     }
 }
 
@@ -488,7 +501,10 @@ function renderDashboard(vendors, scoreSummary, cc, poStats, kategori, evaluatio
     renderPendingVendors(vendors, scoreSummary, kategori);
     renderPoPerformance(poStats);
 
-    // 5. Update Status & Filter Counters
+    // 5. Render Kraljic Strategic Matrix (FITUR 3)
+    renderKraljicMatrix(vendors, scoreSummary, poStats, cc, kategori);
+
+    // 6. Update Status & Filter Counters
     updateFilterCountSummary(vendors, cc, evaluations);
 }
 
@@ -677,7 +693,12 @@ function renderTopVendors(scoreSummary, vendors, categories) {
             <td style="font-weight:700;">${rankBadges[i] || (i + 1)}</td>
             <td>
                 <div style="font-weight:600; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;" title="${esc(v.name)}">${esc(v.name)}</div>
-                <div style="font-size:0.75rem; color:#64748b;">${esc(v.categoryIcon)} ${esc(v.categoryName)}</div>
+                <div class="flex items-center gap-1.5 mt-0.5">
+                    <span style="font-size:0.75rem; color:#64748b;">${esc(v.categoryIcon)} ${esc(v.categoryName)}</span>
+                    <button onclick="openVendorScorecard('${esc(v.name)}')" class="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition shadow-2xs" title="Cetak Rapor Kinerja ${esc(v.name)}">
+                        📄 Rapor
+                    </button>
+                </div>
             </td>
             <td style="text-align:right; font-weight:800; color:#0f172a; font-size:1rem;">${v.avgScore.toFixed(2)}</td>
             <td style="text-align:center;">
@@ -883,6 +904,43 @@ function renderPoPerformance(poStats) {
     container.innerHTML = html;
 }
 
+function getContractDaysRemaining(dateStr) {
+    if (!dateStr || dateStr === '-' || dateStr.toLowerCase().includes('belum')) return null;
+    const target = new Date(dateStr);
+    if (isNaN(target.getTime())) return null;
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    return Math.ceil((target - now) / (1000 * 60 * 60 * 24));
+}
+
+function filterContractsByExpiry(filter) {
+    contractExpiryFilter = filter;
+    
+    // Update button styles
+    const btnIds = {
+        'all': 'btnExpAll',
+        'expired': 'btnExpExpired',
+        'critical': 'btnExpCritical',
+        'warning': 'btnExpWarning',
+        'safe': 'btnExpSafe'
+    };
+    
+    for (const key in btnIds) {
+        const btn = document.getElementById(btnIds[key]);
+        if (btn) {
+            if (key === filter) {
+                btn.className = 'px-2.5 py-1 rounded-lg bg-blue-600 text-white font-bold transition shadow-2xs';
+            } else {
+                btn.className = 'px-2.5 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200/80 transition font-medium';
+            }
+        }
+    }
+    
+    if (dashboardData && dashboardData.contractCompliance) {
+        renderContractTable(dashboardData.contractCompliance);
+    }
+}
+
 function renderContractTable(cc) {
     const tableBody = document.getElementById('contractTableBody');
     if (!tableBody) return;
@@ -897,7 +955,64 @@ function renderContractTable(cc) {
         return;
     }
 
-    tableBody.innerHTML = cc.list.map(c => {
+    // Hitung counter kategori masa berlaku (Fitur 2)
+    let countExpired = 0;
+    let countCritical = 0;
+    let countWarning = 0;
+    let countSafe = 0;
+
+    cc.list.forEach(c => {
+        const days = getContractDaysRemaining(c.tglSelesai);
+        if (days !== null) {
+            if (days < 0) countExpired++;
+            else if (days <= 30) countCritical++;
+            else if (days <= 90) countWarning++;
+            else countSafe++;
+        } else {
+            countSafe++;
+        }
+    });
+
+    const elCountExpired = document.getElementById('countExpExpired');
+    const elCountCritical = document.getElementById('countExpCritical');
+    const elCountWarning = document.getElementById('countExpWarning');
+    const elCountSafe = document.getElementById('countExpSafe');
+
+    if (elCountExpired) elCountExpired.textContent = countExpired;
+    if (elCountCritical) elCountCritical.textContent = countCritical;
+    if (elCountWarning) elCountWarning.textContent = countWarning;
+    if (elCountSafe) elCountSafe.textContent = countSafe;
+
+    // Filter daftar kontrak berdasarkan contractExpiryFilter
+    let displayList = cc.list;
+    if (contractExpiryFilter === 'expired') {
+        displayList = displayList.filter(c => {
+            const d = getContractDaysRemaining(c.tglSelesai);
+            return d !== null && d < 0;
+        });
+    } else if (contractExpiryFilter === 'critical') {
+        displayList = displayList.filter(c => {
+            const d = getContractDaysRemaining(c.tglSelesai);
+            return d !== null && d >= 0 && d <= 30;
+        });
+    } else if (contractExpiryFilter === 'warning') {
+        displayList = displayList.filter(c => {
+            const d = getContractDaysRemaining(c.tglSelesai);
+            return d !== null && d > 30 && d <= 90;
+        });
+    } else if (contractExpiryFilter === 'safe') {
+        displayList = displayList.filter(c => {
+            const d = getContractDaysRemaining(c.tglSelesai);
+            return d === null || d > 90;
+        });
+    }
+
+    if (displayList.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:#94a3b8; padding:2rem;">Tidak ada kontrak pada kategori masa berlaku ini.</td></tr>`;
+        return;
+    }
+
+    tableBody.innerHTML = displayList.map(c => {
         const isComply = c.status && c.status.toLowerCase() === 'comply';
         const statusColor = isComply ? '#10b981' : '#ef4444';
         
@@ -906,19 +1021,33 @@ function renderContractTable(cc) {
 
         const cleanVendor = (c.vendor || '').replace(/\r?\n|\r/g, ' ').trim();
         const cleanJenis = (c.jenisPekerjaan || '-').replace(/\r?\n|\r/g, ' ').trim();
-        const cleanKet = (c.keterangan || '-').replace(/\r?\n|\r/g, ' ').trim();
+
+        const days = getContractDaysRemaining(c.tglSelesai);
+        let expiryBadge = '';
+        if (days !== null) {
+            if (days < 0) {
+                expiryBadge = `<div class="mt-0.5"><span class="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">🔴 Lewat ${Math.abs(days)} hari</span></div>`;
+            } else if (days <= 30) {
+                expiryBadge = `<div class="mt-0.5"><span class="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-300">🟡 Sisa ${days} hari</span></div>`;
+            } else if (days <= 90) {
+                expiryBadge = `<div class="mt-0.5"><span class="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-semibold bg-orange-50 text-orange-700 border border-orange-200">🟠 Sisa ${days} hari</span></div>`;
+            } else {
+                expiryBadge = `<div class="mt-0.5"><span class="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">🟢 Aktif (${days} hari)</span></div>`;
+            }
+        }
 
         return `
         <tr class="hover:bg-blue-50/40 transition-colors">
             <td style="font-weight:700; color:#2563eb; font-size:0.78rem; white-space:nowrap;">#${esc(c.noKontrak)}</td>
             <td>
-                <div style="font-weight:600; color:#0f172a; max-width:240px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${esc(cleanVendor)}">${esc(cleanVendor)}</div>
+                <div style="font-weight:600; color:#0f172a; max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${esc(cleanVendor)}">${esc(cleanVendor)}</div>
             </td>
             <td>
-                <div style="font-size:0.78rem; color:#475569; max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${esc(cleanJenis)}">${esc(cleanJenis)}</div>
+                <div style="font-size:0.78rem; color:#475569; max-width:160px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${esc(cleanJenis)}">${esc(cleanJenis)}</div>
             </td>
             <td style="font-size:0.75rem; color:#64748b; white-space:nowrap;">
-                <span>${esc(c.tglMulai || '-')} &ndash; ${esc(c.tglSelesai || '-')}</span>
+                <div>${esc(c.tglMulai || '-')} &ndash; ${esc(c.tglSelesai || '-')}</div>
+                ${expiryBadge}
             </td>
             <td>
                 <span class="predikat-badge" style="background:${docColor}15; color:${docColor}; border:1px solid ${docColor}30; font-size:0.68rem; font-weight:600; padding:1px 6px;">
@@ -931,8 +1060,10 @@ function renderContractTable(cc) {
                     ${isComply ? '✓ Comply' : '✗ Not Comply'}
                 </span>
             </td>
-            <td>
-                <div style="font-size:0.75rem; color:#64748b; max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${esc(cleanKet)}">${esc(cleanKet)}</div>
+            <td style="text-align:center; white-space:nowrap;">
+                <button onclick="openVendorScorecard('${esc(cleanVendor)}')" class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition shadow-2xs" title="Cetak Rapor Kinerja ${esc(cleanVendor)}">
+                    <span>📄 Rapor</span>
+                </button>
             </td>
         </tr>`;
     }).join('');
@@ -950,7 +1081,7 @@ function renderEvaluationsTable(evaluations) {
     }
 
     if (!evaluations || evaluations.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text3); padding:2rem;">Belum ada data penilaian vendor. Mulai beri penilaian dari halaman utama.</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text3); padding:2rem;">Belum ada data penilaian vendor. Mulai beri penilaian dari halaman utama.</td></tr>`;
         return;
     }
 
@@ -985,6 +1116,11 @@ function renderEvaluationsTable(evaluations) {
             </td>
             <td>
                 <div style="font-size:0.75rem; color:#64748b; max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${esc(cleanCatatan)}">${esc(cleanCatatan)}</div>
+            </td>
+            <td style="text-align:center; white-space:nowrap;">
+                <button onclick="openVendorScorecard('${esc(cleanVendor)}')" class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition shadow-2xs" title="Cetak Rapor Kinerja ${esc(cleanVendor)}">
+                    <span>📄 Rapor</span>
+                </button>
             </td>
         </tr>`;
     }).join('');
@@ -1334,4 +1470,310 @@ function renderComplianceChart(cc) {
         }]
     });
 }
+
+// =====================================================
+// KRALJIC PORTFOLIO MATRIX (FITUR 3)
+// =====================================================
+function renderKraljicMatrix(vendors, scoreSummary, poStats, cc, kategori) {
+    const listStrategicEl = document.getElementById('kraljicListStrategic');
+    const listLeverageEl = document.getElementById('kraljicListLeverage');
+    const listBottleneckEl = document.getElementById('kraljicListBottleneck');
+    const listRoutineEl = document.getElementById('kraljicListRoutine');
+
+    if (!listStrategicEl || !listLeverageEl || !listBottleneckEl || !listRoutineEl) return;
+
+    const vendorMap = {};
+    (vendors || []).forEach(v => {
+        const name = (typeof v === 'object' ? v.nama : v) || '';
+        if (name) vendorMap[name] = typeof v === 'object' ? v : { nama: name };
+    });
+
+    // Hitung total belanja (spend) per vendor dari poStats
+    const spendList = [];
+    const vendorItems = Object.keys(vendorMap).map(name => {
+        const poData = (poStats && poStats.vendorMap && poStats.vendorMap[name]) || null;
+        const totalValue = poData ? (poData.totalValue || 0) : 0;
+        const totalPo = poData ? (poData.totalPo || 0) : 0;
+        const scoreInfo = (scoreSummary && scoreSummary[name]) || null;
+        const avgScore = scoreInfo ? scoreInfo.avgScore : 0;
+        const vObj = vendorMap[name];
+        const cat = (vObj.kategori || '').toLowerCase();
+
+        // Kategori risiko tinggi: IT, Mesin, Bahan Baku, Jasa Kritis, atau score < 3.0
+        const isHighRiskCategory = cat.includes('it') || cat.includes('teknologi') || cat.includes('mesin') || cat.includes('aset') || cat.includes('alat') || cat.includes('raw') || cat.includes('bahan');
+        const isHighRisk = isHighRiskCategory || (avgScore > 0 && avgScore < 3.0);
+
+        if (totalValue > 0) spendList.push(totalValue);
+        else if (totalPo > 0) spendList.push(totalPo * 1000000); // estimasi nilai per PO
+
+        return {
+            name: name,
+            category: vObj.kategori || 'General',
+            spend: totalValue > 0 ? totalValue : (totalPo * 1000000),
+            totalPo: totalPo,
+            avgScore: avgScore,
+            isHighRisk: isHighRisk
+        };
+    });
+
+    // Hitung median spend
+    spendList.sort((a, b) => a - b);
+    const medianSpend = spendList.length > 0 ? spendList[Math.floor(spendList.length / 2)] : 5000000;
+
+    const strategicList = [];
+    const leverageList = [];
+    const bottleneckList = [];
+    const routineList = [];
+
+    vendorItems.forEach(item => {
+        const isHighSpend = item.spend >= medianSpend && item.spend > 0;
+        if (isHighSpend && item.isHighRisk) {
+            strategicList.push(item);
+        } else if (isHighSpend && !item.isHighRisk) {
+            leverageList.push(item);
+        } else if (!isHighSpend && item.isHighRisk) {
+            bottleneckList.push(item);
+        } else {
+            routineList.push(item);
+        }
+    });
+
+    // Update Counter Badges
+    const elTotKraljic = document.getElementById('kraljicTotalVendorsCount');
+    const elCountStrat = document.getElementById('kraljicCountStrategic');
+    const elCountLev = document.getElementById('kraljicCountLeverage');
+    const elCountBot = document.getElementById('kraljicCountBottleneck');
+    const elCountRout = document.getElementById('kraljicCountRoutine');
+
+    if (elTotKraljic) elTotKraljic.textContent = `${vendorItems.length} Rekanan Terpetakan`;
+    if (elCountStrat) elCountStrat.textContent = `${strategicList.length} Vendor`;
+    if (elCountLev) elCountLev.textContent = `${leverageList.length} Vendor`;
+    if (elCountBot) elCountBot.textContent = `${bottleneckList.length} Vendor`;
+    if (elCountRout) elCountRout.textContent = `${routineList.length} Vendor`;
+
+    function renderKraljicPillList(list, badgeColor) {
+        if (list.length === 0) {
+            return `<div class="text-[11px] text-gray-400 italic py-3 text-center">Belum ada rekanan di kuadran ini.</div>`;
+        }
+        return `
+        <div class="flex items-center gap-1.5 flex-wrap">
+            ${list.map(v => `
+                <button onclick="openVendorScorecard('${esc(v.name)}')" class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border ${badgeColor} text-xs font-semibold transition hover:shadow-xs group cursor-pointer" title="Cetak Rapor Kinerja: ${esc(v.name)}">
+                    <span class="truncate max-w-[130px] sm:max-w-[170px] text-gray-900 group-hover:text-blue-600">${esc(v.name)}</span>
+                    <span class="text-[10px] font-mono px-1 py-0.2 bg-white rounded border border-gray-200/80 text-gray-600">${v.avgScore > 0 ? v.avgScore.toFixed(1) + '★' : v.totalPo + ' PO'}</span>
+                    <span class="text-[10px] text-blue-600 opacity-60 group-hover:opacity-100">📄</span>
+                </button>
+            `).join('')}
+        </div>`;
+    }
+
+    listStrategicEl.innerHTML = renderKraljicPillList(strategicList, 'border-purple-200 bg-purple-50/60');
+    listLeverageEl.innerHTML = renderKraljicPillList(leverageList, 'border-blue-200 bg-blue-50/60');
+    listBottleneckEl.innerHTML = renderKraljicPillList(bottleneckList, 'border-amber-200 bg-amber-50/60');
+    listRoutineEl.innerHTML = renderKraljicPillList(routineList, 'border-gray-200 bg-gray-50/60');
+}
+
+// =====================================================
+// VENDOR SCORECARD OFFICIAL PDF (FITUR 5)
+// =====================================================
+function openVendorScorecard(vendorName) {
+    if (!vendorName) return;
+
+    const modal = document.getElementById('vendorScorecardModal');
+    const printArea = document.getElementById('scorecardPrintArea');
+    if (!modal || !printArea) return;
+
+    const vInfo = (dashboardData && dashboardData.vendors && dashboardData.vendors.find(v => v.nama === vendorName)) || { nama: vendorName };
+    const scoreData = (dashboardData && dashboardData.scoreSummary && dashboardData.scoreSummary[vendorName]) || null;
+    const poData = (dashboardData && dashboardData.poStats && dashboardData.poStats.vendorMap && dashboardData.poStats.vendorMap[vendorName]) || null;
+    const contractData = (dashboardData && dashboardData.contractCompliance && dashboardData.contractCompliance.list && dashboardData.contractCompliance.list.find(c => c.vendor === vendorName)) || null;
+    const evals = (dashboardData && dashboardData.evaluationsList && dashboardData.evaluationsList.filter(e => e.vendor === vendorName)) || [];
+
+    const avgScore = scoreData ? parseFloat(scoreData.avgScore || 0) : (evals.length > 0 ? (evals.reduce((sum, e) => sum + (parseFloat(e.score) || 0), 0) / evals.length) : 0);
+    const predikat = scoreData ? scoreData.predikat : getPredikat(avgScore);
+    const score100 = Math.round((avgScore / 5) * 100);
+
+    const totalPo = poData ? (poData.totalPo || 0) : 0;
+    const onTimePo = poData ? (poData.onTimePo || 0) : 0;
+    const latePo = poData ? (poData.latePo || 0) : 0;
+    const onTimeRatePct = poData ? (poData.onTimeRatePct || 100) : 100;
+    const totalSpend = poData ? (poData.totalValue || 0) : (contractData ? contractData.nilai : 0);
+
+    // Rekomendasi Sourcing
+    let recBadge = '';
+    let recDesc = '';
+    if (avgScore >= 4.0 && onTimeRatePct >= 85) {
+        recBadge = `<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">⭐ PREFERRED SUPPLIER (Prioritas Pengadaan)</span>`;
+        recDesc = 'Performa sangat memuaskan, kualitas layanan prima, dan pengiriman tepat waktu tinggi. Direkomendasikan untuk kontrak prioritas.';
+    } else if (avgScore >= 3.0 && onTimeRatePct >= 70) {
+        recBadge = `<span class="px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-300">✅ QUALIFIED SUPPLIER (Pertahankan)</span>`;
+        recDesc = 'Performa memenuhi standar operasional. Dapat dipertahankan untuk kerjasama berkelanjutan dengan pemantauan rutin.';
+    } else if (avgScore >= 2.0) {
+        recBadge = `<span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">⚠️ CONDITIONAL (Perlu Pembinaan)</span>`;
+        recDesc = 'Performa di bawah ekspektasi. Dibutuhkan evaluasi dan rencana perbaikan (CAPA) sebelum alokasi penambahan pesanan.';
+    } else {
+        recBadge = `<span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300">❌ UNDER REVIEW (Tinjau Ulang)</span>`;
+        recDesc = 'Performa kritis / tidak memenuhi standar minimum. Disarankan peninjauan ulang kelayakan kerjasama atau penghentian kontrak.';
+    }
+
+    const todayStr = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    const periodLabel = (slicerState && slicerState.period !== 'all') ? slicerState.period : 'Akumulasi Seluruh Periode';
+    const docNo = `EK-VMS/REP/${new Date().getFullYear()}/${vendorName.replace(/[^a-zA-Z0-9]/g, '').slice(0, 6).toUpperCase()}`;
+
+    // Ekstrak catatan evaluasi
+    const catatanList = evals.map(e => (e.catatan || '').trim()).filter(c => c && c !== '-');
+
+    printArea.innerHTML = `
+        <div class="border-b-2 border-gray-800 pb-5 mb-6">
+            <div class="flex items-start justify-between gap-4">
+                <div class="flex items-center gap-4">
+                    <img src="assets/logo-ethos.png" alt="PT Ethos Kreatif Indonesia" class="h-12 w-auto object-contain">
+                    <div>
+                        <h2 class="text-base font-extrabold text-gray-900 tracking-tight leading-snug">PT ETHOS KREATIF INDONESIA</h2>
+                        <p class="text-xs text-gray-500 font-medium">Head Office &amp; Operations · Vendor Management &amp; Procurement System</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span class="inline-block px-2.5 py-0.5 rounded text-[11px] font-mono font-bold bg-gray-100 border border-gray-300 text-gray-800">${docNo}</span>
+                    <div class="text-[11px] text-gray-500 mt-1">Tanggal Terbit: <strong>${todayStr}</strong></div>
+                    <div class="text-[11px] text-gray-500">Periode: <strong>${periodLabel}</strong></div>
+                </div>
+            </div>
+            <div class="mt-4 text-center">
+                <h1 class="text-lg sm:text-xl font-black text-gray-900 uppercase tracking-wide">RAPOR EVALUASI &amp; KINERJA REKANAN</h1>
+                <p class="text-xs text-gray-500">Official Vendor Performance Scorecard &amp; SLA Fulfillment Report</p>
+            </div>
+        </div>
+
+        <!-- 1. IDENTITAS REKANAN -->
+        <div class="mb-5 bg-gray-50/80 rounded-xl border border-gray-200 p-4">
+            <h3 class="text-xs font-bold text-gray-800 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                <span>🏢</span>
+                <span>Identitas &amp; Profil Rekanan</span>
+            </h3>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                <div>
+                    <span class="text-gray-500 block">Nama Rekanan:</span>
+                    <strong class="text-gray-900 text-sm font-bold block">${esc(vendorName)}</strong>
+                </div>
+                <div>
+                    <span class="text-gray-500 block">Kategori / Bidang:</span>
+                    <strong class="text-gray-900 block">${esc(vInfo.kategori || contractData?.jenisPekerjaan || 'Barang/Jasa')}</strong>
+                </div>
+                <div>
+                    <span class="text-gray-500 block">No. Kontrak / PKS:</span>
+                    <strong class="text-gray-900 block font-mono">${esc(contractData?.noKontrak || 'PKS-TERDAFTAR')}</strong>
+                </div>
+                <div>
+                    <span class="text-gray-500 block">Status Kepatuhan:</span>
+                    <strong class="text-gray-900 block">${contractData?.status ? esc(contractData.status) : 'Comply (Terdaftar)'}</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. EXECUTIVE SUMMARY METRICS -->
+        <div class="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="p-4 rounded-xl border border-blue-200 bg-blue-50/50 text-center">
+                <div class="text-xs font-bold text-blue-900 uppercase">Skor Kinerja Rata-rata</div>
+                <div class="text-3xl font-black text-blue-600 mt-1">${avgScore > 0 ? avgScore.toFixed(2) : 'Belum Dinilai'}</div>
+                <div class="text-xs text-blue-800 font-semibold mt-1">Skala 5.00 (${score100} / 100)</div>
+            </div>
+            <div class="p-4 rounded-xl border border-emerald-200 bg-emerald-50/50 text-center">
+                <div class="text-xs font-bold text-emerald-900 uppercase">Ketepatan Pengiriman (SLA)</div>
+                <div class="text-3xl font-black text-emerald-600 mt-1">${onTimeRatePct}%</div>
+                <div class="text-xs text-emerald-800 font-semibold mt-1">${onTimePo} tepat waktu dari ${totalPo} PO</div>
+            </div>
+            <div class="p-4 rounded-xl border border-purple-200 bg-purple-50/50 text-center">
+                <div class="text-xs font-bold text-purple-900 uppercase">Predikat Evaluasi</div>
+                <div class="text-2xl font-black text-purple-700 mt-1.5">${esc(predikat)}</div>
+                <div class="text-xs text-purple-800 font-semibold mt-1">${evals.length} sesi penilaian tercatat</div>
+            </div>
+        </div>
+
+        <!-- 3. STATUS REKOMENDASI PENGADAAN -->
+        <div class="mb-6 p-4 rounded-xl border border-gray-200 bg-white shadow-2xs">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-1.5">
+                <span class="text-xs font-bold text-gray-700 uppercase tracking-wider">Status Rekomendasi Sourcing:</span>
+                <div>${recBadge}</div>
+            </div>
+            <p class="text-xs text-gray-600 leading-relaxed">${recDesc}</p>
+        </div>
+
+        <!-- 4. LOGISTIK & RIWAYAT PEMESANAN (PO) -->
+        <div class="mb-6">
+            <h3 class="text-xs font-bold text-gray-800 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                <span>📦</span>
+                <span>Rekam Jejak Pemesanan &amp; Logistik (PO SLA)</span>
+            </h3>
+            <table class="w-full text-xs text-left border-collapse border border-gray-200 rounded-lg overflow-hidden">
+                <thead class="bg-gray-100 text-gray-700 font-bold uppercase text-[10px]">
+                    <tr>
+                        <th class="py-2 px-3 border border-gray-200">Total Transaksi PO</th>
+                        <th class="py-2 px-3 border border-gray-200 text-center">Tepat Waktu</th>
+                        <th class="py-2 px-3 border border-gray-200 text-center">Terlambat</th>
+                        <th class="py-2 px-3 border border-gray-200 text-center">On-Time SLA Rate</th>
+                        <th class="py-2 px-3 border border-gray-200 text-right">Akumulasi Nilai Belanja</th>
+                    </tr>
+                </thead>
+                <tbody class="text-gray-900">
+                    <tr>
+                        <td class="py-2 px-3 border border-gray-200 font-bold">${totalPo} Pesanan</td>
+                        <td class="py-2 px-3 border border-gray-200 text-center text-emerald-700 font-semibold">✅ ${onTimePo} PO</td>
+                        <td class="py-2 px-3 border border-gray-200 text-center text-rose-700 font-semibold">⚠️ ${latePo} PO</td>
+                        <td class="py-2 px-3 border border-gray-200 text-center font-bold font-mono text-sm ${onTimeRatePct >= 80 ? 'text-emerald-600' : 'text-rose-600'}">${onTimeRatePct}%</td>
+                        <td class="py-2 px-3 border border-gray-200 text-right font-mono font-bold">${totalSpend > 0 ? formatRupiah(totalSpend) : '-'}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 5. CATATAN & AREA PERBAIKAN -->
+        <div class="mb-8">
+            <h3 class="text-xs font-bold text-gray-800 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <span>📝</span>
+                <span>Catatan Evaluator &amp; Area Perbaikan</span>
+            </h3>
+            <div class="p-3 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-700 leading-relaxed min-h-[60px]">
+                ${catatanList.length > 0 
+                    ? `<ul class="list-disc list-inside space-y-1">${catatanList.map(c => `<li>${esc(c)}</li>`).join('')}</ul>` 
+                    : '<p class="text-gray-400 italic">Tidak ada catatan kendala khusus yang dilaporkan oleh penilai pada periode ini.</p>'}
+            </div>
+        </div>
+
+        <!-- 6. LEMBAR PENGESAHAN TANDA TANGAN -->
+        <div class="pt-6 border-t border-gray-200">
+            <div class="grid grid-cols-3 gap-6 text-center text-xs">
+                <div>
+                    <span class="text-gray-500 block mb-1">Dipersiapkan Oleh:</span>
+                    <strong class="text-gray-900 block font-bold">Procurement / Purchasing</strong>
+                    <div class="h-16"></div>
+                    <div class="border-b border-gray-400 mx-6"></div>
+                    <span class="text-[10px] text-gray-400 mt-1 block">Staff Pengadaan</span>
+                </div>
+                <div>
+                    <span class="text-gray-500 block mb-1">Ditinjau Oleh:</span>
+                    <strong class="text-gray-900 block font-bold">Vendor Management</strong>
+                    <div class="h-16"></div>
+                    <div class="border-b border-gray-400 mx-6"></div>
+                    <span class="text-[10px] text-gray-400 mt-1 block">VMS Officer / Supervisor</span>
+                </div>
+                <div>
+                    <span class="text-gray-500 block mb-1">Disetujui Oleh:</span>
+                    <strong class="text-gray-900 block font-bold">Management</strong>
+                    <div class="h-16"></div>
+                    <div class="border-b border-gray-400 mx-6"></div>
+                    <span class="text-[10px] text-gray-400 mt-1 block">Direksi / Head of Operations</span>
+                </div>
+            </div>
+        </div>
+    `;
+
+    modal.style.display = 'flex';
+}
+
+function closeVendorScorecard() {
+    const modal = document.getElementById('vendorScorecardModal');
+    if (modal) modal.style.display = 'none';
+}
+
 

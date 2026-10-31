@@ -191,6 +191,40 @@ tailwind.config = {
     .tremor-card { padding: 1.15rem; }
   }
 
+  /* Print Styles for Scorecard (FITUR 5) */
+  @media print {
+    body { background: white !important; color: black !important; padding: 0 !important; margin: 0 !important; }
+    header, footer, .filter-bar, #dashboardTabs, #adminAuthOverlay, .toast-box, .no-print, #chartsSection, #sectionContracts, #sectionEvaluations, #sectionPerformance, #sectionKraljic, .kpi-grid, #contractAlertBanner {
+      display: none !important;
+    }
+    #vendorScorecardModal {
+      position: static !important;
+      inset: auto !important;
+      display: block !important;
+      background: none !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      box-shadow: none !important;
+      border: none !important;
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+    #vendorScorecardModal > div {
+      border: none !important;
+      box-shadow: none !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+    #scorecardPrintArea {
+      padding: 1.2cm !important;
+      margin: 0 !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+    }
+  }
+
   /* Subtle animations */
   @keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
   .animate-in { animation: fadeInUp 0.4s ease both; }
@@ -271,6 +305,10 @@ tailwind.config = {
                 <button class="tremor-tab" data-tab="clm">
                     <span>📜</span>
                     <span>Kepatuhan & Kontrak</span>
+                </button>
+                <button class="tremor-tab" data-tab="kraljic">
+                    <span>🧩</span>
+                    <span>Matriks Kraljic</span>
                 </button>
                 <button class="tremor-tab" data-tab="performance">
                     <span>⭐</span>
@@ -562,10 +600,10 @@ tailwind.config = {
 
         <!-- ========== CONTRACT REPOSITORY TABLE ========== -->
         <div class="tremor-card mb-6" id="sectionContracts">
-            <div class="flex items-start justify-between gap-4 mb-4 flex-wrap">
+            <div class="flex items-start justify-between gap-4 mb-3 flex-wrap">
                 <div>
-                    <h3 class="text-base font-bold text-gray-900">Contract Repository & Compliance</h3>
-                    <p class="text-xs text-gray-500 mt-0.5">Monitoring kelengkapan dan kepatuhan kontrak vendor dari sheet Kontrak Vendor</p>
+                    <h3 class="text-base font-bold text-gray-900">Contract Repository &amp; Compliance</h3>
+                    <p class="text-xs text-gray-500 mt-0.5">Monitoring kelengkapan, kepatuhan, dan masa berlaku kontrak vendor dari sheet Kontrak Vendor</p>
                 </div>
                 <div class="flex items-center gap-2 flex-wrap">
                     <input type="text" id="contractSearchInput" placeholder="Cari No. Kontrak / Vendor..." class="text-xs px-3 py-2 rounded-xl border border-gray-200 bg-white text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xs" style="min-width: 220px;">
@@ -575,6 +613,17 @@ tailwind.config = {
                     </button>
                 </div>
             </div>
+
+            <!-- Quick Filter Pill Bar for Contract Expiry Tracker (FITUR 2) -->
+            <div class="flex items-center gap-1.5 mb-4 flex-wrap text-xs" id="contractExpiryFilters">
+                <span class="text-gray-500 font-semibold mr-1">Masa Berlaku:</span>
+                <button onclick="filterContractsByExpiry('all')" id="btnExpAll" class="px-2.5 py-1 rounded-lg bg-blue-600 text-white font-bold transition shadow-2xs">Semua</button>
+                <button onclick="filterContractsByExpiry('expired')" id="btnExpExpired" class="px-2.5 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-rose-50 hover:text-rose-700 border border-gray-200/80 transition font-medium">🔴 Kedaluwarsa (<span id="countExpExpired">0</span>)</button>
+                <button onclick="filterContractsByExpiry('critical')" id="btnExpCritical" class="px-2.5 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-amber-50 hover:text-amber-800 border border-gray-200/80 transition font-medium">🟡 Kritis &le;30 Hari (<span id="countExpCritical">0</span>)</button>
+                <button onclick="filterContractsByExpiry('warning')" id="btnExpWarning" class="px-2.5 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-orange-50 hover:text-orange-700 border border-gray-200/80 transition font-medium">🟠 Perhatian 31-90 Hari (<span id="countExpWarning">0</span>)</button>
+                <button onclick="filterContractsByExpiry('safe')" id="btnExpSafe" class="px-2.5 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 border border-gray-200/80 transition font-medium">🟢 Aktif Aman (<span id="countExpSafe">0</span>)</button>
+            </div>
+
             <div class="table-scroll-container">
                 <table class="tremor-table">
                     <thead>
@@ -582,17 +631,126 @@ tailwind.config = {
                             <th>No Kontrak</th>
                             <th>Vendor</th>
                             <th>Ruang Lingkup</th>
-                            <th>Masa Berlaku</th>
+                            <th>Masa Berlaku &amp; Status</th>
                             <th>Dokumen</th>
                             <th class="text-right">Nilai Kontrak</th>
-                            <th class="text-center">Status</th>
-                            <th>Catatan</th>
+                            <th class="text-center">Kepatuhan</th>
+                            <th class="text-center">Aksi</th>
                         </tr>
                     </thead>
                     <tbody id="contractTableBody">
                         <tr><td colspan="8" class="text-center text-gray-400 py-8">Memuat data kontrak vendor...</td></tr>
                     </tbody>
                 </table>
+            </div>
+        </div>
+
+        <!-- ========== KRALJIC MATRIX SEGMENTATION SECTION (FITUR 3) ========== -->
+        <div class="tremor-card mb-6" id="sectionKraljic" style="display: none;">
+            <div class="flex items-start justify-between gap-4 mb-4 flex-wrap border-b border-gray-100 pb-3">
+                <div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+                            Procurement Strategic Portfolio
+                        </span>
+                    </div>
+                    <h3 class="text-base font-bold text-gray-900">Matriks Portofolio Vendor (Kraljic Matrix)</h3>
+                    <p class="text-xs text-gray-500 mt-0.5">Pemetaan rekanan ke dalam 4 kuadran strategis berdasarkan <strong>Nilai Belanja (Spend)</strong> dan <strong>Dampak/Risiko Pasokan</strong>.</p>
+                </div>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-xs text-gray-500 font-medium" id="kraljicTotalVendorsCount">0 Rekanan Terpetakan</span>
+                </div>
+            </div>
+
+            <!-- 4 Kuadran Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Kuadran 1: STRATEGIC -->
+                <div class="p-4 rounded-xl border border-purple-200 bg-gradient-to-br from-purple-50/70 to-white shadow-2xs flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-start justify-between gap-2 mb-1.5">
+                            <div>
+                                <span class="text-[11px] font-bold text-purple-900 uppercase tracking-wider flex items-center gap-1">
+                                    <span>👑</span>
+                                    <span>KUADRAN 1: STRATEGIC</span>
+                                </span>
+                                <h4 class="text-xs sm:text-sm font-bold text-gray-900">Spend Tinggi · Risiko Tinggi</h4>
+                            </div>
+                            <span class="tremor-badge tremor-badge-purple text-xs" id="kraljicCountStrategic">0 Vendor</span>
+                        </div>
+                        <p class="text-[11px] text-gray-600 mb-2.5 leading-relaxed">
+                            <strong>Strategi Sourcing:</strong> Kemitraan strategis jangka panjang, PKS multi-tahun, audit berkala, dan integrasi operasional SLA ketat.
+                        </p>
+                    </div>
+                    <div class="p-2.5 bg-white/90 rounded-lg border border-purple-100 min-h-[90px] max-h-[170px] overflow-y-auto" id="kraljicListStrategic">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Kuadran 2: LEVERAGE -->
+                <div class="p-4 rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50/70 to-white shadow-2xs flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-start justify-between gap-2 mb-1.5">
+                            <div>
+                                <span class="text-[11px] font-bold text-blue-900 uppercase tracking-wider flex items-center gap-1">
+                                    <span>💰</span>
+                                    <span>KUADRAN 2: LEVERAGE</span>
+                                </span>
+                                <h4 class="text-xs sm:text-sm font-bold text-gray-900">Spend Tinggi · Risiko Rendah</h4>
+                            </div>
+                            <span class="tremor-badge tremor-badge-blue text-xs" id="kraljicCountLeverage">0 Vendor</span>
+                        </div>
+                        <p class="text-[11px] text-gray-600 mb-2.5 leading-relaxed">
+                            <strong>Strategi Sourcing:</strong> Negosiasi harga agresif, komparasi pasar berkala (marketplace), tender lelang kompetitif.
+                        </p>
+                    </div>
+                    <div class="p-2.5 bg-white/90 rounded-lg border border-blue-100 min-h-[90px] max-h-[170px] overflow-y-auto" id="kraljicListLeverage">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Kuadran 3: BOTTLENECK -->
+                <div class="p-4 rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50/70 to-white shadow-2xs flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-start justify-between gap-2 mb-1.5">
+                            <div>
+                                <span class="text-[11px] font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1">
+                                    <span>🛡️</span>
+                                    <span>KUADRAN 3: BOTTLENECK</span>
+                                </span>
+                                <h4 class="text-xs sm:text-sm font-bold text-gray-900">Spend Rendah · Risiko Tinggi</h4>
+                            </div>
+                            <span class="tremor-badge tremor-badge-amber text-xs" id="kraljicCountBottleneck">0 Vendor</span>
+                        </div>
+                        <p class="text-[11px] text-gray-600 mb-2.5 leading-relaxed">
+                            <strong>Strategi Sourcing:</strong> Jaga hubungan baik, kunci kontrak pasokan, siapkan stok pengaman (safety stock), cari rekanan alternatif.
+                        </p>
+                    </div>
+                    <div class="p-2.5 bg-white/90 rounded-lg border border-amber-100 min-h-[90px] max-h-[170px] overflow-y-auto" id="kraljicListBottleneck">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Kuadran 4: ROUTINE -->
+                <div class="p-4 rounded-xl border border-gray-200 bg-gradient-to-br from-gray-50/70 to-white shadow-2xs flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-start justify-between gap-2 mb-1.5">
+                            <div>
+                                <span class="text-[11px] font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1">
+                                    <span>📦</span>
+                                    <span>KUADRAN 4: ROUTINE / NON-CRITICAL</span>
+                                </span>
+                                <h4 class="text-xs sm:text-sm font-bold text-gray-900">Spend Rendah · Risiko Rendah</h4>
+                            </div>
+                            <span class="tremor-badge tremor-badge-gray text-xs" id="kraljicCountRoutine">0 Vendor</span>
+                        </div>
+                        <p class="text-[11px] text-gray-600 mb-2.5 leading-relaxed">
+                            <strong>Strategi Sourcing:</strong> Efisiensi proses pemesanan, standardisasi katalog produk, minimalkan waktu administrasi purchasing.
+                        </p>
+                    </div>
+                    <div class="p-2.5 bg-white/90 rounded-lg border border-gray-100 min-h-[90px] max-h-[170px] overflow-y-auto" id="kraljicListRoutine">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -622,10 +780,11 @@ tailwind.config = {
                             <th class="text-right">Skor Rata-rata</th>
                             <th class="text-center">Predikat</th>
                             <th>Catatan Evaluasi</th>
+                            <th class="text-center">Aksi</th>
                         </tr>
                     </thead>
                     <tbody id="evalTableBody">
-                        <tr><td colspan="7" class="text-center text-gray-400 py-8">Memuat hasil penilaian vendor...</td></tr>
+                        <tr><td colspan="8" class="text-center text-gray-400 py-8">Memuat hasil penilaian vendor...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -663,6 +822,33 @@ tailwind.config = {
                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
                 Kembali ke Form Penilaian
             </a>
+        </div>
+    </div>
+
+    <!-- Vendor Scorecard Official PDF Modal (FITUR 5) -->
+    <div id="vendorScorecardModal" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-md p-4 overflow-y-auto" style="display: none;">
+        <div class="w-full max-w-4xl bg-white rounded-2xl border border-gray-200 shadow-2xl overflow-hidden my-6">
+            <!-- Modal Action Header (Non-Printable) -->
+            <div class="flex items-center justify-between p-4 bg-gray-50 border-b border-gray-200 no-print">
+                <div class="flex items-center gap-2">
+                    <span class="text-lg">📄</span>
+                    <h3 class="text-sm font-bold text-gray-900">Rapor Kinerja Resmi Rekanan (Vendor Scorecard)</h3>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="window.print()" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-sm transition">
+                        <span>🖨️</span>
+                        <span>Cetak / Simpan PDF</span>
+                    </button>
+                    <button onclick="closeVendorScorecard()" class="p-1.5 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-200/60 transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Scorecard Printable Document Area -->
+            <div id="scorecardPrintArea" class="p-8 sm:p-10 bg-white text-gray-900 font-sans">
+                <!-- Dynamically populated by renderScorecardDocument() -->
+            </div>
         </div>
     </div>
 

@@ -9,7 +9,8 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxZPk7gIhZ75OPAgdS8P
 let catalogData = null;
 let catalogSearchQuery = '';
 let catalogPeriodFilter = 'all'; // 'all' | 'Q1 2026' | 'Q2 2026' | etc.
-let catalogSortBy = 'po-desc'; // 'po-desc' | 'name-asc' | 'ontime-desc'
+let catalogSortBy = 'po-desc'; // 'po-desc' | 'name-asc' | 'ontime-desc' | 'risk-desc'
+let catalogRiskFilter = 'all'; // 'all' | 'high-risk' | 'diversified'
 let catalogViewMode = 'group'; // 'group' | 'raw'
 let currentPage = 1;
 let pageSize = 25; // default 25 item per halaman
@@ -148,6 +149,17 @@ function initControls() {
         sortSelect.dataset.bound = 'true';
         sortSelect.addEventListener('change', (e) => {
             catalogSortBy = e.target.value;
+            currentPage = 1;
+            renderCatalog();
+        });
+    }
+
+    // 3b. Risk Filter Selector
+    const riskSelect = document.getElementById('catalogRiskSelect');
+    if (riskSelect && !riskSelect.dataset.bound) {
+        riskSelect.dataset.bound = 'true';
+        riskSelect.addEventListener('change', (e) => {
+            catalogRiskFilter = e.target.value;
             currentPage = 1;
             renderCatalog();
         });
@@ -418,11 +430,15 @@ function renderCatalog() {
             .sort((a, b) => b.count - a.count);
 
         const onTimeRate = p.totalOrders > 0 ? Math.round((p.onTimeOrders / p.totalOrders) * 100) : 100;
+        const topShare = vendorEntries.length > 0 ? vendorEntries[0].percentage : 0;
+        const isSingleSourceRisk = (p.totalOrders >= 2 && topShare >= 70);
         return {
             ...p,
             topVendors: vendorEntries,
             top3Vendors: vendorEntries.slice(0, 3),
-            onTimeRate
+            onTimeRate,
+            topShare,
+            isSingleSourceRisk
         };
     });
 
@@ -432,6 +448,7 @@ function renderCatalog() {
     const elTopProd = document.getElementById('catStatTopProduct');
     const elTopProdMeta = document.getElementById('catStatTopProductMeta');
     const elOnTimeRate = document.getElementById('catStatOnTimeRate');
+    const elRiskProd = document.getElementById('catStatRiskProducts');
 
     if (elTotProd) elTotProd.textContent = groupedProducts.length;
     if (elTotOrd) elTotOrd.textContent = allOrders.length;
@@ -450,10 +467,20 @@ function renderCatalog() {
         const overallRate = allOrders.length > 0 ? Math.round((totalOnTimeAll / allOrders.length) * 100) : 100;
         elOnTimeRate.textContent = `${overallRate}%`;
     }
+    if (elRiskProd) {
+        const riskCount = groupedProducts.filter(p => p.isSingleSourceRisk).length;
+        elRiskProd.textContent = riskCount;
+    }
 
-    // 4. Filter Pencarian (Live Search)
+    // 4. Filter Pencarian & Risiko
     let filteredGrouped = groupedProducts;
     let filteredOrders = allOrders;
+
+    if (catalogRiskFilter === 'high-risk') {
+        filteredGrouped = filteredGrouped.filter(p => p.isSingleSourceRisk);
+    } else if (catalogRiskFilter === 'diversified') {
+        filteredGrouped = filteredGrouped.filter(p => !p.isSingleSourceRisk);
+    }
 
     if (catalogSearchQuery) {
         filteredGrouped = groupedProducts.filter(p => {
@@ -479,6 +506,8 @@ function renderCatalog() {
     } else if (catalogSortBy === 'ontime-desc') {
         filteredGrouped.sort((a, b) => b.onTimeRate - a.onTimeRate || b.totalOrders - a.totalOrders);
         filteredOrders.sort((a, b) => (b.isOnTime ? 1 : 0) - (a.isOnTime ? 1 : 0));
+    } else if (catalogSortBy === 'risk-desc') {
+        filteredGrouped.sort((a, b) => (b.topShare || 0) - (a.topShare || 0) || b.totalOrders - a.totalOrders);
     } else {
         // Default: po-desc
         filteredGrouped.sort((a, b) => b.totalOrders - a.totalOrders);
@@ -596,6 +625,15 @@ function renderCatalog() {
                                             <svg class="w-2.5 h-2.5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
                                         </a>
                                     </div>
+                                    ${item.isSingleSourceRisk ? `
+                                        <div class="mt-1">
+                                            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-900 border border-amber-300 shadow-2xs" title="${item.topShare}% pesanan terpusat pada 1 vendor saja">
+                                                <span>⚠️ Single-Source</span>
+                                                <span class="font-mono text-amber-700">${item.topShare}%</span>
+                                                <span class="font-normal text-amber-800 truncate max-w-[120px]">(${esc(item.top3Vendors[0]?.vendor || '-')})</span>
+                                            </span>
+                                        </div>
+                                    ` : ''}
                                 </div>
                             </div>
                         </td>
@@ -643,6 +681,16 @@ function renderCatalog() {
                                         </a>
                                     </div>
                                 </div>
+                                ${item.isSingleSourceRisk ? `
+                                    <div class="mb-3 p-2.5 bg-amber-50/90 border border-amber-200 rounded-xl text-xs text-amber-950 flex items-start gap-2 shadow-2xs">
+                                        <span class="text-base leading-none mt-0.5">⚠️</span>
+                                        <div class="leading-relaxed">
+                                            <strong class="font-bold text-amber-900">Analisis Ketergantungan Pasokan:</strong> 
+                                            Sebesar <strong>${item.topShare}%</strong> dari total ${item.totalOrders} pesanan produk ini terkonsentrasi pada satu rekanan yaitu <strong>${esc(item.top3Vendors[0]?.vendor)}</strong>.
+                                            ${item.topVendors.length > 1 ? `<div class="mt-0.5 text-amber-800">💡 <em>Mitigasi Risiko: Pertimbangkan pengalihan sebagian PO ke vendor cadangan (misal: <strong>${esc(item.topVendors.slice(1, 3).map(v => v.vendor).join(', '))}</strong>) untuk menjaga stabilitas pasokan.</em></div>` : `<div class="mt-0.5 text-amber-800">💡 <em>Mitigasi Risiko: Belum ada vendor alternatif di riwayat PO. Disarankan mencari vendor pembanding baru.</em></div>`}
+                                        </div>
+                                    </div>
+                                ` : ''}
                                 <div class="table-scroll-container max-h-56 overflow-y-auto">
                                     <table class="w-full text-left border-collapse">
                                         <thead>
