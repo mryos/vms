@@ -2029,12 +2029,21 @@ function openVendorScorecard(vendorName) {
     `;
 
     modal.style.display = 'flex';
+    const scrollContainer = document.getElementById('scorecardScrollContainer');
+    if (scrollContainer) scrollContainer.scrollTop = 0;
 }
 
 function closeVendorScorecard() {
     const modal = document.getElementById('vendorScorecardModal');
     if (modal) modal.style.display = 'none';
 }
+
+// Tutup modal rapor dengan tombol Escape
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeVendorScorecard();
+    }
+});
 
 function toggleScorecardExtraPo() {
     const extraRows = document.getElementById('scorecardExtraPoRows');
