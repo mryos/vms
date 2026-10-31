@@ -301,6 +301,8 @@
                     <!-- Sort Selector -->
                     <select id="catalogSortSelect" class="tremor-select text-xs py-1.5 pl-3 pr-7 rounded-lg border border-gray-200 focus:outline-none focus:border-blue-500 shadow-2xs" title="Urutkan Data">
                         <option value="po-desc">🔢 PO Terbanyak</option>
+                        <option value="price-desc">💰 Nilai / Harga Tertinggi</option>
+                        <option value="price-asc">🏷️ Nilai / Harga Terendah</option>
                         <option value="name-asc">🔤 Nama Produk (A - Z)</option>
                         <option value="ontime-desc">⏱️ On-Time Tertinggi</option>
                         <option value="risk-desc">⚠️ Risiko Ketergantungan Tertinggi</option>
@@ -338,14 +340,15 @@
                         <tr>
                             <th class="w-10">#</th>
                             <th>Produk / Jasa &amp; Riset Pasar</th>
-                            <th class="text-center w-24">Total PO</th>
-                            <th>Top 3 Vendor Penyuplai</th>
-                            <th class="w-32 text-center">Ketepatan Waktu</th>
-                            <th class="w-24 text-center">Detail</th>
+                            <th class="text-center w-20">Total PO</th>
+                            <th>Top 3 Vendor Penyuplai &amp; Harga</th>
+                            <th class="w-40">Harga Terakhir / Kisaran</th>
+                            <th class="w-28 text-center">Ketepatan SLA</th>
+                            <th class="w-20 text-center">Detail</th>
                         </tr>
                     </thead>
                     <tbody id="catalogGroupedTableBody">
-                        <tr><td colspan="6" class="text-center text-gray-400 py-12">Memuat data katalog produk &amp; penyuplai...</td></tr>
+                        <tr><td colspan="7" class="text-center text-gray-400 py-12">Memuat data katalog produk &amp; penyuplai...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -359,13 +362,14 @@
                             <th>No. PO</th>
                             <th>Nama Produk / Jasa</th>
                             <th>Vendor Penyedia</th>
+                            <th class="text-right">Nilai / Harga PO</th>
                             <th>Tgl Expected</th>
                             <th>Tgl Realisasi</th>
                             <th>Status</th>
                         </tr>
                     </thead>
                     <tbody id="catalogRawTableBody">
-                        <tr><td colspan="7" class="text-center text-gray-400 py-12">Memuat log pemesanan...</td></tr>
+                        <tr><td colspan="8" class="text-center text-gray-400 py-12">Memuat log pemesanan...</td></tr>
                     </tbody>
                 </table>
             </div>

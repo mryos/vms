@@ -925,6 +925,7 @@ function partitionPoSheetByDate(sheet, masterMap) {
       effectiveDate: (effDate && effDate.toString().trim() !== '-') ? formatDate(effDate) : 'Belum Diterima',
       status: status,
       isOnTime: isOnTime,
+      nilai: nilai,
       periode: pId
     };
 
@@ -1196,7 +1197,8 @@ function parsePoFromSheet(sheet, masterMap) {
       expectedDate: expDate ? formatDate(expDate) : '-',
       effectiveDate: (effDate && effDate.toString().trim() !== '-') ? formatDate(effDate) : 'Belum Diterima',
       status: status,
-      isOnTime: isOnTime
+      isOnTime: isOnTime,
+      nilai: nilai
     };
 
     rawOrders.push(orderObj);

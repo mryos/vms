@@ -397,6 +397,18 @@ function renderCatalog() {
     allOrders.forEach(o => {
         const rawName = (o.product || 'Lain-lain').trim();
         const key = rawName.toLowerCase();
+
+        // Ekstraksi nilai/harga numerik bersih
+        const rawVal = o.nilai ?? o.price ?? o.totalValue ?? o.amount ?? o.grandTotal ?? 0;
+        let numVal = 0;
+        if (typeof rawVal === 'number') {
+            numVal = rawVal;
+        } else if (rawVal) {
+            const cleaned = rawVal.toString().replace(/[^0-9.-]+/g, '');
+            numVal = parseFloat(cleaned) || 0;
+        }
+        o._cleanPrice = numVal;
+
         if (!productMap[key]) {
             productMap[key] = {
                 productName: rawName,
@@ -404,6 +416,8 @@ function renderCatalog() {
                 onTimeOrders: 0,
                 lateOrders: 0,
                 vendorsCount: {},
+                vendorOrders: {},
+                prices: [],
                 orders: []
             };
         }
@@ -417,17 +431,74 @@ function renderCatalog() {
 
         const vName = (o.vendor || 'Unknown').trim();
         productMap[key].vendorsCount[vName] = (productMap[key].vendorsCount[vName] || 0) + 1;
+        if (!productMap[key].vendorOrders[vName]) {
+            productMap[key].vendorOrders[vName] = [];
+        }
+        productMap[key].vendorOrders[vName].push(o);
+
+        if (numVal > 0) {
+            productMap[key].prices.push(numVal);
+        }
         productMap[key].orders.push(o);
     });
 
     let groupedProducts = Object.values(productMap).map(p => {
+        // Kalkulasi harga agregat produk
+        const hasPrices = p.prices.length > 0;
+        const minPrice = hasPrices ? Math.min(...p.prices) : 0;
+        const maxPrice = hasPrices ? Math.max(...p.prices) : 0;
+        const avgPrice = hasPrices ? Math.round(p.prices.reduce((a, b) => a + b, 0) / p.prices.length) : 0;
+
+        // Harga pembelian terakhir (dari transaksi terbaru yang memiliki nilai > 0)
+        let lastPrice = 0;
+        for (let i = p.orders.length - 1; i >= 0; i--) {
+            if (p.orders[i]._cleanPrice > 0) {
+                lastPrice = p.orders[i]._cleanPrice;
+                break;
+            }
+        }
+        if (lastPrice === 0 && hasPrices) {
+            lastPrice = p.prices[p.prices.length - 1];
+        }
+
+        // Kalkulasi per vendor penyuplai
         const vendorEntries = Object.entries(p.vendorsCount)
-            .map(([vendor, count]) => ({
-                vendor,
-                count,
-                percentage: p.totalOrders > 0 ? Math.round((count / p.totalOrders) * 100) : 0
-            }))
+            .map(([vendor, count]) => {
+                const vOrders = p.vendorOrders[vendor] || [];
+                const vPrices = vOrders.map(o => o._cleanPrice).filter(v => v > 0);
+                let vLastPrice = 0;
+                for (let i = vOrders.length - 1; i >= 0; i--) {
+                    if (vOrders[i]._cleanPrice > 0) {
+                        vLastPrice = vOrders[i]._cleanPrice;
+                        break;
+                    }
+                }
+                const vMinPrice = vPrices.length > 0 ? Math.min(...vPrices) : 0;
+                const vMaxPrice = vPrices.length > 0 ? Math.max(...vPrices) : 0;
+                const vAvgPrice = vPrices.length > 0 ? Math.round(vPrices.reduce((a, b) => a + b, 0) / vPrices.length) : 0;
+
+                return {
+                    vendor,
+                    count,
+                    percentage: p.totalOrders > 0 ? Math.round((count / p.totalOrders) * 100) : 0,
+                    lastPrice: vLastPrice,
+                    minPrice: vMinPrice,
+                    maxPrice: vMaxPrice,
+                    avgPrice: vAvgPrice,
+                    hasPrice: vPrices.length > 0
+                };
+            })
             .sort((a, b) => b.count - a.count);
+
+        // Identifikasi vendor dengan harga termurah (hanya jika ada >= 2 vendor yang memiliki data harga)
+        const vendorsWithPrice = vendorEntries.filter(v => v.lastPrice > 0);
+        let lowestPrice = 0;
+        if (vendorsWithPrice.length > 0) {
+            lowestPrice = Math.min(...vendorsWithPrice.map(v => v.lastPrice));
+        }
+        vendorEntries.forEach(v => {
+            v.isBestPrice = (lowestPrice > 0 && v.lastPrice === lowestPrice && vendorsWithPrice.length > 1);
+        });
 
         const onTimeRate = p.totalOrders > 0 ? Math.round((p.onTimeOrders / p.totalOrders) * 100) : 100;
         const topShare = vendorEntries.length > 0 ? vendorEntries[0].percentage : 0;
@@ -436,6 +507,12 @@ function renderCatalog() {
             ...p,
             topVendors: vendorEntries,
             top3Vendors: vendorEntries.slice(0, 3),
+            hasPrices,
+            minPrice,
+            maxPrice,
+            avgPrice,
+            lastPrice,
+            lowestPrice,
             onTimeRate,
             topShare,
             isSingleSourceRisk
@@ -503,6 +580,20 @@ function renderCatalog() {
     if (catalogSortBy === 'name-asc') {
         filteredGrouped.sort((a, b) => a.productName.localeCompare(b.productName));
         filteredOrders.sort((a, b) => (a.product || '').localeCompare(b.product || ''));
+    } else if (catalogSortBy === 'price-desc') {
+        filteredGrouped.sort((a, b) => (b.lastPrice || 0) - (a.lastPrice || 0) || b.totalOrders - a.totalOrders);
+        filteredOrders.sort((a, b) => (b._cleanPrice || 0) - (a._cleanPrice || 0));
+    } else if (catalogSortBy === 'price-asc') {
+        filteredGrouped.sort((a, b) => {
+            if ((a.lastPrice || 0) === 0 && (b.lastPrice || 0) > 0) return 1;
+            if ((b.lastPrice || 0) === 0 && (a.lastPrice || 0) > 0) return -1;
+            return (a.lastPrice || 0) - (b.lastPrice || 0) || b.totalOrders - a.totalOrders;
+        });
+        filteredOrders.sort((a, b) => {
+            if ((a._cleanPrice || 0) === 0 && (b._cleanPrice || 0) > 0) return 1;
+            if ((b._cleanPrice || 0) === 0 && (a._cleanPrice || 0) > 0) return -1;
+            return (a._cleanPrice || 0) - (b._cleanPrice || 0);
+        });
     } else if (catalogSortBy === 'ontime-desc') {
         filteredGrouped.sort((a, b) => b.onTimeRate - a.onTimeRate || b.totalOrders - a.totalOrders);
         filteredOrders.sort((a, b) => (b.isOnTime ? 1 : 0) - (a.isOnTime ? 1 : 0));
@@ -537,25 +628,43 @@ function renderCatalog() {
     // 7. Render Mode Grouped (Agregasi Produk & Top 3 Penyuplai Format Kompak)
     if (groupedTbody) {
         if (pagedGrouped.length === 0) {
-            groupedTbody.innerHTML = `<tr><td colspan="6" class="text-center text-gray-400 py-12">Tidak ada produk atau penyuplai yang cocok dengan kriteria filter.</td></tr>`;
+            groupedTbody.innerHTML = `<tr><td colspan="7" class="text-center text-gray-400 py-12">Tidak ada produk atau penyuplai yang cocok dengan kriteria filter.</td></tr>`;
         } else {
             groupedTbody.innerHTML = pagedGrouped.map((item, idx) => {
                 const globalIdx = startIndex + idx;
                 const rankIcons = ['🥇', '🥈', '🥉'];
                 const rankBorderColors = ['border-amber-300 bg-amber-50/70 text-amber-950', 'border-slate-300 bg-slate-50 text-slate-800', 'border-orange-300 bg-orange-50/70 text-orange-950'];
 
-                // Top 3 vendor dalam 1 baris badge horizontal yang ringkas
+                // Top 3 vendor dalam badge informatif dengan harga & penanda termurah
                 const topVendorsHtml = item.top3Vendors.map((v, rIdx) => {
                     const icon = rankIcons[rIdx] || '•';
                     const colorClass = rankBorderColors[rIdx] || 'border-gray-200 bg-gray-50 text-gray-800';
+                    const priceText = v.lastPrice > 0 ? formatCompactRupiah(v.lastPrice) : '-';
+                    const bestPriceBadge = v.isBestPrice
+                        ? `<span class="inline-flex items-center gap-0.5 px-1 py-0.2 rounded bg-emerald-100 text-emerald-800 text-[10px] font-extrabold tracking-tight" title="Vendor dengan harga pengadaan paling hemat untuk produk ini">🟢 Termurah</span>`
+                        : '';
+
                     return `
-                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border ${colorClass} text-xs shadow-2xs" title="${esc(v.vendor)}">
-                            <span>${icon}</span>
-                            <span class="font-semibold text-gray-900 truncate max-w-[150px] sm:max-w-[200px]">${esc(v.vendor)}</span>
-                            <span class="font-mono text-[11px] font-semibold text-blue-700 bg-white px-1.5 py-0.2 rounded border border-gray-200/80">
-                                ${v.count} PO · ${v.percentage}%
-                            </span>
-                        </span>
+                        <div class="inline-flex flex-col gap-0.5 px-2 py-1 rounded-md border ${colorClass} text-xs shadow-2xs min-w-[130px] sm:min-w-[150px]">
+                            <div class="flex items-center justify-between gap-1.5">
+                                <div class="flex items-center gap-1 min-w-0" title="${esc(v.vendor)}">
+                                    <span>${icon}</span>
+                                    <span class="font-bold text-gray-900 truncate max-w-[100px] sm:max-w-[130px]">${esc(v.vendor)}</span>
+                                </div>
+                                <span class="font-mono text-[10px] font-bold text-blue-700 bg-white px-1.5 py-0.2 rounded border border-gray-200/90 whitespace-nowrap shadow-2xs">
+                                    ${v.count} PO · ${v.percentage}%
+                                </span>
+                            </div>
+                            <div class="flex items-center justify-between gap-1 pt-1 border-t border-gray-200/60 mt-0.5">
+                                <span class="text-[10px] text-gray-500 font-medium">Harga PO:</span>
+                                <div class="flex items-center gap-1">
+                                    <span class="font-mono text-[11px] font-bold ${v.isBestPrice ? 'text-emerald-700' : (v.lastPrice > 0 ? 'text-gray-900' : 'text-gray-400')}">
+                                        ${priceText}
+                                    </span>
+                                    ${bestPriceBadge}
+                                </div>
+                            </div>
+                        </div>
                     `;
                 }).join('');
 
@@ -574,6 +683,37 @@ function renderCatalog() {
                     onTimeBadge = `<span class="tremor-badge bg-rose-50 text-rose-700 border-rose-200 font-semibold">⚠️ ${item.onTimeRate}%</span>`;
                 }
 
+                // Kolom Harga Terakhir & Kisaran
+                let priceColumnHtml = '';
+                if (item.hasPrices && item.lastPrice > 0) {
+                    const hasRange = item.minPrice > 0 && item.maxPrice > item.minPrice;
+                    priceColumnHtml = `
+                        <div class="flex flex-col py-0.5">
+                            <div class="flex items-baseline gap-1">
+                                <span class="text-[10px] text-gray-400 font-medium">Terakhir:</span>
+                                <span class="font-mono font-bold text-xs text-gray-900" title="Harga Pembelian Terakhir">${formatRupiah(item.lastPrice)}</span>
+                            </div>
+                            ${hasRange ? `
+                                <div class="text-[10px] text-gray-500 font-mono mt-0.5 flex items-center gap-1" title="Rentang Pengadaan: ${formatRupiah(item.minPrice)} s/d ${formatRupiah(item.maxPrice)}">
+                                    <span class="text-gray-400">Kisaran:</span>
+                                    <span class="font-semibold text-slate-700">${formatCompactRupiah(item.minPrice)} - ${formatCompactRupiah(item.maxPrice)}</span>
+                                </div>
+                            ` : `
+                                <div class="text-[10px] text-emerald-600 font-medium mt-0.5 flex items-center gap-1">
+                                    <span>✓</span> <span>Harga seragam</span>
+                                </div>
+                            `}
+                        </div>
+                    `;
+                } else {
+                    priceColumnHtml = `
+                        <div class="flex flex-col text-gray-400 py-0.5">
+                            <span class="text-xs font-mono">-</span>
+                            <span class="text-[10px] text-gray-400">Belum ada nilai PO</span>
+                        </div>
+                    `;
+                }
+
                 // Sub-table untuk rincian PO produk ini
                 const poRowsHtml = item.orders.map(o => {
                     let stBadge = '';
@@ -585,10 +725,15 @@ function renderCatalog() {
                     } else {
                         stBadge = `<span class="px-2 py-0.5 text-[11px] font-semibold rounded bg-blue-50 text-blue-700 border border-blue-200">⏳ Proses</span>`;
                     }
+                    const poPriceCell = o._cleanPrice > 0
+                        ? `<span class="font-mono font-bold text-gray-900 text-xs">${formatRupiah(o._cleanPrice)}</span>`
+                        : `<span class="text-gray-400 font-mono text-[11px]">-</span>`;
+
                     return `
                         <tr class="border-b border-gray-100 text-xs hover:bg-gray-50/50">
                             <td class="py-1 px-3 font-mono font-semibold text-gray-800">${esc(o.poNum || '-')}</td>
                             <td class="py-1 px-3 text-gray-700">${esc(o.vendor || '-')}</td>
+                            <td class="py-1 px-3 text-right whitespace-nowrap">${poPriceCell}</td>
                             <td class="py-1 px-3 text-gray-500 font-mono text-[11px]">${esc(o.expectedDate || '-')}</td>
                             <td class="py-1 px-3 text-gray-500 font-mono text-[11px]">${esc(o.effectiveDate || '-')}</td>
                             <td class="py-1 px-3">${stBadge}</td>
@@ -648,6 +793,9 @@ function renderCatalog() {
                                 ${otherVendorsNotice}
                             </div>
                         </td>
+                        <td>
+                            ${priceColumnHtml}
+                        </td>
                         <td class="text-center">
                             ${onTimeBadge}
                         </td>
@@ -658,7 +806,7 @@ function renderCatalog() {
                         </td>
                     </tr>
                     <tr id="productPoRow_${globalIdx}" style="display: none;" class="bg-gray-50/70 border-b border-gray-200">
-                        <td colspan="6" class="p-3">
+                        <td colspan="7" class="p-3">
                             <div class="bg-white rounded-xl border border-gray-200 p-3 shadow-xs">
                                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2.5 pb-2 border-b border-gray-100">
                                     <div>
@@ -697,6 +845,7 @@ function renderCatalog() {
                                             <tr class="text-[10px] text-gray-500 uppercase border-b border-gray-200 bg-gray-50/90 sticky top-0">
                                                 <th class="py-1 px-3">No. PO</th>
                                                 <th class="py-1 px-3">Vendor</th>
+                                                <th class="py-1 px-3 text-right">Nilai / Harga PO</th>
                                                 <th class="py-1 px-3">Tgl Expected</th>
                                                 <th class="py-1 px-3">Tgl Realisasi</th>
                                                 <th class="py-1 px-3">Status</th>
@@ -718,7 +867,7 @@ function renderCatalog() {
     // 8. Render Mode Raw (Log Seluruh PO Format Kompak)
     if (rawTbody) {
         if (pagedOrders.length === 0) {
-            rawTbody.innerHTML = `<tr><td colspan="7" class="text-center text-gray-400 py-12">Tidak ada data pesanan PO yang ditemukan.</td></tr>`;
+            rawTbody.innerHTML = `<tr><td colspan="8" class="text-center text-gray-400 py-12">Tidak ada data pesanan PO yang ditemukan.</td></tr>`;
         } else {
             rawTbody.innerHTML = pagedOrders.map((o, idx) => {
                 const globalIdx = startIndex + idx;
@@ -734,6 +883,10 @@ function renderCatalog() {
 
                 const tokpedUrl = getMarketplaceUrl('tokopedia', o.product);
                 const shopeeUrl = getMarketplaceUrl('shopee', o.product);
+
+                const rawPriceCell = o._cleanPrice > 0
+                    ? `<span class="font-mono font-bold text-gray-900 text-xs">${formatRupiah(o._cleanPrice)}</span>`
+                    : `<span class="text-gray-400 font-mono text-[11px]">-</span>`;
 
                 return `
                     <tr class="hover:bg-gray-50/80 transition-colors">
@@ -751,6 +904,7 @@ function renderCatalog() {
                             </div>
                         </td>
                         <td class="text-xs text-gray-600">${esc(o.vendor || '-')}</td>
+                        <td class="text-xs text-right whitespace-nowrap">${rawPriceCell}</td>
                         <td class="text-xs text-gray-500 font-mono text-[11px]">${esc(o.expectedDate || '-')}</td>
                         <td class="text-xs text-gray-500 font-mono text-[11px]">${esc(o.effectiveDate || '-')}</td>
                         <td class="text-xs">${statusBadge}</td>
@@ -854,23 +1008,49 @@ function exportCatalogToCSV() {
         allOrders.forEach(o => {
             const rawName = (o.product || 'Lain-lain').trim();
             const key = rawName.toLowerCase();
+            const rawVal = o.nilai ?? o.price ?? o.totalValue ?? o.amount ?? o.grandTotal ?? 0;
+            let numVal = 0;
+            if (typeof rawVal === 'number') {
+                numVal = rawVal;
+            } else if (rawVal) {
+                const cleaned = rawVal.toString().replace(/[^0-9.-]+/g, '');
+                numVal = parseFloat(cleaned) || 0;
+            }
+
             if (!productMap[key]) {
-                productMap[key] = { productName: rawName, totalOrders: 0, onTimeOrders: 0, vendorsCount: {} };
+                productMap[key] = { productName: rawName, totalOrders: 0, onTimeOrders: 0, vendorsCount: {}, prices: [], orders: [] };
             }
             productMap[key].totalOrders++;
             if (o.isOnTime) productMap[key].onTimeOrders++;
             const vName = (o.vendor || 'Unknown').trim();
             productMap[key].vendorsCount[vName] = (productMap[key].vendorsCount[vName] || 0) + 1;
+            if (numVal > 0) productMap[key].prices.push(numVal);
+            productMap[key].orders.push({ ...o, _cleanPrice: numVal });
         });
 
         let list = Object.values(productMap).map(p => {
             const vendorEntries = Object.entries(p.vendorsCount)
                 .map(([vendor, count]) => ({ vendor, count, pct: Math.round((count / p.totalOrders) * 100) }))
                 .sort((a, b) => b.count - a.count);
+
+            const hasPrices = p.prices.length > 0;
+            const minPrice = hasPrices ? Math.min(...p.prices) : 0;
+            const maxPrice = hasPrices ? Math.max(...p.prices) : 0;
+            let lastPrice = 0;
+            for (let i = p.orders.length - 1; i >= 0; i--) {
+                if (p.orders[i]._cleanPrice > 0) {
+                    lastPrice = p.orders[i]._cleanPrice;
+                    break;
+                }
+            }
+
             return {
                 ...p,
                 top3: vendorEntries.slice(0, 3),
-                onTimePct: p.totalOrders > 0 ? Math.round((p.onTimeOrders / p.totalOrders) * 100) : 100
+                onTimePct: p.totalOrders > 0 ? Math.round((p.onTimeOrders / p.totalOrders) * 100) : 100,
+                lastPrice,
+                minPrice,
+                maxPrice
             };
         });
 
@@ -881,6 +1061,10 @@ function exportCatalogToCSV() {
         // Sorting
         if (catalogSortBy === 'name-asc') {
             list.sort((a, b) => a.productName.localeCompare(b.productName));
+        } else if (catalogSortBy === 'price-desc') {
+            list.sort((a, b) => (b.lastPrice || 0) - (a.lastPrice || 0) || b.totalOrders - a.totalOrders);
+        } else if (catalogSortBy === 'price-asc') {
+            list.sort((a, b) => (a.lastPrice || 0) - (b.lastPrice || 0) || b.totalOrders - a.totalOrders);
         } else if (catalogSortBy === 'ontime-desc') {
             list.sort((a, b) => b.onTimePct - a.onTimePct || b.totalOrders - a.totalOrders);
         } else {
@@ -892,7 +1076,7 @@ function exportCatalogToCSV() {
             return;
         }
 
-        const headers = ['No', 'Produk / Jasa', 'Total Pemesanan (PO)', 'Top Penyuplai #1', 'Penyuplai #2', 'Penyuplai #3', 'Ketepatan Waktu (%)'];
+        const headers = ['No', 'Produk / Jasa', 'Total Pemesanan (PO)', 'Harga Terakhir (IDR)', 'Kisaran Terendah (IDR)', 'Kisaran Tertinggi (IDR)', 'Top Penyuplai #1', 'Penyuplai #2', 'Penyuplai #3', 'Ketepatan Waktu (%)'];
         const rows = list.map((item, idx) => {
             const v1 = item.top3[0] ? `${item.top3[0].vendor} (${item.top3[0].count} PO - ${item.top3[0].pct}%)` : '-';
             const v2 = item.top3[1] ? `${item.top3[1].vendor} (${item.top3[1].count} PO - ${item.top3[1].pct}%)` : '-';
@@ -901,6 +1085,9 @@ function exportCatalogToCSV() {
                 idx + 1,
                 `"${item.productName.replace(/"/g, '""')}"`,
                 item.totalOrders,
+                item.lastPrice > 0 ? item.lastPrice : '-',
+                item.minPrice > 0 ? item.minPrice : '-',
+                item.maxPrice > 0 ? item.maxPrice : '-',
                 `"${v1.replace(/"/g, '""')}"`,
                 `"${v2.replace(/"/g, '""')}"`,
                 `"${v3.replace(/"/g, '""')}"`,
@@ -936,16 +1123,20 @@ function exportCatalogToCSV() {
             return;
         }
 
-        const headers = ['No', 'No PO', 'Nama Produk / Jasa', 'Vendor', 'Tgl Expected', 'Tgl Realisasi', 'Status'];
-        const rows = orders.map((o, idx) => [
-            idx + 1,
-            `"${(o.poNum || '').replace(/"/g, '""')}"`,
-            `"${(o.product || '').replace(/"/g, '""')}"`,
-            `"${(o.vendor || '').replace(/"/g, '""')}"`,
-            `"${(o.expectedDate || '').replace(/"/g, '""')}"`,
-            `"${(o.effectiveDate || '').replace(/"/g, '""')}"`,
-            `"${(o.status || '').replace(/"/g, '""')}"`
-        ]);
+        const headers = ['No', 'No PO', 'Nama Produk / Jasa', 'Vendor', 'Nilai / Harga PO (IDR)', 'Tgl Expected', 'Tgl Realisasi', 'Status'];
+        const rows = orders.map((o, idx) => {
+            const rawVal = o._cleanPrice || o.nilai || 0;
+            return [
+                idx + 1,
+                `"${(o.poNum || '').replace(/"/g, '""')}"`,
+                `"${(o.product || '').replace(/"/g, '""')}"`,
+                `"${(o.vendor || '').replace(/"/g, '""')}"`,
+                rawVal > 0 ? rawVal : '-',
+                `"${(o.expectedDate || '').replace(/"/g, '""')}"`,
+                `"${(o.effectiveDate || '').replace(/"/g, '""')}"`,
+                `"${(o.status || '').replace(/"/g, '""')}"`
+            ];
+        });
 
         const periodLabel = catalogPeriodFilter === 'all' ? 'Semua_Periode' : catalogPeriodFilter.replace(/[^a-zA-Z0-9]/g, '_');
         const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
@@ -963,6 +1154,30 @@ function exportCatalogToCSV() {
 // =====================================================
 // UTILS
 // =====================================================
+function formatRupiah(number) {
+    if (!number || isNaN(number)) return 'Rp 0';
+    return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+    }).format(number);
+}
+
+function formatCompactRupiah(val) {
+    if (!val || isNaN(val)) return '-';
+    if (val >= 1000000000) {
+        return `Rp ${(val / 1000000000).toLocaleString('id-ID', { maximumFractionDigits: 1 })} M`;
+    }
+    if (val >= 1000000) {
+        return `Rp ${(val / 1000000).toLocaleString('id-ID', { maximumFractionDigits: 1 })} jt`;
+    }
+    if (val >= 1000) {
+        return `Rp ${(val / 1000).toLocaleString('id-ID', { maximumFractionDigits: 0 })} rb`;
+    }
+    return `Rp ${val.toLocaleString('id-ID')}`;
+}
+
 function esc(str) {
     if (str === undefined || str === null) return '';
     const d = document.createElement('div');
