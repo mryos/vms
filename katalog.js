@@ -341,6 +341,33 @@ function getCatalogOrders() {
 }
 
 // =====================================================
+// MARKETPLACE PRICE COMPARISON HELPER
+// =====================================================
+function cleanProductName(name) {
+    if (!name) return '';
+    let cleaned = name.replace(/\[[^\]]*\]/g, '').trim();
+    cleaned = cleaned.replace(/^[-:\s]+|[-:\s]+$/g, '').trim();
+    return cleaned || name;
+}
+
+function getMarketplaceUrl(platform, rawName) {
+    const q = cleanProductName(rawName);
+    const enc = encodeURIComponent(q);
+    switch (platform) {
+        case 'tokopedia':
+            return `https://www.tokopedia.com/search?st=product&q=${enc}`;
+        case 'shopee':
+            return `https://shopee.co.id/search?keyword=${enc}`;
+        case 'google':
+            return `https://www.google.com/search?tbm=shop&q=${enc}`;
+        case 'blibli':
+            return `https://www.blibli.com/cari/${enc}`;
+        default:
+            return `https://www.google.com/search?q=${enc}`;
+    }
+}
+
+// =====================================================
 // RENDERING FUNCTIONS
 // =====================================================
 function renderCatalog() {
@@ -540,15 +567,35 @@ function renderCatalog() {
                     `;
                 }).join('');
 
+                const cleanName = cleanProductName(item.productName);
+                const tokpedUrl = getMarketplaceUrl('tokopedia', item.productName);
+                const shopeeUrl = getMarketplaceUrl('shopee', item.productName);
+                const googleUrl = getMarketplaceUrl('google', item.productName);
+
                 return `
                     <tr class="hover:bg-gray-50/60 transition-colors border-b border-gray-100 align-middle">
                         <td class="text-xs text-gray-400 font-mono">${globalIdx + 1}</td>
                         <td>
-                            <div class="flex items-center gap-2">
-                                <span class="text-base">📦</span>
+                            <div class="flex items-start gap-2.5">
+                                <span class="text-base mt-0.5">📦</span>
                                 <div class="min-w-0">
-                                    <h4 class="text-xs sm:text-sm font-bold text-gray-900 leading-snug truncate max-w-[240px]" title="${esc(item.productName)}">${esc(item.productName)}</h4>
-                                    <span class="text-[10px] text-gray-400">${item.topVendors.length} vendor penyuplai</span>
+                                    <h4 class="text-xs sm:text-sm font-bold text-gray-900 leading-snug truncate max-w-[260px]" title="${esc(item.productName)}">${esc(item.productName)}</h4>
+                                    <div class="flex items-center gap-1.5 flex-wrap mt-1">
+                                        <span class="text-[10px] text-gray-400 font-medium">${item.topVendors.length} vendor ·</span>
+                                        <span class="text-[10px] text-gray-500 font-medium">🛒 Cek Pasar:</span>
+                                        <a href="${tokpedUrl}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 border border-emerald-200/80 transition" title="Cari '${esc(cleanName)}' di Tokopedia">
+                                            <span>Tokopedia</span>
+                                            <svg class="w-2.5 h-2.5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                                        </a>
+                                        <a href="${shopeeUrl}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-orange-50 text-orange-700 hover:bg-orange-100 hover:text-orange-800 border border-orange-200/80 transition" title="Cari '${esc(cleanName)}' di Shopee">
+                                            <span>Shopee</span>
+                                            <svg class="w-2.5 h-2.5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                                        </a>
+                                        <a href="${googleUrl}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 hover:text-blue-800 border border-blue-200/80 transition" title="Cari '${esc(cleanName)}' di Google Shopping">
+                                            <span>Google Shop</span>
+                                            <svg class="w-2.5 h-2.5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
                         </td>
@@ -575,12 +622,26 @@ function renderCatalog() {
                     <tr id="productPoRow_${globalIdx}" style="display: none;" class="bg-gray-50/70 border-b border-gray-200">
                         <td colspan="6" class="p-3">
                             <div class="bg-white rounded-xl border border-gray-200 p-3 shadow-xs">
-                                <div class="flex items-center justify-between mb-2">
-                                    <h5 class="text-xs font-bold text-gray-800 flex items-center gap-1.5">
-                                        <span>📋 Rincian Pesanan:</span>
-                                        <span class="text-blue-600">${esc(item.productName)}</span>
-                                    </h5>
-                                    <span class="text-[11px] text-gray-400">${item.orders.length} riwayat transaksi PO</span>
+                                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2.5 pb-2 border-b border-gray-100">
+                                    <div>
+                                        <h5 class="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                                            <span>📋 Rincian Pesanan:</span>
+                                            <span class="text-blue-600">${esc(item.productName)}</span>
+                                        </h5>
+                                        <span class="text-[11px] text-gray-400">${item.orders.length} riwayat transaksi PO tercatat</span>
+                                    </div>
+                                    <div class="flex items-center gap-1.5 flex-wrap">
+                                        <span class="text-xs font-semibold text-gray-500">🛒 Bandingkan Harga:</span>
+                                        <a href="${tokpedUrl}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition shadow-2xs" title="Cari di Tokopedia">
+                                            <span>🟢 Tokopedia ↗</span>
+                                        </a>
+                                        <a href="${shopeeUrl}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200 transition shadow-2xs" title="Cari di Shopee">
+                                            <span>🟠 Shopee ↗</span>
+                                        </a>
+                                        <a href="${googleUrl}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition shadow-2xs" title="Cari di Google Shopping">
+                                            <span>🔵 Google Shopping ↗</span>
+                                        </a>
+                                    </div>
                                 </div>
                                 <div class="table-scroll-container max-h-56 overflow-y-auto">
                                     <table class="w-full text-left border-collapse">
@@ -623,11 +684,24 @@ function renderCatalog() {
                     statusBadge = `<span class="tremor-badge bg-blue-50 text-blue-700 border-blue-200">⏳ ${esc(o.status || 'Proses')}</span>`;
                 }
 
+                const tokpedUrl = getMarketplaceUrl('tokopedia', o.product);
+                const shopeeUrl = getMarketplaceUrl('shopee', o.product);
+
                 return `
                     <tr class="hover:bg-gray-50/80 transition-colors">
                         <td class="text-xs text-gray-400 font-mono">${globalIdx + 1}</td>
                         <td class="text-xs font-semibold text-gray-900 font-mono">${esc(o.poNum || '-')}</td>
-                        <td class="text-xs font-semibold text-gray-900">${esc(o.product || '-')}</td>
+                        <td class="text-xs font-semibold text-gray-900">
+                            <div>
+                                <span>${esc(o.product || '-')}</span>
+                                <div class="flex items-center gap-1.5 mt-0.5">
+                                    <span class="text-[10px] text-gray-400">Riset:</span>
+                                    <a href="${tokpedUrl}" target="_blank" rel="noopener noreferrer" class="text-[10px] font-semibold text-emerald-600 hover:text-emerald-700 hover:underline" title="Cari di Tokopedia">Tokopedia ↗</a>
+                                    <span class="text-gray-300">·</span>
+                                    <a href="${shopeeUrl}" target="_blank" rel="noopener noreferrer" class="text-[10px] font-semibold text-orange-600 hover:text-orange-700 hover:underline" title="Cari di Shopee">Shopee ↗</a>
+                                </div>
+                            </div>
+                        </td>
                         <td class="text-xs text-gray-600">${esc(o.vendor || '-')}</td>
                         <td class="text-xs text-gray-500 font-mono text-[11px]">${esc(o.expectedDate || '-')}</td>
                         <td class="text-xs text-gray-500 font-mono text-[11px]">${esc(o.effectiveDate || '-')}</td>
