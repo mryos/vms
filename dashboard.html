@@ -877,7 +877,7 @@ tailwind.config = {
 
     <!-- Vendor Scorecard Official PDF Modal (FITUR 5) -->
     <div id="vendorScorecardModal" onclick="if(event.target === this) closeVendorScorecard()" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/75 backdrop-blur-sm p-2 sm:p-4 md:p-6 overflow-hidden" style="display: none;">
-        <div class="w-full max-w-3xl bg-white rounded-2xl border border-gray-200 shadow-2xl overflow-hidden flex flex-col h-[94vh] sm:h-[90vh]">
+        <div class="w-full max-w-4xl bg-white rounded-2xl border border-gray-200 shadow-2xl overflow-hidden flex flex-col h-[94vh] sm:h-[90vh]">
             <!-- Modal Action Header (STICKY & Non-Printable) -->
             <div class="flex-shrink-0 flex items-center justify-between px-4 sm:px-6 py-3 bg-gray-900 text-white border-b border-gray-800 shadow-sm no-print">
                 <div class="flex items-center gap-2.5">
@@ -901,7 +901,7 @@ tailwind.config = {
 
             <!-- Scorecard Scrollable Document Container -->
             <div class="flex-1 overflow-y-auto bg-gray-100/70 p-3 sm:p-6 flex justify-center" id="scorecardScrollContainer">
-                <div id="scorecardPrintArea" class="w-full max-w-[700px] bg-white p-6 sm:p-8 shadow-sm rounded-xl border border-gray-200/80 font-sans text-gray-900">
+                <div id="scorecardPrintArea" class="w-full max-w-[760px] bg-white p-6 sm:p-8 shadow-sm rounded-xl border border-gray-200/80 font-sans text-gray-900">
                     <!-- Dynamically populated by renderScorecardDocument() -->
                 </div>
             </div>

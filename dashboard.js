@@ -1737,13 +1737,13 @@ function openVendorScorecard(vendorName) {
     let topProductsHtml = '';
     if (topProducts.length > 0) {
         topProductsHtml = `
-            <div class="mb-3 p-2.5 bg-blue-50/40 rounded-lg border border-blue-100 text-xs">
-                <span class="text-[11px] font-bold text-gray-700 uppercase tracking-wider block mb-1.5">📦 Komoditas / Produk Utama yang Disuplai:</span>
-                <div class="flex flex-wrap gap-1.5">
+            <div class="mt-2.5 pt-2.5 border-t border-gray-200/80">
+                <div class="flex items-center gap-1.5 flex-wrap text-xs">
+                    <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider mr-1">Komoditas Utama:</span>
                     ${topProducts.map(([pName, count]) => `
-                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-white text-gray-800 border border-gray-200 shadow-2xs">
-                            <span class="font-bold text-blue-600">${count}x PO</span>
-                            <span class="text-gray-700 truncate max-w-[260px]" title="${esc(pName)}">${esc(pName)}</span>
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-white text-gray-800 border border-gray-200 shadow-2xs">
+                            <span class="font-bold text-blue-600">${count}x</span>
+                            <span class="text-gray-700 truncate max-w-[200px]" title="${esc(pName)}">${esc(pName)}</span>
                         </span>
                     `).join('')}
                 </div>
@@ -1751,7 +1751,7 @@ function openVendorScorecard(vendorName) {
         `;
     }
 
-    // Riwayat Log Pesanan PO Detail
+    // Riwayat Log Pesanan PO Detail (Format 4 Kolom Proporsional & Bebas Terpotong)
     let recentOrdersTableHtml = '';
     if (vendorOrders.length > 0) {
         const displayLimit = 10;
@@ -1762,19 +1762,27 @@ function openVendorScorecard(vendorName) {
             const dev = calculateDeliveryDeviation(o.expectedDate, o.effectiveDate);
             const isFinishedOnTime = o.isOnTime;
             const statusBadge = isFinishedOnTime
-                ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">✅ Tepat Waktu</span>`
+                ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">✅ Tepat Waktu</span>`
                 : (o.status && o.status.toLowerCase().includes('proses') 
-                    ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">⏳ Proses</span>`
-                    : `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">⚠️ Terlambat</span>`);
+                    ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-blue-50 text-blue-700 border border-blue-200">⏳ Proses</span>`
+                    : `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-rose-50 text-rose-700 border border-rose-200">⚠️ Terlambat</span>`);
 
             return `
-                <tr class="hover:bg-gray-50 border-b border-gray-100 text-[11px]">
-                    <td class="py-1.5 px-2.5 font-mono font-bold text-blue-700 whitespace-nowrap">${esc(o.poNum || '-')}</td>
-                    <td class="py-1.5 px-2.5 text-gray-900 font-medium max-w-[240px] truncate" title="${esc(o.product || '-')}">${esc(o.product || '-')}</td>
-                    <td class="py-1.5 px-2.5 font-mono text-gray-600 whitespace-nowrap">${esc(o.expectedDate || '-')}</td>
-                    <td class="py-1.5 px-2.5 font-mono text-gray-600 whitespace-nowrap">${esc(o.effectiveDate || '-')}</td>
-                    <td class="py-1.5 px-2.5 whitespace-nowrap ${dev.color}">${esc(dev.text)}</td>
-                    <td class="py-1.5 px-2.5 text-center whitespace-nowrap">${statusBadge}</td>
+                <tr class="hover:bg-gray-50/80 border-b border-gray-100 text-[11px]">
+                    <td class="py-2 px-2.5 font-mono font-bold text-blue-700 whitespace-nowrap align-top">
+                        <span title="${esc(o.poNum || '-')}">${esc(o.poNum || '-')}</span>
+                    </td>
+                    <td class="py-2 px-2.5 text-gray-800 font-medium align-top">
+                        <div class="line-clamp-2" title="${esc(o.product || '-')}">${esc(o.product || '-')}</div>
+                    </td>
+                    <td class="py-2 px-2.5 whitespace-nowrap align-top text-[10px]">
+                        <div class="text-gray-500 font-mono">Tgt: <span class="text-gray-700">${esc(o.expectedDate || '-')}</span></div>
+                        <div class="text-gray-500 font-mono mt-0.5">Rls: <span class="font-bold text-gray-900">${esc(o.effectiveDate || '-')}</span></div>
+                    </td>
+                    <td class="py-2 px-2.5 text-right whitespace-nowrap align-top">
+                        <div>${statusBadge}</div>
+                        <div class="text-[9.5px] mt-0.5 ${dev.color}">${esc(dev.text)}</div>
+                    </td>
                 </tr>
             `;
         };
@@ -1786,8 +1794,8 @@ function openVendorScorecard(vendorName) {
         }
 
         recentOrdersTableHtml = `
-            <div class="mt-2.5">
-                <div class="flex items-center justify-between mb-1.5">
+            <div class="mt-3.5 pt-3 border-t border-gray-200/80">
+                <div class="flex items-center justify-between mb-2">
                     <span class="text-[11px] font-bold text-gray-700 uppercase tracking-wider">
                         📋 Riwayat Transaksi Pemesanan (Log Detail PO):
                     </span>
@@ -1795,16 +1803,20 @@ function openVendorScorecard(vendorName) {
                         Menampilkan ${visibleOrders.length} dari ${vendorOrders.length} pesanan tercatat
                     </span>
                 </div>
-                <div class="border border-gray-200 rounded-lg overflow-hidden">
-                    <table class="w-full text-left border-collapse">
-                        <thead class="bg-gray-100 text-gray-700 font-bold uppercase text-[10px]">
+                <div class="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-2xs">
+                    <table class="w-full text-left border-collapse table-fixed">
+                        <colgroup>
+                            <col class="w-[28%] sm:w-[25%]">
+                            <col class="w-[38%] sm:w-[41%]">
+                            <col class="w-[18%] sm:w-[17%]">
+                            <col class="w-[16%] sm:w-[17%]">
+                        </colgroup>
+                        <thead class="bg-gray-100/90 text-gray-700 font-bold uppercase text-[9.5px]">
                             <tr>
-                                <th class="py-1.5 px-2.5 border-b border-gray-200">No. PO</th>
-                                <th class="py-1.5 px-2.5 border-b border-gray-200">Komoditas / Produk</th>
-                                <th class="py-1.5 px-2.5 border-b border-gray-200">Tgl Expected</th>
-                                <th class="py-1.5 px-2.5 border-b border-gray-200">Tgl Realisasi</th>
-                                <th class="py-1.5 px-2.5 border-b border-gray-200">Deviasi Lead-Time</th>
-                                <th class="py-1.5 px-2.5 border-b border-gray-200 text-center">Status</th>
+                                <th class="py-2 px-2.5 border-b border-gray-200">No. PO</th>
+                                <th class="py-2 px-2.5 border-b border-gray-200">Komoditas / Produk</th>
+                                <th class="py-2 px-2.5 border-b border-gray-200">Jadwal &amp; Realisasi</th>
+                                <th class="py-2 px-2.5 border-b border-gray-200 text-right">Status SLA</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100">
@@ -1818,8 +1830,8 @@ function openVendorScorecard(vendorName) {
                     </table>
                 </div>
                 ${remainingCount > 0 ? `
-                    <div class="text-center mt-2 no-print">
-                        <button type="button" onclick="toggleScorecardExtraPo()" id="btnToggleExtraPo" class="px-3 py-1 rounded text-[11px] font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 transition">
+                    <div class="text-center mt-2.5 no-print">
+                        <button type="button" onclick="toggleScorecardExtraPo()" id="btnToggleExtraPo" class="px-3 py-1 rounded-md text-[11px] font-semibold bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 shadow-2xs transition cursor-pointer">
                             ▼ Tampilkan Seluruh (${vendorOrders.length}) Riwayat Pesanan
                         </button>
                     </div>
@@ -1929,54 +1941,46 @@ function openVendorScorecard(vendorName) {
         </div>
 
         <!-- 4. LOGISTIK & RIWAYAT PEMESANAN (PO SLA) -->
-        <div class="mb-6">
-            <div class="flex items-center justify-between mb-2">
+        <div class="mb-6 bg-gray-50/70 rounded-xl border border-gray-200 p-4">
+            <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
                 <h3 class="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
                     <span>📦</span>
                     <span>Rekam Jejak Pemesanan &amp; Logistik (PO SLA)</span>
                 </h3>
-                <span class="text-[11px] font-semibold text-gray-500">
-                    SLA Standar Minimum: &ge;80%
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold ${onTimeRatePct >= 80 ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-rose-100 text-rose-800 border border-rose-300'}">
+                    ${onTimeRatePct >= 80 ? '🟢 Memenuhi Standar SLA (≥80%)' : '🔴 Di Bawah Standar SLA (<80%)'}
                 </span>
             </div>
 
-            <!-- Ringkasan KPI Grid Komprehensif -->
-            <table class="w-full text-xs text-left border-collapse border border-gray-200 rounded-lg overflow-hidden mb-2.5">
-                <thead class="bg-gray-100 text-gray-700 font-bold uppercase text-[10px]">
-                    <tr>
-                        <th class="py-2 px-3 border border-gray-200">Total Transaksi PO</th>
-                        <th class="py-2 px-3 border border-gray-200 text-center">Tepat Waktu</th>
-                        <th class="py-2 px-3 border border-gray-200 text-center">Terlambat</th>
-                        <th class="py-2 px-3 border border-gray-200 text-center">On-Time SLA Rate</th>
-                        <th class="py-2 px-3 border border-gray-200 text-right">Akumulasi Nilai Belanja</th>
-                    </tr>
-                </thead>
-                <tbody class="text-gray-900">
-                    <tr>
-                        <td class="py-2 px-3 border border-gray-200 font-bold">${totalPo} Pesanan</td>
-                        <td class="py-2 px-3 border border-gray-200 text-center text-emerald-700 font-semibold">✅ ${onTimePo} PO (${onTimePct}%)</td>
-                        <td class="py-2 px-3 border border-gray-200 text-center text-rose-700 font-semibold">⚠️ ${latePo} PO (${latePct}%)</td>
-                        <td class="py-2 px-3 border border-gray-200 text-center font-bold font-mono text-sm ${onTimeRatePct >= 80 ? 'text-emerald-600' : 'text-rose-600'}">${onTimeRatePct}%</td>
-                        <td class="py-2 px-3 border border-gray-200 text-right font-mono font-bold">${totalSpend > 0 ? formatRupiah(totalSpend) : '-'}</td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <!-- Visual Progress Bar Ketepatan Waktu -->
-            <div class="p-2.5 bg-gray-50 rounded-lg border border-gray-200 mb-2.5">
-                <div class="flex items-center justify-between text-xs font-semibold mb-1">
-                    <span class="text-gray-700">Distribusi Pemenuhan Waktu Pengiriman:</span>
-                    <span class="${onTimeRatePct >= 80 ? 'text-emerald-700' : 'text-rose-700'} font-bold">
-                        ${onTimeRatePct >= 80 ? '🟢 Memenuhi Standar SLA Layanan' : '🔴 Di Bawah Target SLA Minimal (80%)'}
-                    </span>
+            <!-- Metrik Grid 4 Kolom Bersih -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-2.5 text-center">
+                <div class="bg-white p-2.5 rounded-lg border border-gray-200 shadow-2xs">
+                    <span class="text-[10px] font-bold text-gray-500 uppercase block">Total Pesanan PO</span>
+                    <strong class="text-base font-black text-gray-900 block mt-0.5">${totalPo} PO</strong>
+                    <span class="text-[10px] text-gray-500 font-mono font-medium block truncate" title="${totalSpend > 0 ? formatRupiah(totalSpend) : '-'}">${totalSpend > 0 ? formatRupiah(totalSpend) : '-'}</span>
                 </div>
-                <div class="w-full bg-gray-200 h-2.5 rounded-full overflow-hidden flex">
+                <div class="bg-white p-2.5 rounded-lg border border-emerald-200/80 shadow-2xs">
+                    <span class="text-[10px] font-bold text-emerald-800 uppercase block">Tepat Waktu</span>
+                    <strong class="text-base font-black text-emerald-600 block mt-0.5">✅ ${onTimePo} PO</strong>
+                    <span class="text-[10px] text-emerald-700 font-semibold block">${onTimePct}% on-time</span>
+                </div>
+                <div class="bg-white p-2.5 rounded-lg border border-rose-200/80 shadow-2xs">
+                    <span class="text-[10px] font-bold text-rose-800 uppercase block">Terlambat</span>
+                    <strong class="text-base font-black text-rose-600 block mt-0.5">⚠️ ${latePo} PO</strong>
+                    <span class="text-[10px] text-rose-700 font-semibold block">${latePct}% delayed</span>
+                </div>
+                <div class="bg-white p-2.5 rounded-lg border border-blue-200/80 shadow-2xs">
+                    <span class="text-[10px] font-bold text-blue-800 uppercase block">On-Time SLA Rate</span>
+                    <strong class="text-base font-black ${onTimeRatePct >= 80 ? 'text-emerald-600' : 'text-rose-600'} block mt-0.5 font-mono">${onTimeRatePct}%</strong>
+                    <span class="text-[10px] text-gray-500 font-medium block">Target Min: 80%</span>
+                </div>
+            </div>
+
+            <!-- Visual Bar SLA Ramping -->
+            <div class="mb-1">
+                <div class="w-full bg-gray-200 h-2 rounded-full overflow-hidden flex">
                     <div style="width: ${onTimePct}%" class="bg-emerald-500 h-full" title="Tepat Waktu: ${onTimePct}%"></div>
                     <div style="width: ${latePct}%" class="bg-rose-500 h-full" title="Terlambat: ${latePct}%"></div>
-                </div>
-                <div class="flex items-center justify-between text-[10px] text-gray-500 mt-1 font-medium">
-                    <span>✅ Tepat Waktu: <strong>${onTimePo} PO (${onTimePct}%)</strong></span>
-                    <span>⚠️ Terlambat: <strong>${latePo} PO (${latePct}%)</strong></span>
                 </div>
             </div>
 
