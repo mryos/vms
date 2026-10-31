@@ -252,6 +252,18 @@ async function loadCatalogData() {
                 });
             }
 
+            // [DEBUG] Log sample order untuk verifikasi field yang tersedia
+            const sampleOrders = (catalogData.allRawOrders || []).slice(0, 3);
+            if (sampleOrders.length > 0) {
+                console.log('[Katalog Debug] Sample order keys:', Object.keys(sampleOrders[0]));
+                console.log('[Katalog Debug] Sample orders:', JSON.stringify(sampleOrders, null, 2));
+                const hasNilai = sampleOrders.some(o => o.nilai !== undefined);
+                console.log('[Katalog Debug] Field "nilai" tersedia:', hasNilai);
+                if (!hasNilai) {
+                    console.warn('[Katalog Debug] ⚠️ Backend belum mengembalikan field "nilai". Perbarui Google Apps Script terlebih dahulu.');
+                }
+            }
+
             // Inisialisasi opsi filter periode
             populatePeriodFilterOptions();
 
