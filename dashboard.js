@@ -698,29 +698,29 @@ function renderTopVendors(scoreSummary, vendors, categories) {
     }).sort((a, b) => b.avgScore - a.avgScore).slice(0, 5);
 
     const rankBadges = [
-        '<span class="rank-badge-1 px-1.5 py-0.5 rounded-full text-xs">🥇 1</span>',
-        '<span class="rank-badge-2 px-1.5 py-0.5 rounded-full text-xs">🥈 2</span>',
-        '<span class="rank-badge-3 px-1.5 py-0.5 rounded-full text-xs">🥉 3</span>',
-        '<span class="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded-full text-xs font-bold">4</span>',
-        '<span class="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded-full text-xs font-bold">5</span>'
+        '<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#fef3c7;font-size:10px;font-weight:700;color:#92400e;">1</span>',
+        '<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#f1f5f9;font-size:10px;font-weight:700;color:#475569;">2</span>',
+        '<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#fff7ed;font-size:10px;font-weight:700;color:#9a3412;">3</span>',
+        '<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#f1f5f9;font-size:10px;font-weight:700;color:#64748b;">4</span>',
+        '<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#f1f5f9;font-size:10px;font-weight:700;color:#64748b;">5</span>'
     ];
 
     tableBody.innerHTML = sorted.map((v, i) => `
         <tr>
-            <td style="font-weight:700; width:36px;">${rankBadges[i] || (i + 1)}</td>
-            <td>
-                <div style="font-weight:600; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;" title="${esc(v.name)}">${esc(v.name)}</div>
-                <div class="flex items-center gap-1.5 mt-0.5">
-                    <span style="font-size:0.72rem; color:#64748b;">${esc(v.categoryIcon)} ${esc(v.categoryName)}</span>
-                    <button onclick="openVendorScorecard('${esc(v.name)}')" class="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition shadow-2xs" title="Cetak Rapor Kinerja ${esc(v.name)}">
+            <td style="width:30px; padding:0.3rem 0.4rem; vertical-align:middle;">${rankBadges[i] || (i + 1)}</td>
+            <td style="padding:0.3rem 0.5rem;">
+                <div style="font-weight:600; color:#0f172a; font-size:0.78rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px; line-height:1.3;" title="${esc(v.name)}">${esc(v.name)}</div>
+                <div class="flex items-center gap-1 mt-0.5">
+                    <span style="font-size:0.65rem; color:#64748b;">${esc(v.categoryIcon)} ${esc(v.categoryName)}</span>
+                    <button onclick="openVendorScorecard('${esc(v.name)}')" class="inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[9px] font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition" title="Rapor ${esc(v.name)}">
                         📄 Rapor
                     </button>
                 </div>
             </td>
-            <td style="text-align:right; width:90px;">
-                <div class="inline-flex items-center justify-end gap-1.5">
-                    <span style="font-weight:800; color:#0f172a; font-size:0.95rem;">${v.avgScore.toFixed(2)}</span>
-                    <span class="predikat-badge" style="background:${getPredikatColor(v.avgScore)}15; color:${getPredikatColor(v.avgScore)}; border:1px solid ${getPredikatColor(v.avgScore)}30; padding:0.1rem 0.45rem; font-size:0.68rem;">
+            <td style="text-align:right; width:80px; padding:0.3rem 0.4rem;">
+                <div style="display:flex; align-items:center; justify-content:flex-end; gap:4px;">
+                    <span style="font-weight:800; color:#0f172a; font-size:0.82rem;">${v.avgScore.toFixed(2)}</span>
+                    <span class="predikat-badge" style="background:${getPredikatColor(v.avgScore)}15; color:${getPredikatColor(v.avgScore)}; border:1px solid ${getPredikatColor(v.avgScore)}30; padding:0.05rem 0.35rem; font-size:0.6rem;">
                         ${esc(v.predikat)}
                     </span>
                 </div>
