@@ -516,7 +516,7 @@ tailwind.config = {
         <!-- ========== MACRO ANALYTICS & CHARTS GRID (3-COLUMN EQUAL HEIGHT) ========== -->
         <div class="chart-grid grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6" id="chartsSection">
             <!-- Chart 1: Donut Compliance -->
-            <div class="tremor-card flex flex-col justify-between h-[390px]">
+            <div class="tremor-card flex flex-col justify-between h-[320px]">
                 <div>
                     <div class="flex items-center justify-between mb-1">
                         <h3 class="text-sm font-bold text-gray-900">Kepatuhan Kontrak Vendor</h3>
@@ -524,8 +524,8 @@ tailwind.config = {
                     </div>
                     <p class="text-xs text-gray-500 mb-2">Rasio kepatuhan dokumen kelengkapan kontrak</p>
                 </div>
-                <div class="flex justify-center items-center my-auto" style="height:210px;">
-                    <canvas id="complianceChart" style="max-width:210px; max-height:210px;"></canvas>
+                <div class="flex justify-center items-center my-auto" style="height:160px;">
+                    <canvas id="complianceChart" style="max-width:210px; max-height:160px;"></canvas>
                 </div>
                 <div class="grid grid-cols-2 gap-2 pt-3 mt-auto border-t border-gray-100 text-center text-xs">
                     <div class="p-2 bg-emerald-50 rounded-lg">
@@ -540,7 +540,7 @@ tailwind.config = {
             </div>
 
             <!-- Chart 2: Predicate Distribution -->
-            <div class="tremor-card flex flex-col justify-between h-[390px]">
+            <div class="tremor-card flex flex-col justify-between h-[320px]">
                 <div>
                     <div class="flex items-center justify-between mb-1">
                         <h3 class="text-sm font-bold text-gray-900">Distribusi Predikat Kinerja</h3>
@@ -548,8 +548,8 @@ tailwind.config = {
                     </div>
                     <p class="text-xs text-gray-500 mb-2">Proporsi tingkatan skor evaluasi rekanan</p>
                 </div>
-                <div class="flex justify-center items-center my-auto" style="height:210px;">
-                    <canvas id="predicateChart" style="max-width:210px; max-height:210px;"></canvas>
+                <div class="flex justify-center items-center my-auto" style="height:160px;">
+                    <canvas id="predicateChart" style="max-width:210px; max-height:160px;"></canvas>
                 </div>
                 <div class="grid grid-cols-4 gap-1.5 pt-3 mt-auto border-t border-gray-100 text-center text-xs">
                     <div class="p-1.5 bg-emerald-50 rounded-lg">
@@ -572,7 +572,7 @@ tailwind.config = {
             </div>
 
             <!-- Chart 3: Skor Kinerja per Bidang (Adaptif Bar / Radar) -->
-            <div class="tremor-card flex flex-col justify-between h-[390px]">
+            <div class="tremor-card flex flex-col justify-between h-[320px]">
                 <div>
                     <div class="flex items-center justify-between mb-1">
                         <h3 class="text-sm font-bold text-gray-900" id="chartBidangTitle">Skor Kinerja per Bidang</h3>
@@ -586,7 +586,7 @@ tailwind.config = {
                     </div>
                     <p class="text-xs text-gray-500 mb-2">Rata-rata performa mutu berdasarkan spesialisasi</p>
                 </div>
-                <div class="flex justify-center items-center my-auto w-full" style="height:210px; position:relative;">
+                <div class="flex justify-center items-center my-auto w-full" style="height:160px; position:relative;">
                     <canvas id="radarChart"></canvas>
                 </div>
                 <div class="pt-2.5 mt-auto border-t border-gray-100 text-center text-xs text-gray-500" id="radarSummaryMeta">
@@ -598,7 +598,7 @@ tailwind.config = {
         <!-- ========== OPERATIONAL MONITORING GRID (3-COLUMN EQUAL HEIGHT) ========== -->
         <div class="perf-grid grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6 items-stretch" id="sectionPerformance">
             <!-- 1. TOP 5 Vendor Terbaik -->
-            <div class="tremor-card flex flex-col justify-between h-[420px]">
+            <div class="tremor-card flex flex-col justify-between h-[310px]">
                 <div class="flex flex-col h-full">
                     <div class="flex items-center justify-between mb-1">
                         <h3 class="text-sm font-bold text-gray-900 flex items-center gap-1.5">
@@ -607,7 +607,7 @@ tailwind.config = {
                         <span class="tremor-badge tremor-badge-emerald">Skor Tertinggi</span>
                     </div>
                     <p class="text-xs text-gray-500 mb-2">Rekanan dengan performa paling konsisten</p>
-                    <div class="overflow-x-auto flex-1 custom-scrollbar">
+                    <div class="overflow-x-auto custom-scrollbar" style="max-height: 190px;">
                         <table class="tremor-table w-full">
                             <thead>
                                 <tr>
@@ -621,12 +621,12 @@ tailwind.config = {
                             </tbody>
                         </table>
                     </div>
-                    <div id="topVendorsFooterNotice" class="mt-auto pt-2"></div>
+                    <div id="topVendorsFooterNotice" class="mt-2"></div>
                 </div>
             </div>
 
             <!-- 2. Status Penilaian & Prioritas Evaluasi (Mekari Spend Priority) -->
-            <div class="tremor-card flex flex-col justify-between h-[420px]">
+            <div class="tremor-card flex flex-col justify-between h-[310px]">
                 <div class="flex flex-col h-full">
                     <div class="flex items-center justify-between mb-1">
                         <h3 class="text-sm font-bold text-gray-900 flex items-center gap-1.5">
@@ -642,7 +642,7 @@ tailwind.config = {
             </div>
 
             <!-- 3. Kinerja Pengiriman PO Realtime -->
-            <div id="sectionOrders" class="tremor-card flex flex-col justify-between h-[420px]">
+            <div id="sectionOrders" class="tremor-card flex flex-col justify-between h-[310px]">
                 <div class="flex flex-col h-full">
                     <div class="flex items-center justify-between mb-1">
                         <h3 class="text-sm font-bold text-gray-900 flex items-center gap-1.5">

@@ -740,14 +740,14 @@ function renderTopVendors(scoreSummary, vendors, categories) {
         const totalVendors = vendors ? vendors.length : 0;
         if (totalEvaluated < 5) {
             noticeEl.innerHTML = `
-                <div class="p-2.5 bg-blue-50/70 border border-blue-100 rounded-xl flex items-center justify-between text-xs mt-2">
-                    <span class="text-blue-900">Baru <strong>${totalEvaluated}</strong> dari <strong>${totalVendors}</strong> rekanan dinilai</span>
+                <div class="p-2 bg-blue-50/70 border border-blue-100 rounded-lg flex items-center justify-between text-2xs mt-1.5">
+                    <span class="text-blue-900 font-medium">Baru <strong>${totalEvaluated}</strong> dari <strong>${totalVendors}</strong> rekanan dinilai</span>
                     <a href="index.html" class="font-bold text-blue-600 hover:text-blue-800 hover:underline">Nilai Rekanan →</a>
                 </div>
             `;
         } else {
             noticeEl.innerHTML = `
-                <div class="text-2xs text-gray-400 text-center pt-2 border-t border-gray-100 font-medium">
+                <div class="text-2xs text-gray-400 text-center pt-1.5 border-t border-gray-100 font-medium">
                     Menampilkan 5 rekanan berkinerja tertinggi
                 </div>
             `;
@@ -824,39 +824,38 @@ function renderPendingVendors(vendors, scoreSummary, categories, poStats) {
         </div>`;
     }
 
-    // Daftar vendor prioritas penilaian
+    // Daftar vendor prioritas penilaian (Compact & Clean)
     if (pendingList.length > 0) {
         const withPoCount = pendingList.filter(p => p.totalPo > 0).length;
         html += `
-        <div class="text-xs font-bold text-gray-700 mb-2 flex items-center justify-between">
+        <div class="text-xs font-bold text-gray-700 mb-1.5 flex items-center justify-between">
             <span class="flex items-center gap-1 text-gray-800">
                 <span>🎯 Prioritas Penilaian</span>
-                ${withPoCount > 0 ? `<span class="text-2xs font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">${withPoCount} Ber-PO</span>` : ''}
+                ${withPoCount > 0 ? `<span class="text-2xs font-semibold text-amber-800 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200/80">${withPoCount} Ber-PO</span>` : ''}
             </span>
-            <span class="text-gray-400 font-normal">${pendingList.length} rekanan</span>
+            <span class="text-gray-400 font-normal text-2xs">${pendingList.length} rekanan</span>
         </div>
-        <div class="space-y-1.5">
+        <div class="space-y-1">
             ${pendingList.slice(0, 10).map(v => {
                 const catCode = v.kategori || 'general';
                 const catInfo = (categories && categories.find(c => c.kode === catCode)) || { nama: 'General', ikon: '📦' };
                 const hasPo = v.totalPo > 0;
                 return `
-                <div class="flex items-center justify-between p-2 rounded-lg ${hasPo ? 'bg-amber-50/40 border border-amber-100 hover:bg-amber-50' : 'bg-gray-50 border border-gray-100 hover:bg-gray-100/70'} transition">
+                <div class="flex items-center justify-between py-1 px-2 rounded-lg ${hasPo ? 'bg-amber-50/25 border border-amber-100/80 hover:bg-amber-50/60' : 'bg-gray-50/80 border border-gray-100 hover:bg-gray-100/60'} transition">
                     <div class="min-w-0 pr-2">
-                        <div class="font-semibold text-xs text-gray-900 truncate" title="${esc(v.nama)}">${esc(v.nama)}</div>
-                        <div class="flex items-center gap-2 text-2xs text-gray-500 mt-0.5">
+                        <div class="font-semibold text-xs text-gray-900 truncate leading-tight" title="${esc(v.nama)}">${esc(v.nama)}</div>
+                        <div class="flex items-center gap-1.5 text-2xs text-gray-500 mt-0.5 leading-tight">
                             <span>${esc(catInfo.ikon)} ${esc(catInfo.nama)}</span>
-                            ${hasPo ? `<span class="font-bold text-amber-700 bg-amber-100/80 px-1 rounded">${v.totalPo} PO</span>` : ''}
+                            ${hasPo ? `<span class="font-semibold text-2xs text-amber-800 bg-amber-50 px-1 py-0.2 rounded border border-amber-200/70">${v.totalPo} PO</span>` : ''}
                         </div>
                     </div>
-                    <a href="index.html" class="inline-flex items-center gap-1 text-2xs font-bold px-2 py-1 rounded-md ${hasPo ? 'bg-amber-600 hover:bg-amber-700 text-white shadow-2xs' : 'bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100'} whitespace-nowrap transition" title="Beri nilai sekarang">
-                        <span>Nilai</span>
-                        <span>→</span>
+                    <a href="index.html" class="inline-flex items-center gap-0.5 text-2xs font-semibold px-2 py-0.5 rounded-md border border-gray-200 bg-white text-gray-700 hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50/50 whitespace-nowrap transition shadow-2xs" title="Beri nilai sekarang">
+                        Nilai →
                     </a>
                 </div>`;
             }).join('')}
             ${pendingList.length > 10 ? `
-                <div class="text-center text-xs text-gray-400 pt-1.5 font-medium">
+                <div class="text-center text-2xs text-gray-400 pt-1 font-medium">
                     +${pendingList.length - 10} vendor lainnya
                 </div>
             ` : ''}
@@ -1321,10 +1320,10 @@ function renderPoPerformance(poStats) {
         const badgeText = pct >= 80 ? '#065f46' : pct >= 60 ? '#92400e' : '#991b1b';
         
         return `
-        <div class="po-perf-item p-2 rounded-lg bg-gray-50 border border-gray-100 hover:bg-gray-100/70 transition mb-2">
+        <div class="po-perf-item py-1 px-2 rounded-lg bg-gray-50/80 border border-gray-100 hover:bg-gray-100/60 transition mb-1.5">
             <div class="flex items-center justify-between mb-1 text-xs">
-                <span class="font-semibold text-gray-900 truncate max-w-[170px]" title="${esc(name)}">${esc(name)}</span>
-                <span class="font-bold text-2xs px-1.5 py-0.5 rounded" style="background:${badgeBg}; color:${badgeText};">${pct}% (${v.onTimePo}/${v.totalPo} PO)</span>
+                <span class="font-semibold text-gray-900 truncate max-w-[170px] leading-tight" title="${esc(name)}">${esc(name)}</span>
+                <span class="font-bold text-2xs px-1.5 py-0.2 rounded" style="background:${badgeBg}; color:${badgeText};">${pct}% (${v.onTimePo}/${v.totalPo} PO)</span>
             </div>
             <div class="progress-bar-container bg-gray-200 h-1.5 rounded-full overflow-hidden">
                 <div class="progress-bar-fill h-full rounded-full transition-all duration-500" style="width:${pct}%; background:${color};"></div>
