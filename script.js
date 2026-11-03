@@ -1409,14 +1409,32 @@ function processVendorData(vendorData) {
     }
 }
 
+// Helper: Periksa apakah kriteria hanya diperuntukkan bagi Admin di spreadsheet
+// (seperti Dokumen Legal & Dokumen Transaksi yang tidak dimiliki aksesnya oleh user penilai)
+function isAdminOnlyCriteria(k) {
+    if (!k) return false;
+    if (k.adminOnly === true || k.admin_only === true || k.isAdminOnly === true) return true;
+
+    const text = ((k.kriteria || '') + ' ' + (k.id || '') + ' ' + (k.deskripsi || '')).toLowerCase();
+
+    // Kata kunci dokumen legal & transaksi yang hanya diisi oleh Admin langsung di spreadsheet
+    return text.includes('dokumen legal') ||
+           text.includes('dokumen transaksi') ||
+           text.includes('validasi dokumen') ||
+           text.includes('kelengkapan & validasi dokumen') ||
+           text.includes('[admin]') ||
+           text.includes('(admin)');
+}
+
 function renderDynamicForm(vendorName) {
     const container = document.getElementById('questionsContainer');
     if (!container) return;
 
     const vendorCat = getVendorCategory(vendorName);
     
-    // Cari di kriteriaList dulu
+    // Cari di kriteriaList dulu, filter kriteria khusus admin (seperti dokumen legal & transaksi)
     let matchedKriteria = (kriteriaList || []).filter(k => {
+        if (isAdminOnlyCriteria(k)) return false;
         if (k.vendorSpesifik && k.vendorSpesifik.trim() !== '') {
             return k.vendorSpesifik.toLowerCase().trim() === vendorName.toLowerCase().trim();
         }
@@ -1425,12 +1443,12 @@ function renderDynamicForm(vendorName) {
 
     // Jika tidak ditemukan di kriteriaList (atau kriteriaList dari server kosong), ambil dari DEFAULT_KRITERIA (11 pertanyaan per kategori)
     if (matchedKriteria.length === 0) {
-        matchedKriteria = DEFAULT_KRITERIA.filter(k => normalizeCategory(k.kategori) === vendorCat);
+        matchedKriteria = DEFAULT_KRITERIA.filter(k => !isAdminOnlyCriteria(k) && normalizeCategory(k.kategori) === vendorCat);
     }
 
     // Fallback darurat ke BarangJasa jika masih kosong
     if (matchedKriteria.length === 0) {
-        matchedKriteria = DEFAULT_KRITERIA.filter(k => k.kategori === 'BarangJasa');
+        matchedKriteria = DEFAULT_KRITERIA.filter(k => !isAdminOnlyCriteria(k) && k.kategori === 'BarangJasa');
     }
 
     ratings = {};

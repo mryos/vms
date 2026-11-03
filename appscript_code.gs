@@ -1281,6 +1281,22 @@ function getAllVendors(ss) {
   return list;
 }
 
+function isCriteriaAdminOnly(qText, tag) {
+  if (tag) {
+    var tagStr = tag.toString().trim().toLowerCase();
+    if (tagStr === 'y' || tagStr === 'ya' || tagStr === 'yes' || tagStr === 'true' || tagStr === 'admin' || tagStr === '1') {
+      return true;
+    }
+  }
+  var t = (qText || '').toString().toLowerCase();
+  return t.indexOf('dokumen legal') !== -1 ||
+         t.indexOf('dokumen transaksi') !== -1 ||
+         t.indexOf('validasi dokumen') !== -1 ||
+         t.indexOf('kelengkapan & validasi') !== -1 ||
+         t.indexOf('[admin]') !== -1 ||
+         t.indexOf('(admin)') !== -1;
+}
+
 function getKriteriaPenilaian(ss) {
   if (!ss) ss = SpreadsheetApp.getActiveSpreadsheet();
   var list = [];
@@ -1308,7 +1324,8 @@ function getKriteriaPenilaian(ss) {
               kriteria: qText,
               deskripsi: getQuestionDescription(qText),
               kategori: normalizeCategoryCode(kategori),
-              vendorSpesifik: vendorSpesifik
+              vendorSpesifik: vendorSpesifik,
+              adminOnly: isCriteriaAdminOnly(qText)
             });
           }
         }
@@ -1321,12 +1338,15 @@ function getKriteriaPenilaian(ss) {
 
         if (kriteria && kriteria.toLowerCase() !== 'kriteria') {
           var id = generateQuestionId(kriteria);
+          var adminColIdx = getHeaderIndex(header, ['admin', 'admin only', 'admin_only', 'khusus admin']);
+          var adminTag = adminColIdx !== -1 ? data[i][adminColIdx] : (data[i][3] || '');
           list.push({
             id: id,
             kriteria: kriteria,
             deskripsi: deskripsi || getQuestionDescription(kriteria),
             kategori: normalizeCategoryCode(kategori),
-            vendorSpesifik: ''
+            vendorSpesifik: '',
+            adminOnly: isCriteriaAdminOnly(kriteria, adminTag)
           });
         }
       }
@@ -1354,7 +1374,8 @@ function getKriteriaPenilaian(ss) {
               kriteria: cleanQ,
               deskripsi: getQuestionDescription(cleanQ),
               kategori: catCode,
-              vendorSpesifik: ''
+              vendorSpesifik: '',
+              adminOnly: isCriteriaAdminOnly(cleanQ)
             });
           }
         }
@@ -1575,18 +1596,17 @@ function getVendorScoreSummary(ss) {
       if (!catVendor) continue;
 
       var catScore = 0;
-      if (catIdxAvg !== -1 && catData[ci][catIdxAvg] !== '' && catData[ci][catIdxAvg] !== null) {
-        catScore = typeof catData[ci][catIdxAvg] === 'number' ? catData[ci][catIdxAvg] : (parseFloat(catData[ci][catIdxAvg].toString().replace(',', '.')) || 0);
-      }
-      if (catScore === 0) {
-        var cSum = 0, cCnt = 0;
-        for (var cc = 0; cc < catHeaders.length; cc++) {
-          if (cc !== catIdxVendor && cc !== catIdxAvg && cc !== catIdxPred && cc !== catIdxPeriode && cc !== catIdxPenilai && cc !== catIdxTimestamp && cc !== catIdxCatatan) {
-            var cv = typeof catData[ci][cc] === 'number' ? catData[ci][cc] : (parseFloat((catData[ci][cc] || '').toString().replace(',', '.')) || 0);
-            if (cv >= 1 && cv <= 5) { cSum += cv; cCnt++; }
-          }
+      var cSum = 0, cCnt = 0;
+      for (var cc = 0; cc < catHeaders.length; cc++) {
+        if (cc !== catIdxVendor && cc !== catIdxAvg && cc !== catIdxPred && cc !== catIdxPeriode && cc !== catIdxPenilai && cc !== catIdxTimestamp && cc !== catIdxCatatan) {
+          var cv = typeof catData[ci][cc] === 'number' ? catData[ci][cc] : (parseFloat((catData[ci][cc] || '').toString().replace(',', '.')) || 0);
+          if (cv >= 1 && cv <= 5) { cSum += cv; cCnt++; }
         }
-        if (cCnt > 0) catScore = Math.round((cSum / cCnt) * 100) / 100;
+      }
+      if (cCnt > 0) {
+        catScore = Math.round((cSum / cCnt) * 100) / 100;
+      } else if (catIdxAvg !== -1 && catData[ci][catIdxAvg] !== '' && catData[ci][catIdxAvg] !== null) {
+        catScore = typeof catData[ci][catIdxAvg] === 'number' ? catData[ci][catIdxAvg] : (parseFloat(catData[ci][catIdxAvg].toString().replace(',', '.')) || 0);
       }
 
       if (catScore > 0) {
