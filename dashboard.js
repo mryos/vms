@@ -119,46 +119,39 @@ function initTabs() {
 }
 
 function applyTabFilter(tab) {
-    const chartsSec = document.getElementById('chartsSection');
+    const bentoDash = document.getElementById('bentoDashboard');
     const contractsSec = document.getElementById('sectionContracts');
     const evalSec = document.getElementById('sectionEvaluations');
-    const perfSec = document.getElementById('sectionPerformance');
     const ordersCol = document.getElementById('sectionOrders');
     const kraljicSec = document.getElementById('sectionKraljic');
 
     if (tab === 'all') {
-        if (chartsSec) chartsSec.style.display = 'grid';
+        if (bentoDash) bentoDash.style.display = 'grid';
         if (contractsSec) contractsSec.style.display = 'block';
         if (evalSec) evalSec.style.display = 'block';
-        if (perfSec) perfSec.style.display = 'grid';
         if (ordersCol) ordersCol.style.display = 'flex';
         if (kraljicSec) kraljicSec.style.display = 'block';
     } else if (tab === 'clm') {
-        if (chartsSec) chartsSec.style.display = 'grid';
+        if (bentoDash) bentoDash.style.display = 'grid';
         if (contractsSec) contractsSec.style.display = 'block';
         if (evalSec) evalSec.style.display = 'block';
-        if (perfSec) perfSec.style.display = 'none';
-        if (ordersCol) ordersCol.style.display = 'none';
+        if (ordersCol) ordersCol.style.display = 'flex';
         if (kraljicSec) kraljicSec.style.display = 'none';
     } else if (tab === 'kraljic') {
-        if (chartsSec) chartsSec.style.display = 'none';
+        if (bentoDash) bentoDash.style.display = 'none';
         if (contractsSec) contractsSec.style.display = 'none';
         if (evalSec) evalSec.style.display = 'none';
-        if (perfSec) perfSec.style.display = 'none';
-        if (ordersCol) ordersCol.style.display = 'none';
         if (kraljicSec) kraljicSec.style.display = 'block';
     } else if (tab === 'performance') {
-        if (chartsSec) chartsSec.style.display = 'grid';
+        if (bentoDash) bentoDash.style.display = 'grid';
         if (contractsSec) contractsSec.style.display = 'none';
         if (evalSec) evalSec.style.display = 'block';
-        if (perfSec) perfSec.style.display = 'grid';
         if (ordersCol) ordersCol.style.display = 'none';
         if (kraljicSec) kraljicSec.style.display = 'none';
     } else if (tab === 'orders') {
-        if (chartsSec) chartsSec.style.display = 'none';
+        if (bentoDash) bentoDash.style.display = 'grid';
         if (contractsSec) contractsSec.style.display = 'none';
         if (evalSec) evalSec.style.display = 'none';
-        if (perfSec) perfSec.style.display = 'grid';
         if (ordersCol) ordersCol.style.display = 'flex';
         if (kraljicSec) kraljicSec.style.display = 'none';
     }
