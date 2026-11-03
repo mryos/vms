@@ -96,6 +96,24 @@ tailwind.config = {
   .tremor-table tbody tr:hover { background: #f8fafc; }
 
   /* Compact scrollable table container */
+  
+  /* Custom Slim Scrollbar for Balanced Cards */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: #f8fafc;
+    border-radius: 9999px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 9999px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+
   .table-scroll-container {
     max-height: 480px;
     overflow-y: auto;
@@ -409,15 +427,15 @@ tailwind.config = {
             <!-- 1. Total Nilai Kontrak -->
             <div class="kpi-card kpi-card-blue animate-in animate-in-1">
                 <div class="flex items-center justify-between mb-2">
-                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Nilai Kontrak</p>
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider" id="kpiSpendTitle">Total Belanja PO</p>
                     <span class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
                         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 100 4h4a2 2 0 110 4H8"/><path d="M12 18V6"/></svg>
                     </span>
                 </div>
                 <p class="text-xl sm:text-2xl font-black text-gray-900 truncate" id="statTotalContractValue">Rp 0</p>
                 <div class="flex items-center justify-between mt-2 pt-2 border-t border-gray-100 text-xs">
-                    <span class="text-gray-500" id="statTotalContractsCount">0 kontrak</span>
-                    <span class="text-blue-600 font-semibold" id="statAvgContractValue">Rata-rata: -</span>
+                    <span class="text-gray-500" id="statTotalContractsCount">0 kontrak aktif</span>
+                    <span class="text-blue-600 font-semibold" id="statAvgContractValue">Portofolio Belanja</span>
                 </div>
             </div>
 
@@ -495,21 +513,21 @@ tailwind.config = {
             </div>
         </div>
 
-        <!-- ========== MACRO ANALYTICS & CHARTS GRID (3-COLUMN) ========== -->
+        <!-- ========== MACRO ANALYTICS & CHARTS GRID (3-COLUMN EQUAL HEIGHT) ========== -->
         <div class="chart-grid grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6" id="chartsSection">
             <!-- Chart 1: Donut Compliance -->
-            <div class="tremor-card flex flex-col justify-between">
+            <div class="tremor-card flex flex-col justify-between h-[390px]">
                 <div>
                     <div class="flex items-center justify-between mb-1">
                         <h3 class="text-sm font-bold text-gray-900">Kepatuhan Kontrak Vendor</h3>
                         <span class="tremor-badge tremor-badge-amber">Compliance</span>
                     </div>
-                    <p class="text-xs text-gray-500 mb-4">Rasio kepatuhan dokumen kelengkapan kontrak</p>
+                    <p class="text-xs text-gray-500 mb-2">Rasio kepatuhan dokumen kelengkapan kontrak</p>
                 </div>
-                <div class="flex justify-center items-center my-auto" style="min-height:230px;">
-                    <canvas id="complianceChart" style="max-width:240px; max-height:240px;"></canvas>
+                <div class="flex justify-center items-center my-auto" style="height:210px;">
+                    <canvas id="complianceChart" style="max-width:210px; max-height:210px;"></canvas>
                 </div>
-                <div class="grid grid-cols-2 gap-2 pt-3 mt-3 border-t border-gray-100 text-center text-xs">
+                <div class="grid grid-cols-2 gap-2 pt-3 mt-auto border-t border-gray-100 text-center text-xs">
                     <div class="p-2 bg-emerald-50 rounded-lg">
                         <div class="text-emerald-700 font-bold text-sm" id="donutComplyCount">0</div>
                         <div class="text-emerald-600 text-2xs uppercase font-semibold">Comply</div>
@@ -522,18 +540,18 @@ tailwind.config = {
             </div>
 
             <!-- Chart 2: Predicate Distribution -->
-            <div class="tremor-card flex flex-col justify-between">
+            <div class="tremor-card flex flex-col justify-between h-[390px]">
                 <div>
                     <div class="flex items-center justify-between mb-1">
                         <h3 class="text-sm font-bold text-gray-900">Distribusi Predikat Kinerja</h3>
                         <span class="tremor-badge tremor-badge-emerald">Sebaran Mutu</span>
                     </div>
-                    <p class="text-xs text-gray-500 mb-4">Proporsi tingkatan skor evaluasi rekanan</p>
+                    <p class="text-xs text-gray-500 mb-2">Proporsi tingkatan skor evaluasi rekanan</p>
                 </div>
-                <div class="flex justify-center items-center my-auto" style="min-height:230px;">
-                    <canvas id="predicateChart" style="max-width:240px; max-height:240px;"></canvas>
+                <div class="flex justify-center items-center my-auto" style="height:210px;">
+                    <canvas id="predicateChart" style="max-width:210px; max-height:210px;"></canvas>
                 </div>
-                <div class="grid grid-cols-4 gap-1.5 pt-3 mt-3 border-t border-gray-100 text-center text-xs">
+                <div class="grid grid-cols-4 gap-1.5 pt-3 mt-auto border-t border-gray-100 text-center text-xs">
                     <div class="p-1.5 bg-emerald-50 rounded-lg">
                         <div class="text-emerald-700 font-bold text-xs" id="distSangatBaikCount">0</div>
                         <div class="text-emerald-600 text-2xs font-semibold">Sangat Baik</div>
@@ -553,80 +571,87 @@ tailwind.config = {
                 </div>
             </div>
 
-            <!-- Chart 3: Radar Score per Bidang -->
-            <div class="tremor-card flex flex-col justify-between">
+            <!-- Chart 3: Skor Kinerja per Bidang (Adaptif Bar / Radar) -->
+            <div class="tremor-card flex flex-col justify-between h-[390px]">
                 <div>
                     <div class="flex items-center justify-between mb-1">
-                        <h3 class="text-sm font-bold text-gray-900">Skor Kinerja per Bidang</h3>
-                        <span class="tremor-badge tremor-badge-blue">Kategori</span>
+                        <h3 class="text-sm font-bold text-gray-900" id="chartBidangTitle">Skor Kinerja per Bidang</h3>
+                        <div class="flex items-center gap-1.5">
+                            <span class="tremor-badge tremor-badge-blue" id="chartBidangBadge">Mutu Bidang</span>
+                            <div class="inline-flex rounded-lg border border-gray-200 bg-gray-100 p-0.5 text-xs">
+                                <button type="button" id="btnChartBar" onclick="setBidangChartType('bar')" class="px-2 py-0.5 rounded-md font-semibold text-xs bg-white text-gray-800 shadow-2xs transition">Bar</button>
+                                <button type="button" id="btnChartRadar" onclick="setBidangChartType('radar')" class="px-2 py-0.5 rounded-md font-semibold text-xs text-gray-500 hover:text-gray-800 transition">Radar</button>
+                            </div>
+                        </div>
                     </div>
-                    <p class="text-xs text-gray-500 mb-4">Perbandingan rata-rata performa antar spesialisasi</p>
+                    <p class="text-xs text-gray-500 mb-2">Rata-rata performa mutu berdasarkan spesialisasi</p>
                 </div>
-                <div class="flex justify-center items-center my-auto" style="min-height:230px;">
-                    <canvas id="radarChart" style="max-width:100%; max-height:240px;"></canvas>
+                <div class="flex justify-center items-center my-auto w-full" style="height:210px; position:relative;">
+                    <canvas id="radarChart"></canvas>
                 </div>
-                <div class="pt-3 mt-3 border-t border-gray-100 text-center text-xs text-gray-500" id="radarSummaryMeta">
-                    Memetakan komparasi standar antar bidang kerja
+                <div class="pt-2.5 mt-auto border-t border-gray-100 text-center text-xs text-gray-500" id="radarSummaryMeta">
+                    Membandingkan performa mutu antar bidang rekanan
                 </div>
             </div>
         </div>
 
-        <!-- ========== OPERATIONAL MONITORING GRID (3-COLUMN) ========== -->
-        <div class="perf-grid grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6" id="sectionPerformance">
+        <!-- ========== OPERATIONAL MONITORING GRID (3-COLUMN EQUAL HEIGHT) ========== -->
+        <div class="perf-grid grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6 items-stretch" id="sectionPerformance">
             <!-- 1. TOP 5 Vendor Terbaik -->
-            <div class="tremor-card flex flex-col justify-between">
-                <div>
+            <div class="tremor-card flex flex-col justify-between h-[420px]">
+                <div class="flex flex-col h-full">
                     <div class="flex items-center justify-between mb-1">
-                        <h3 class="text-sm font-bold text-gray-900">🏆 Top 5 Vendor Terbaik</h3>
+                        <h3 class="text-sm font-bold text-gray-900 flex items-center gap-1.5">
+                            <span>🏆</span> Top 5 Vendor Terbaik
+                        </h3>
                         <span class="tremor-badge tremor-badge-emerald">Skor Tertinggi</span>
                     </div>
-                    <p class="text-xs text-gray-500 mb-3">Rekanan dengan performa paling konsisten</p>
-                    <div class="overflow-x-auto -mx-1.5">
-                        <table class="tremor-table">
+                    <p class="text-xs text-gray-500 mb-2">Rekanan dengan performa paling konsisten</p>
+                    <div class="overflow-x-auto flex-1 custom-scrollbar">
+                        <table class="tremor-table w-full">
                             <thead>
                                 <tr>
-                                    <th style="width:36px">Rank</th>
-                                    <th>Vendor</th>
-                                    <th class="text-right">Skor</th>
-                                    <th class="text-center">Predikat</th>
+                                    <th style="width:36px">#</th>
+                                    <th>Vendor & Bidang</th>
+                                    <th class="text-right" style="width:90px">Skor</th>
                                 </tr>
                             </thead>
                             <tbody id="topVendorsTable">
-                                <tr><td colspan="4" class="text-center text-gray-400 py-6">Memuat data ranking...</td></tr>
+                                <tr><td colspan="3" class="text-center text-gray-400 py-6">Memuat data ranking...</td></tr>
                             </tbody>
                         </table>
                     </div>
+                    <div id="topVendorsFooterNotice" class="mt-auto pt-2"></div>
                 </div>
             </div>
 
-            <!-- 2. Status Penilaian & Vendor Belum Dinilai -->
-            <div class="tremor-card flex flex-col justify-between">
-                <div>
+            <!-- 2. Status Penilaian & Prioritas Evaluasi (Mekari Spend Priority) -->
+            <div class="tremor-card flex flex-col justify-between h-[420px]">
+                <div class="flex flex-col h-full">
                     <div class="flex items-center justify-between mb-1">
-                        <h3 class="text-sm font-bold text-gray-900">📋 Pengawasan Evaluasi</h3>
-                        <span class="tremor-badge tremor-badge-purple" id="pendingVendorBadge">0 Pending</span>
+                        <h3 class="text-sm font-bold text-gray-900 flex items-center gap-1.5">
+                            <span>📋</span> Prioritas Evaluasi
+                        </h3>
+                        <span class="tremor-badge tremor-badge-purple" id="pendingVendorBadge">0 Belum Dinilai</span>
                     </div>
-                    <p class="text-xs text-gray-500 mb-3">Vendor yang perlu dinilai atau memerlukan atensi</p>
-                    <div class="overflow-y-auto" style="max-height: 280px;" id="pendingVendorsContainer">
+                    <p class="text-xs text-gray-500 mb-2">Vendor transaksi tinggi yang perlu dievaluasi</p>
+                    <div class="overflow-y-auto flex-1 pr-1 custom-scrollbar" id="pendingVendorsContainer">
                         <div class="text-center text-gray-400 py-6">Memeriksa status evaluasi vendor...</div>
                     </div>
-                </div>
-                <div class="pt-2 mt-2 border-t border-gray-100">
-                    <table class="tremor-table" style="display:none;" id="attentionVendorsTable">
-                        <tbody></tbody>
-                    </table>
                 </div>
             </div>
 
             <!-- 3. Kinerja Pengiriman PO Realtime -->
-            <div id="sectionOrders" class="tremor-card flex flex-col justify-between">
-                <div>
+            <div id="sectionOrders" class="tremor-card flex flex-col justify-between h-[420px]">
+                <div class="flex flex-col h-full">
                     <div class="flex items-center justify-between mb-1">
-                        <h3 class="text-sm font-bold text-gray-900">🚚 Ketepatan Pengiriman PO</h3>
+                        <h3 class="text-sm font-bold text-gray-900 flex items-center gap-1.5">
+                            <span>🚚</span> Ketepatan Pengiriman PO
+                        </h3>
                         <span id="overallOnTimeBadge" class="tremor-badge tremor-badge-blue">0% On-Time</span>
                     </div>
-                    <p class="text-xs text-gray-500 mb-3">Monitoring ketepatan waktu pengiriman purchase order</p>
-                    <div class="po-performance-list overflow-y-auto" id="poPerformanceList" style="max-height: 280px;">
+                    <p class="text-xs text-gray-500 mb-2">Monitoring SLA ketepatan waktu purchase order</p>
+                    <div class="po-performance-list overflow-y-auto flex-1 pr-1 custom-scrollbar" id="poPerformanceList">
                         <div class="text-center text-gray-400 py-6">Memuat data pengiriman...</div>
                     </div>
                 </div>

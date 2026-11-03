@@ -498,11 +498,13 @@ function renderDashboard(vendors, scoreSummary, cc, poStats, kategori, evaluatio
     renderPredicateChart(scoreSummary);
     renderRadarChart(vendors, scoreSummary, kategori);
 
+    window._lastDashboardArgs = { vendors, scoreSummary, cc, poStats, kategori, evaluations };
+
     // 4. Render Operational Tables & Tracking Cards
     renderContractTable(cc);
     renderEvaluationsTable(evaluations);
     renderTopVendors(scoreSummary, vendors, kategori);
-    renderPendingVendors(vendors, scoreSummary, kategori);
+    renderPendingVendors(vendors, scoreSummary, kategori, poStats);
     renderPoPerformance(poStats);
 
     // 5. Render Kraljic Strategic Matrix (FITUR 3)
@@ -515,7 +517,7 @@ function renderDashboard(vendors, scoreSummary, cc, poStats, kategori, evaluatio
 function renderSummaryCards(vendors, scoreSummary, cc, poStats) {
     const totalVendors = vendors ? vendors.length : 0;
     
-    // 1. Total Nilai Kontrak
+    // 1. Total Nilai Kontrak & Spend PO (Spend Analytics Mekari)
     let totalContractVal = 0;
     let totalContractsCount = 0;
     if (cc && cc.list) {
@@ -527,11 +529,27 @@ function renderSummaryCards(vendors, scoreSummary, cc, poStats) {
     const valEl = document.getElementById('statTotalContractValue');
     const valCountEl = document.getElementById('statTotalContractsCount');
     const valAvgEl = document.getElementById('statAvgContractValue');
-    if (valEl) valEl.textContent = formatRupiah(totalContractVal);
-    if (valCountEl) valCountEl.textContent = `${totalContractsCount} kontrak aktif`;
-    if (valAvgEl) {
-        const avgVal = totalContractsCount > 0 ? (totalContractVal / totalContractsCount) : 0;
-        valAvgEl.textContent = totalContractVal > 0 ? `Rata-rata: ${formatRupiah(avgVal)}` : `Portofolio Aktif`;
+    const kpiSpendTitleEl = document.getElementById('kpiSpendTitle');
+
+    const totalPoSpend = poStats ? (poStats.totalValue || 0) : 0;
+    const totalPoOrders = poStats ? (poStats.totalOrders || 0) : 0;
+
+    if (totalContractVal > 0) {
+        if (kpiSpendTitleEl) kpiSpendTitleEl.textContent = 'Nilai Kontrak';
+        if (valEl) valEl.textContent = formatRupiah(totalContractVal);
+        if (valCountEl) valCountEl.textContent = `${totalContractsCount} kontrak aktif`;
+        if (valAvgEl) {
+            const avgVal = totalContractsCount > 0 ? (totalContractVal / totalContractsCount) : 0;
+            valAvgEl.textContent = totalPoSpend > 0 ? `Belanja PO: ${formatRupiah(totalPoSpend)}` : `Rata-rata: ${formatRupiah(avgVal)}`;
+        }
+    } else {
+        // Fallback cerdas: Jika nilai kontrak belum diisi/0 di spreadsheet, tampilkan Total Belanja PO riil
+        if (kpiSpendTitleEl) kpiSpendTitleEl.textContent = 'Total Belanja PO';
+        if (valEl) valEl.textContent = totalPoSpend > 0 ? formatRupiah(totalPoSpend) : 'Rp 0';
+        if (valCountEl) valCountEl.textContent = `${totalContractsCount} kontrak aktif`;
+        if (valAvgEl) {
+            valAvgEl.textContent = totalPoOrders > 0 ? `${totalPoOrders} pesanan PO terdata` : 'Portofolio Belanja';
+        }
     }
 
     // 2. KPI 4: Contract Compliance
@@ -663,10 +681,12 @@ function checkExpiringContracts(cc) {
 
 function renderTopVendors(scoreSummary, vendors, categories) {
     const tableBody = document.getElementById('topVendorsTable');
+    const noticeEl = document.getElementById('topVendorsFooterNotice');
     if (!tableBody) return;
 
     if (!scoreSummary || Object.keys(scoreSummary).length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:2rem;">Belum ada vendor yang dinilai.</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#94a3b8; padding:2rem;">Belum ada vendor yang dinilai.</td></tr>`;
+        if (noticeEl) noticeEl.innerHTML = '';
         return;
     }
 
@@ -694,27 +714,48 @@ function renderTopVendors(scoreSummary, vendors, categories) {
 
     tableBody.innerHTML = sorted.map((v, i) => `
         <tr>
-            <td style="font-weight:700;">${rankBadges[i] || (i + 1)}</td>
+            <td style="font-weight:700; width:36px;">${rankBadges[i] || (i + 1)}</td>
             <td>
                 <div style="font-weight:600; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;" title="${esc(v.name)}">${esc(v.name)}</div>
                 <div class="flex items-center gap-1.5 mt-0.5">
-                    <span style="font-size:0.75rem; color:#64748b;">${esc(v.categoryIcon)} ${esc(v.categoryName)}</span>
+                    <span style="font-size:0.72rem; color:#64748b;">${esc(v.categoryIcon)} ${esc(v.categoryName)}</span>
                     <button onclick="openVendorScorecard('${esc(v.name)}')" class="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition shadow-2xs" title="Cetak Rapor Kinerja ${esc(v.name)}">
                         📄 Rapor
                     </button>
                 </div>
             </td>
-            <td style="text-align:right; font-weight:800; color:#0f172a; font-size:1rem;">${v.avgScore.toFixed(2)}</td>
-            <td style="text-align:center;">
-                <span class="predikat-badge" style="background:${getPredikatColor(v.avgScore)}15; color:${getPredikatColor(v.avgScore)}; border:1px solid ${getPredikatColor(v.avgScore)}30;">
-                    ${esc(v.predikat)}
-                </span>
+            <td style="text-align:right; width:90px;">
+                <div class="inline-flex items-center justify-end gap-1.5">
+                    <span style="font-weight:800; color:#0f172a; font-size:0.95rem;">${v.avgScore.toFixed(2)}</span>
+                    <span class="predikat-badge" style="background:${getPredikatColor(v.avgScore)}15; color:${getPredikatColor(v.avgScore)}; border:1px solid ${getPredikatColor(v.avgScore)}30; padding:0.1rem 0.45rem; font-size:0.68rem;">
+                        ${esc(v.predikat)}
+                    </span>
+                </div>
             </td>
         </tr>
     `).join('');
+
+    if (noticeEl) {
+        const totalEvaluated = Object.keys(scoreSummary).length;
+        const totalVendors = vendors ? vendors.length : 0;
+        if (totalEvaluated < 5) {
+            noticeEl.innerHTML = `
+                <div class="p-2.5 bg-blue-50/70 border border-blue-100 rounded-xl flex items-center justify-between text-xs mt-2">
+                    <span class="text-blue-900">Baru <strong>${totalEvaluated}</strong> dari <strong>${totalVendors}</strong> rekanan dinilai</span>
+                    <a href="index.html" class="font-bold text-blue-600 hover:text-blue-800 hover:underline">Nilai Rekanan →</a>
+                </div>
+            `;
+        } else {
+            noticeEl.innerHTML = `
+                <div class="text-2xs text-gray-400 text-center pt-2 border-t border-gray-100 font-medium">
+                    Menampilkan 5 rekanan berkinerja tertinggi
+                </div>
+            `;
+        }
+    }
 }
 
-function renderPendingVendors(vendors, scoreSummary, categories) {
+function renderPendingVendors(vendors, scoreSummary, categories, poStats) {
     const container = document.getElementById('pendingVendorsContainer');
     const badge = document.getElementById('pendingVendorBadge');
     if (!container) return;
@@ -722,7 +763,20 @@ function renderPendingVendors(vendors, scoreSummary, categories) {
     const evaluatedNames = new Set(scoreSummary ? Object.keys(scoreSummary) : []);
     const allList = vendors || [];
     
-    const pendingList = allList.filter(v => !evaluatedNames.has(v.nama));
+    // Prioritas Evaluasi: Berdasarkan aktivitas PO (Spend Strategic Priority ala Mekari)
+    const pendingList = allList.filter(v => !evaluatedNames.has(v.nama)).map(v => {
+        const poData = (poStats && poStats.vendorMap) ? poStats.vendorMap[v.nama] : null;
+        return {
+            ...v,
+            totalPo: poData ? (poData.totalPo || 0) : 0,
+            onTimePo: poData ? (poData.onTimePo || 0) : 0,
+            totalSpend: poData ? (poData.totalValue || 0) : 0
+        };
+    }).sort((a, b) => {
+        if (b.totalPo !== a.totalPo) return b.totalPo - a.totalPo;
+        return b.totalSpend - a.totalSpend;
+    });
+
     const attentionList = [];
     if (scoreSummary) {
         for (let name in scoreSummary) {
@@ -770,31 +824,40 @@ function renderPendingVendors(vendors, scoreSummary, categories) {
         </div>`;
     }
 
-    // Daftar vendor belum dievaluasi
+    // Daftar vendor prioritas penilaian
     if (pendingList.length > 0) {
+        const withPoCount = pendingList.filter(p => p.totalPo > 0).length;
         html += `
         <div class="text-xs font-bold text-gray-700 mb-2 flex items-center justify-between">
-            <span>Menunggu Penilaian:</span>
+            <span class="flex items-center gap-1 text-gray-800">
+                <span>🎯 Prioritas Penilaian</span>
+                ${withPoCount > 0 ? `<span class="text-2xs font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">${withPoCount} Ber-PO</span>` : ''}
+            </span>
             <span class="text-gray-400 font-normal">${pendingList.length} rekanan</span>
         </div>
         <div class="space-y-1.5">
-            ${pendingList.slice(0, 7).map(v => {
+            ${pendingList.slice(0, 10).map(v => {
                 const catCode = v.kategori || 'general';
                 const catInfo = (categories && categories.find(c => c.kode === catCode)) || { nama: 'General', ikon: '📦' };
+                const hasPo = v.totalPo > 0;
                 return `
-                <div class="flex items-center justify-between p-2 rounded-lg bg-gray-50 border border-gray-100 hover:bg-gray-100/70 transition">
+                <div class="flex items-center justify-between p-2 rounded-lg ${hasPo ? 'bg-amber-50/40 border border-amber-100 hover:bg-amber-50' : 'bg-gray-50 border border-gray-100 hover:bg-gray-100/70'} transition">
                     <div class="min-w-0 pr-2">
-                        <div class="font-semibold text-xs text-gray-800 truncate" title="${esc(v.nama)}">${esc(v.nama)}</div>
-                        <div class="text-2xs text-gray-400">${esc(catInfo.ikon)} ${esc(catInfo.nama)}</div>
+                        <div class="font-semibold text-xs text-gray-900 truncate" title="${esc(v.nama)}">${esc(v.nama)}</div>
+                        <div class="flex items-center gap-2 text-2xs text-gray-500 mt-0.5">
+                            <span>${esc(catInfo.ikon)} ${esc(catInfo.nama)}</span>
+                            ${hasPo ? `<span class="font-bold text-amber-700 bg-amber-100/80 px-1 rounded">${v.totalPo} PO</span>` : ''}
+                        </div>
                     </div>
-                    <span class="text-2xs font-semibold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 whitespace-nowrap">
-                        ⏳ Belum Dinilai
-                    </span>
+                    <a href="index.html" class="inline-flex items-center gap-1 text-2xs font-bold px-2 py-1 rounded-md ${hasPo ? 'bg-amber-600 hover:bg-amber-700 text-white shadow-2xs' : 'bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100'} whitespace-nowrap transition" title="Beri nilai sekarang">
+                        <span>Nilai</span>
+                        <span>→</span>
+                    </a>
                 </div>`;
             }).join('')}
-            ${pendingList.length > 7 ? `
-                <div class="text-center text-xs text-gray-400 pt-1 font-medium">
-                    +${pendingList.length - 7} vendor lainnya
+            ${pendingList.length > 10 ? `
+                <div class="text-center text-xs text-gray-400 pt-1.5 font-medium">
+                    +${pendingList.length - 10} vendor lainnya
                 </div>
             ` : ''}
         </div>`;
@@ -1253,16 +1316,18 @@ function renderPoPerformance(poStats) {
     const html = sortedVendorNames.map(name => {
         const v = poStats.vendorMap[name];
         const pct = v.onTimeRatePct;
-        const color = pct >= 80 ? 'var(--accent)' : pct >= 60 ? '#f59e0b' : '#ef4444';
+        const color = pct >= 80 ? '#10b981' : pct >= 60 ? '#f59e0b' : '#ef4444';
+        const badgeBg = pct >= 80 ? '#ecfdf5' : pct >= 60 ? '#fffbeb' : '#fef2f2';
+        const badgeText = pct >= 80 ? '#065f46' : pct >= 60 ? '#92400e' : '#991b1b';
         
         return `
-        <div class="po-perf-item" style="margin-bottom: 1.25rem;">
-            <div style="display:flex; justify-content:space-between; margin-bottom:0.35rem; font-size:0.875rem;">
-                <span style="font-weight:600; color:var(--text); text-overflow:ellipsis; overflow:hidden; white-space:nowrap; max-width:260px;" title="${esc(name)}">${esc(name)}</span>
-                <span style="font-weight:700; color:${color}; font-size:0.8rem; white-space:nowrap; margin-left:0.5rem;">${pct}% (${v.onTimePo}/${v.totalPo} PO)</span>
+        <div class="po-perf-item p-2 rounded-lg bg-gray-50 border border-gray-100 hover:bg-gray-100/70 transition mb-2">
+            <div class="flex items-center justify-between mb-1 text-xs">
+                <span class="font-semibold text-gray-900 truncate max-w-[170px]" title="${esc(name)}">${esc(name)}</span>
+                <span class="font-bold text-2xs px-1.5 py-0.5 rounded" style="background:${badgeBg}; color:${badgeText};">${pct}% (${v.onTimePo}/${v.totalPo} PO)</span>
             </div>
-            <div class="progress-bar-container" style="background:var(--border); height:8px; border-radius:4px; overflow:hidden; display:flex;">
-                <div class="progress-bar-fill" style="width:${pct}%; background:${color}; height:100%; border-radius:4px;"></div>
+            <div class="progress-bar-container bg-gray-200 h-1.5 rounded-full overflow-hidden">
+                <div class="progress-bar-fill h-full rounded-full transition-all duration-500" style="width:${pct}%; background:${color};"></div>
             </div>
         </div>`;
     }).join('');
@@ -1629,6 +1694,28 @@ function showToast(msg, type = 'success') {
 // =====================================================
 let radarChartInstance = null;
 let complianceChartInstance = null;
+let currentBidangChartType = 'bar'; // Default to horizontal bar to avoid single-line collapse!
+
+window.setBidangChartType = function(type) {
+    currentBidangChartType = type;
+    const btnBar = document.getElementById('btnChartBar');
+    const btnRadar = document.getElementById('btnChartRadar');
+    const badge = document.getElementById('chartBidangBadge');
+    if (btnBar && btnRadar) {
+        if (type === 'bar') {
+            btnBar.className = 'px-2 py-0.5 rounded-md font-semibold text-xs bg-white text-gray-800 shadow-2xs transition';
+            btnRadar.className = 'px-2 py-0.5 rounded-md font-semibold text-xs text-gray-500 hover:text-gray-800 transition';
+            if (badge) badge.textContent = 'Bar Chart';
+        } else {
+            btnRadar.className = 'px-2 py-0.5 rounded-md font-semibold text-xs bg-white text-gray-800 shadow-2xs transition';
+            btnBar.className = 'px-2 py-0.5 rounded-md font-semibold text-xs text-gray-500 hover:text-gray-800 transition';
+            if (badge) badge.textContent = 'Radar Mutu';
+        }
+    }
+    if (window._lastDashboardArgs) {
+        renderRadarChart(window._lastDashboardArgs.vendors, window._lastDashboardArgs.scoreSummary, window._lastDashboardArgs.kategori);
+    }
+};
 
 function renderRadarChart(vendors, scoreSummary, kategori) {
     const canvas = document.getElementById('radarChart');
@@ -1643,7 +1730,7 @@ function renderRadarChart(vendors, scoreSummary, kategori) {
             if (evalData) {
                 if (!catScores[catCode]) {
                     const catInfo = (kategori && kategori.find(c => c.kode === catCode)) || { nama: catCode, ikon: '📦' };
-                    catScores[catCode] = { label: catInfo.nama, icon: catInfo.ikon || '📦', sum: 0, count: 0 };
+                    catScores[catCode] = { code: catCode, label: catInfo.nama, icon: catInfo.ikon || '📦', sum: 0, count: 0 };
                 }
                 catScores[catCode].sum += evalData.avgScore;
                 catScores[catCode].count++;
@@ -1651,81 +1738,167 @@ function renderRadarChart(vendors, scoreSummary, kategori) {
         });
     }
 
-    const labels = [];
-    const data = [];
-    for (const code in catScores) {
-        const cat = catScores[code];
-        labels.push(`${cat.icon} ${cat.label}`);
-        data.push(parseFloat((cat.sum / cat.count).toFixed(2)));
-    }
-
-    if (labels.length === 0) {
-        labels.push('Belum ada data evaluasi');
-        data.push(0);
-    }
-
     const radarMetaEl = document.getElementById('radarSummaryMeta');
-    if (radarMetaEl) {
-        const catCount = Object.keys(catScores).length;
-        radarMetaEl.textContent = catCount > 0
-            ? `Membandingkan performa pada ${catCount} bidang rekanan aktif`
-            : 'Belum ada data evaluasi untuk bidang rekanan';
-    }
+    const evaluatedCatCount = Object.keys(catScores).length;
 
     if (radarChartInstance) radarChartInstance.destroy();
 
-    radarChartInstance = new Chart(canvas, {
-        type: 'radar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Skor Rata-rata',
-                data: data,
-                backgroundColor: 'rgba(16, 185, 129, 0.15)',
-                borderColor: '#10b981',
-                borderWidth: 2,
-                pointBackgroundColor: '#10b981',
-                pointBorderColor: '#fff',
-                pointBorderWidth: 2,
-                pointRadius: 5,
-                pointHoverRadius: 7
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            scales: {
-                r: {
-                    beginAtZero: true,
-                    max: 5,
-                    ticks: {
-                        stepSize: 1,
-                        font: { size: 11 },
-                        backdropColor: 'transparent'
-                    },
-                    pointLabels: {
-                        font: { size: 12, weight: '600' },
-                        color: '#334155'
-                    },
-                    grid: { color: '#e2e8f0' },
-                    angleLines: { color: '#e2e8f0' }
-                }
+    if (currentBidangChartType === 'bar') {
+        // ========== HORIZONTAL BAR CHART (ADAPTIF & BERSIH) ==========
+        const barItems = [];
+        for (const code in catScores) {
+            const cat = catScores[code];
+            const avg = parseFloat((cat.sum / cat.count).toFixed(2));
+            barItems.push({
+                label: `${cat.icon} ${cat.label}`,
+                score: avg,
+                count: cat.count
+            });
+        }
+        barItems.sort((a, b) => b.score - a.score);
+
+        if (barItems.length === 0) {
+            barItems.push({ label: 'Belum ada penilaian bidang', score: 0, count: 0 });
+        }
+
+        const labels = barItems.map(b => b.label);
+        const data = barItems.map(b => b.score);
+        const bgColors = data.map(val => val >= 4.0 ? '#10b981' : val >= 3.0 ? '#3b82f6' : val >= 2.0 ? '#f59e0b' : '#ef4444');
+
+        if (radarMetaEl) {
+            radarMetaEl.textContent = evaluatedCatCount > 0
+                ? `Rata-rata performa mutu pada ${evaluatedCatCount} bidang rekanan aktif`
+                : 'Belum ada data evaluasi untuk bidang rekanan';
+        }
+
+        radarChartInstance = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Skor Mutu (1-5)',
+                    data: data,
+                    backgroundColor: bgColors,
+                    borderRadius: 6,
+                    barThickness: Math.min(32, Math.max(18, 120 / (labels.length || 1)))
+                }]
             },
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    backgroundColor: '#1e293b',
-                    titleFont: { size: 13, weight: '700' },
-                    bodyFont: { size: 12 },
-                    padding: 10,
-                    cornerRadius: 8,
-                    callbacks: {
-                        label: function(ctx) { return `Skor: ${ctx.raw} / 5.0`; }
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        max: 5,
+                        grid: { color: '#f1f5f9' },
+                        ticks: {
+                            stepSize: 1,
+                            font: { size: 10, weight: '600' },
+                            color: '#64748b'
+                        }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: {
+                            font: { size: 11, weight: '600' },
+                            color: '#1e293b'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#1e293b',
+                        titleFont: { size: 12, weight: '700' },
+                        bodyFont: { size: 11 },
+                        padding: 8,
+                        cornerRadius: 8,
+                        callbacks: {
+                            label: function(ctx) { return ` Skor Rata-rata: ${ctx.raw} / 5.0`; }
+                        }
                     }
                 }
             }
+        });
+    } else {
+        // ========== RADAR CHART (DENGAN MASTER CATEGORIES AGAR TIDAK MENGKERUT) ==========
+        const allCategories = (kategori && kategori.length > 0) ? kategori : [
+            { kode: 'ITSoftware', nama: 'IT & Software', ikon: '💻' },
+            { kode: 'BarangJasa', nama: 'Pengadaan Barang & Jasa', ikon: '📦' },
+            { kode: 'KOLInfPodcast', nama: 'KOL & Media', ikon: '🎙️' }
+        ];
+
+        const labels = [];
+        const data = [];
+        allCategories.forEach(cat => {
+            labels.push(`${cat.ikon || '📦'} ${cat.nama}`);
+            if (catScores[cat.kode]) {
+                data.push(parseFloat((catScores[cat.kode].sum / catScores[cat.kode].count).toFixed(2)));
+            } else {
+                data.push(0);
+            }
+        });
+
+        if (radarMetaEl) {
+            radarMetaEl.textContent = evaluatedCatCount > 0
+                ? `Memetakan polygon mutu pada ${allCategories.length} kategori rekanan`
+                : 'Belum ada data evaluasi untuk bidang rekanan';
         }
-    });
+
+        radarChartInstance = new Chart(canvas, {
+            type: 'radar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Skor Rata-rata',
+                    data: data,
+                    backgroundColor: 'rgba(59, 130, 246, 0.18)',
+                    borderColor: '#2563eb',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#2563eb',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        max: 5,
+                        ticks: {
+                            stepSize: 1,
+                            font: { size: 10 },
+                            backdropColor: 'transparent'
+                        },
+                        pointLabels: {
+                            font: { size: 10, weight: '600' },
+                            color: '#334155'
+                        },
+                        grid: { color: '#e2e8f0' },
+                        angleLines: { color: '#e2e8f0' }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#1e293b',
+                        titleFont: { size: 12, weight: '700' },
+                        bodyFont: { size: 11 },
+                        padding: 8,
+                        cornerRadius: 8,
+                        callbacks: {
+                            label: function(ctx) { return `Skor: ${ctx.raw} / 5.0`; }
+                        }
+                    }
+                }
+            }
+        });
+    }
 }
 
 let predicateChartInstance = null;
