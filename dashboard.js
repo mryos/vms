@@ -1947,16 +1947,7 @@ function renderPredicateChart(scoreSummary) {
             maintainAspectRatio: true,
             cutout: '68%',
             plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        padding: 10,
-                        usePointStyle: true,
-                        pointStyle: 'circle',
-                        font: { size: 11, weight: '600' },
-                        color: '#475569'
-                    }
-                },
+                legend: { display: false },
                 tooltip: {
                     backgroundColor: '#0f172a',
                     titleFont: { size: 12, weight: '700' },
@@ -1985,13 +1976,13 @@ function renderPredicateChart(scoreSummary) {
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
 
-                ctx.font = 'bold 24px Inter, sans-serif';
+                ctx.font = 'bold 22px Inter, sans-serif';
                 ctx.fillStyle = '#0f172a';
-                ctx.fillText(`${total}`, centerX, centerY - 8);
+                ctx.fillText(`${total}`, centerX, centerY - 6);
 
-                ctx.font = '600 11px Inter, sans-serif';
+                ctx.font = '600 9px Inter, sans-serif';
                 ctx.fillStyle = '#64748b';
-                ctx.fillText('Vendor Dinilai', centerX, centerY + 14);
+                ctx.fillText('Vendor Dinilai', centerX, centerY + 12);
 
                 ctx.restore();
             }
@@ -2026,21 +2017,12 @@ function renderComplianceChart(cc) {
             maintainAspectRatio: true,
             cutout: '68%',
             plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        padding: 14,
-                        usePointStyle: true,
-                        pointStyle: 'circle',
-                        font: { size: 12, weight: '600' },
-                        color: '#334155'
-                    }
-                },
+                legend: { display: false },
                 tooltip: {
                     backgroundColor: '#1e293b',
-                    titleFont: { size: 13, weight: '700' },
-                    bodyFont: { size: 12 },
-                    padding: 10,
+                    titleFont: { size: 12, weight: '700' },
+                    bodyFont: { size: 11 },
+                    padding: 8,
                     cornerRadius: 8,
                     callbacks: {
                         label: function(ctx) {
@@ -2065,13 +2047,13 @@ function renderComplianceChart(cc) {
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
 
-                ctx.font = 'bold 26px Inter, sans-serif';
+                ctx.font = 'bold 22px Inter, sans-serif';
                 ctx.fillStyle = '#1e293b';
-                ctx.fillText(`${rate}%`, centerX, centerY - 8);
+                ctx.fillText(`${rate}%`, centerX, centerY - 6);
 
-                ctx.font = '600 11px Inter, sans-serif';
+                ctx.font = '600 9px Inter, sans-serif';
                 ctx.fillStyle = '#64748b';
-                ctx.fillText('Compliance Rate', centerX, centerY + 14);
+                ctx.fillText('Compliance', centerX, centerY + 12);
 
                 ctx.restore();
             }
