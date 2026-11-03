@@ -1597,10 +1597,20 @@ function getVendorScoreSummary(ss) {
 
       var catScore = 0;
       var cSum = 0, cCnt = 0;
+      var evalLines = [];
       for (var cc = 0; cc < catHeaders.length; cc++) {
         if (cc !== catIdxVendor && cc !== catIdxAvg && cc !== catIdxPred && cc !== catIdxPeriode && cc !== catIdxPenilai && cc !== catIdxTimestamp && cc !== catIdxCatatan) {
           var cv = typeof catData[ci][cc] === 'number' ? catData[ci][cc] : (parseFloat((catData[ci][cc] || '').toString().replace(',', '.')) || 0);
-          if (cv >= 1 && cv <= 5) { cSum += cv; cCnt++; }
+          if (cv >= 1 && cv <= 5) {
+            cSum += cv;
+            cCnt++;
+            var rawH = catData[0][cc] ? catData[0][cc].toString().trim() : '';
+            var cleanH = rawH.replace(/\s*\([0-9-]+\)\s*$/, '').trim();
+            evalLines.push({
+              name: cleanH,
+              score: cv
+            });
+          }
         }
       }
       if (cCnt > 0) {
@@ -1615,12 +1625,17 @@ function getVendorScoreSummary(ss) {
         var catPenilai = catIdxPenilai !== -1 && catData[ci][catIdxPenilai] ? catData[ci][catIdxPenilai].toString().trim() : '-';
         var catTimestamp = catIdxTimestamp !== -1 && catData[ci][catIdxTimestamp] ? formatDate(catData[ci][catIdxTimestamp]) : '-';
         var catCatatan = catIdxCatatan !== -1 && catData[ci][catIdxCatatan] ? catData[ci][catIdxCatatan].toString().trim() : '';
+        var catKategoriName = sName.replace(/^Penilaian\s*-\s*/, '');
 
-        // Cek duplikasi: jangan hitung jika sudah ada entry sama dari sheet master
-        var isDuplicate = result.evaluationsList.some(function(ev) {
-          return ev.vendor === catVendor && ev.periode === catPeriode && ev.penilai === catPenilai && Math.abs(ev.score - catScore) < 0.01;
+        // Cek apakah sudah ada entry dari master sheet, jika ada lengkapi dengan lines detail
+        var existingEv = result.evaluationsList.find(function(ev) {
+          return ev.vendor === catVendor && ev.periode === catPeriode && ev.penilai === catPenilai;
         });
-        if (isDuplicate) continue;
+        if (existingEv) {
+          existingEv.lines = evalLines;
+          existingEv.kategori = catKategoriName;
+          continue;
+        }
 
         if (!result.summary[catVendor]) {
           result.summary[catVendor] = { totalScore: 0, count: 0, avgScore: 0, predikat: 'Cukup', periodeScores: [] };
@@ -1631,7 +1646,8 @@ function getVendorScoreSummary(ss) {
 
         result.evaluationsList.push({
           timestamp: catTimestamp, penilai: catPenilai, vendor: catVendor,
-          periode: catPeriode, score: catScore, predikat: catPredikat, catatan: catCatatan
+          kategori: catKategoriName, periode: catPeriode, score: catScore,
+          predikat: catPredikat, catatan: catCatatan, lines: evalLines
         });
       }
     }

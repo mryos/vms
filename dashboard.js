@@ -866,6 +866,368 @@ function exportDashboardCsv() {
     exportEvaluationCsv();
 }
 
+// =====================================================
+// ERP / ODOO CSV EXPORT UTILITIES (SESUAI TEMPLATE ERP)
+// =====================================================
+function openErpExportModal() {
+    const modal = document.getElementById('erpExportModal');
+    if (!modal) return;
+
+    // 1. Populate period dropdown
+    const periodSelect = document.getElementById('erpExportPeriodSelect');
+    if (periodSelect) {
+        let periodOptions = '<option value="all">📅 Semua Periode Evaluasi</option>';
+        if (dashboardData && Array.isArray(dashboardData.periodList)) {
+            periodOptions += dashboardData.periodList.map(p => `<option value="${esc(p)}">📅 ${esc(p)}</option>`).join('');
+        }
+        periodSelect.innerHTML = periodOptions;
+
+        // Default to current slicer period if not "all"
+        const currentSlicer = document.getElementById('slicerPeriodSelect')?.value;
+        if (currentSlicer && currentSlicer !== 'all') {
+            periodSelect.value = currentSlicer;
+        } else {
+            periodSelect.value = 'all';
+        }
+    }
+
+    // 2. Populate vendor dropdown
+    const vendorSelect = document.getElementById('erpExportVendorSelect');
+    if (vendorSelect) {
+        let vendorOptions = '<option value="all">🤝 Semua Rekanan yang Dinilai</option>';
+        const evaluatedVendors = new Set();
+        if (dashboardData && Array.isArray(dashboardData.evaluationsList)) {
+            dashboardData.evaluationsList.forEach(e => {
+                if (e.vendor) evaluatedVendors.add(e.vendor);
+            });
+        }
+        Array.from(evaluatedVendors).sort().forEach(v => {
+            vendorOptions += `<option value="${esc(v)}">${esc(v)}</option>`;
+        });
+        vendorSelect.innerHTML = vendorOptions;
+    }
+
+    // 3. Update preview
+    updateErpExportPreview();
+
+    modal.style.display = 'flex';
+}
+
+function closeErpExportModal() {
+    const modal = document.getElementById('erpExportModal');
+    if (modal) modal.style.display = 'none';
+}
+
+function updateErpExportPreview() {
+    const periodFilter = document.getElementById('erpExportPeriodSelect')?.value || 'all';
+    const vendorFilter = document.getElementById('erpExportVendorSelect')?.value || 'all';
+    const badge = document.getElementById('erpExportSummaryBadge');
+    const textEl = document.getElementById('erpExportSummaryText');
+
+    const evals = getFilteredEvaluationsForErp(periodFilter, vendorFilter);
+    let totalLinesCount = 0;
+    evals.forEach(e => {
+        const lines = getEvaluationLinesForRecord(e);
+        totalLinesCount += lines.length;
+    });
+
+    if (badge) {
+        badge.textContent = `${evals.length} Rekanan · ${totalLinesCount} Baris CSV`;
+    }
+    if (textEl) {
+        if (evals.length === 0) {
+            textEl.innerHTML = '<span class="text-rose-600 font-semibold">⚠️ Tidak ada data evaluasi yang cocok dengan filter yang dipilih.</span>';
+        } else {
+            const sample = evals[0];
+            const sampleLines = getEvaluationLinesForRecord(sample);
+            textEl.innerHTML = `Siap mengekspor <strong>${evals.length} sesi evaluasi</strong> (${totalLinesCount} baris detail kriteria).<br>
+            <span class="text-indigo-600 font-mono text-[10px] mt-1 block">Contoh Record: ${esc(sample.vendor)} (${esc(sample.periode || 'General')}) &bull; ${sampleLines.length} kriteria penilaian</span>`;
+        }
+    }
+}
+
+function getFilteredEvaluationsForErp(periodFilter, vendorFilter) {
+    if (!dashboardData || !Array.isArray(dashboardData.evaluationsList)) return [];
+    return dashboardData.evaluationsList.filter(e => {
+        if (periodFilter !== 'all' && e.periode !== periodFilter) {
+            const pClean = (e.periode || '').toLowerCase().replace(/\s+/g, '');
+            const filterClean = periodFilter.toLowerCase().replace(/\s+/g, '');
+            if (pClean !== filterClean) return false;
+        }
+        if (vendorFilter !== 'all' && e.vendor !== vendorFilter) {
+            return false;
+        }
+        return true;
+    });
+}
+
+function getVendorBusinessTitle(vendorName, categoryCode) {
+    // 1. Cek dari sheet Kontrak Vendor (ruang lingkup / jenis pekerjaan)
+    if (dashboardData && dashboardData.contractCompliance && Array.isArray(dashboardData.contractCompliance.list)) {
+        const c = dashboardData.contractCompliance.list.find(item => item.vendor && item.vendor.toLowerCase().trim() === vendorName.toLowerCase().trim());
+        if (c && c.jenisPekerjaan && c.jenisPekerjaan !== '-') {
+            return c.jenisPekerjaan;
+        }
+    }
+
+    // 2. Cek dari PO produk yang pernah disuplai
+    if (dashboardData && Array.isArray(dashboardData.allRawOrders)) {
+        const po = dashboardData.allRawOrders.find(o => o.vendor && o.vendor.toLowerCase().trim() === vendorName.toLowerCase().trim() && o.product);
+        if (po && po.product) {
+            return po.product;
+        }
+    }
+
+    // 3. Cek dari nama kategori vendor
+    if (categoryCode && dashboardData && Array.isArray(dashboardData.kategoriList)) {
+        const cat = dashboardData.kategoriList.find(k => k.kode === categoryCode || k.nama === categoryCode);
+        if (cat && cat.nama) return cat.nama;
+    }
+
+    return 'Barang & Jasa';
+}
+
+function getVendorEmail(vendorName) {
+    if (dashboardData && Array.isArray(dashboardData.allMasterVendors)) {
+        const v = dashboardData.allMasterVendors.find(item => item.nama && item.nama.toLowerCase().trim() === vendorName.toLowerCase().trim());
+        if (v && v.kontak && v.kontak.includes('@')) {
+            return v.kontak.trim();
+        }
+    }
+    return '';
+}
+
+function formatToDmY(dateStr) {
+    if (!dateStr || dateStr === '-') return '';
+    const d = new Date(dateStr);
+    if (!isNaN(d.getTime())) {
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        return `${day}/${month}/${year}`;
+    }
+    return dateStr;
+}
+
+function getPeriodDateRange(periode) {
+    const text = (periode || '').toString();
+    const yearMatch = text.match(/\b(20\d\d)\b/);
+    const year = yearMatch ? yearMatch[1] : new Date().getFullYear().toString();
+
+    let q = 0;
+    if (text.includes('1') || text.toLowerCase().includes('q1')) q = 1;
+    else if (text.includes('2') || text.toLowerCase().includes('q2')) q = 2;
+    else if (text.includes('3') || text.toLowerCase().includes('q3')) q = 3;
+    else if (text.includes('4') || text.toLowerCase().includes('q4')) q = 4;
+
+    if (q === 1) return { startDmY: `1/1/${year}`, endDmY: `31/03/${year}` };
+    if (q === 2) return { startDmY: `1/4/${year}`, endDmY: `30/06/${year}` };
+    if (q === 3) return { startDmY: `1/7/${year}`, endDmY: `30/09/${year}` };
+    if (q === 4) return { startDmY: `1/10/${year}`, endDmY: `31/12/${year}` };
+
+    return { startDmY: `1/1/${year}`, endDmY: `31/12/${year}` };
+}
+
+function mapScoreToErpRate(score) {
+    const val = parseFloat(score) || 0;
+    if (val >= 4.5) return 'Excellent';
+    if (val >= 3.5) return 'Good';
+    if (val >= 2.5) return 'Fair';
+    if (val >= 1.5) return 'Poor';
+    return 'Very Poor';
+}
+
+function calculateLineFactors(lines) {
+    if (!lines || lines.length === 0) return [];
+    const n = lines.length;
+    const base = Math.floor(100 / n);
+    const factors = new Array(n).fill(base);
+
+    // Kustomisasi bobot sesuai kriteria spesifik
+    lines.forEach((l, idx) => {
+        const lName = (l.name || '').toLowerCase();
+        if (lName.includes('dokumen legal') || lName.includes('dokumen transaksi') || lName.includes('efisiensi') || lName.includes('budget')) {
+            factors[idx] = 5;
+        } else if (lName.includes('kualitas') || lName.includes('hasil') || lName.includes('portofolio')) {
+            factors[idx] = 20;
+        } else {
+            factors[idx] = 10;
+        }
+    });
+
+    // Normalisasi agar tepat total 100
+    const sum = factors.reduce((a, b) => a + b, 0);
+    const diff = 100 - sum;
+    if (factors.length > 0) {
+        factors[factors.length - 1] += diff;
+    }
+    return factors;
+}
+
+function getEvaluationLinesForRecord(e) {
+    // 1. Jika sudah ada data lines dari sheet Penilaian - <Kategori>
+    if (Array.isArray(e.lines) && e.lines.length > 0) {
+        return e.lines;
+    }
+
+    // 2. Fallback: ambil kriteria berdasarkan kategori vendor
+    const vCat = e.kategori || (dashboardData && dashboardData.vendors && dashboardData.vendors.find(v => v.nama === e.vendor)?.kategori) || 'BarangJasa';
+    let matched = [];
+    if (dashboardData && Array.isArray(dashboardData.kriteriaList)) {
+        matched = dashboardData.kriteriaList.filter(k => k.kategori === vCat || (k.vendorSpesifik && k.vendorSpesifik.toLowerCase() === (e.vendor || '').toLowerCase()));
+    }
+
+    if (matched.length > 0) {
+        return matched.map(m => ({
+            name: m.kriteria,
+            score: e.score || 4
+        }));
+    }
+
+    // 3. Fallback standar 10 kriteria umum
+    const fallbackNames = [
+        'Kelengkapan & Validasi Dokumen Legal',
+        'Pengalaman & Portofolio',
+        'Kualitas Hasil Pekerjaan',
+        'Kesesuaian Brand Guideline',
+        'Kreativitas & Inovasi',
+        'Kesesuaian Timeline & Jadwal',
+        'Kecepatan Respon & Komunikasi',
+        'Penanganan Masalah & Revisi',
+        'Kemampuan Koordinasi Teknis',
+        'Efisiensi Biaya & Penawaran'
+    ];
+    return fallbackNames.map(name => ({
+        name: name,
+        score: e.score || 4
+    }));
+}
+
+function getVendorPoCheck(vendorName) {
+    if (dashboardData && dashboardData.poStats && dashboardData.poStats.vendorMap) {
+        const vPo = dashboardData.poStats.vendorMap[vendorName];
+        if (vPo && vPo.onTimeRatePct >= 80) return true;
+    }
+    return false;
+}
+
+function getVendorFulfillmentCheck(vendorName) {
+    if (dashboardData && dashboardData.contractCompliance && Array.isArray(dashboardData.contractCompliance.list)) {
+        const c = dashboardData.contractCompliance.list.find(item => item.vendor && item.vendor.toLowerCase() === vendorName.toLowerCase());
+        if (c && (c.kelengkapan === 'Lengkap' || c.status === 'Aktif')) return true;
+    }
+    return false;
+}
+
+function formatCsvCell(val, delim = ',') {
+    if (val === undefined || val === null) return '';
+    const str = val.toString().trim();
+    if (str.includes(delim) || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+        return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+}
+
+function executeErpCsvDownload() {
+    const periodFilter = document.getElementById('erpExportPeriodSelect')?.value || 'all';
+    const vendorFilter = document.getElementById('erpExportVendorSelect')?.value || 'all';
+    const defaultManager = (document.getElementById('erpExportManagerInput')?.value || '').trim() || 'yanis.ahmad@ethos.co.id';
+    const delimiterChoice = document.getElementById('erpExportDelimiterSelect')?.value || 'comma';
+    const isSemicolon = (delimiterChoice === 'semicolon');
+    const delim = isSemicolon ? ';' : ',';
+
+    const evals = getFilteredEvaluationsForErp(periodFilter, vendorFilter);
+    if (evals.length === 0) {
+        showToast('Tidak ada data evaluasi yang cocok untuk diekspor.', 'error');
+        return;
+    }
+
+    // Header sesuai template ERP / Odoo
+    const headers = [
+        'External ID',
+        'Vendor',
+        'Business Title',
+        'Email',
+        'Date Entry',
+        'Review Period',
+        'Period End',
+        'Manager',
+        'on_time_rate_check',
+        'fulfillment_check',
+        'Evaluation Line/Evaluation Name',
+        'Evaluation Line/Rate',
+        'Evaluation Line/Factor',
+        'Evaluation Line/Comment'
+    ];
+
+    let csv = headers.join(delim) + (isSemicolon ? ';\n' : '\n');
+    let totalLines = 0;
+
+    evals.forEach((e, idx) => {
+        const vName = e.vendor;
+        const cleanVendorSlug = vName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+        const cleanPeriodSlug = (e.periode || 'general').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+        const extId = `ve_${cleanPeriodSlug}_${cleanVendorSlug}`;
+
+        const bTitle = getVendorBusinessTitle(vName, e.kategori);
+        const vEmail = getVendorEmail(vName);
+        const { startDmY, endDmY } = getPeriodDateRange(e.periode);
+        const dateEntry = formatToDmY(e.timestamp) || endDmY;
+
+        let managerEmail = defaultManager;
+        if (e.penilai && e.penilai !== '-' && e.penilai.includes('@')) {
+            managerEmail = e.penilai.trim();
+        } else if (e.penilai && e.penilai !== '-') {
+            managerEmail = e.penilai.toLowerCase().trim().replace(/[^a-z0-9]+/g, '.') + '@ethos.co.id';
+        }
+
+        const poCheck = getVendorPoCheck(vName);
+        const fulfillCheck = getVendorFulfillmentCheck(vName);
+
+        const lines = getEvaluationLinesForRecord(e);
+        const factors = calculateLineFactors(lines);
+
+        lines.forEach((line, lIdx) => {
+            const factor = factors[lIdx] || 10;
+            const rateStr = mapScoreToErpRate(line.score);
+            const comment = (lIdx === 0 && e.catatan) ? e.catatan : (line.comment || '');
+
+            if (isSemicolon) {
+                // Format template dengan semicolon setelah External ID
+                csv += `${extId};${vName},${bTitle},${vEmail},${dateEntry},${startDmY},${endDmY},${managerEmail},${poCheck ? 'TRUE' : 'FALSE'},${fulfillCheck ? 'TRUE' : 'FALSE'},${line.name},${rateStr},${factor},${comment}\n`;
+            } else {
+                // Standar RFC / Odoo CSV dengan koma dan quoting
+                const rowCells = [
+                    extId,
+                    vName,
+                    bTitle,
+                    vEmail,
+                    dateEntry,
+                    startDmY,
+                    endDmY,
+                    managerEmail,
+                    poCheck ? 'TRUE' : 'FALSE',
+                    fulfillCheck ? 'TRUE' : 'FALSE',
+                    line.name,
+                    rateStr,
+                    factor,
+                    comment
+                ];
+                csv += rowCells.map(c => formatCsvCell(c, ',')).join(',') + '\n';
+            }
+            totalLines++;
+        });
+    });
+
+    const nowStr = new Date().toISOString().slice(0, 10);
+    const periodLabel = periodFilter === 'all' ? 'Semua_Periode' : periodFilter.replace(/[^a-zA-Z0-9]/g, '_');
+    const filename = `vendor-evaluation-import-template-${periodLabel}-${nowStr}.csv`;
+    downloadCsv(csv, filename);
+    showToast(`Berhasil mengunduh ${totalLines} baris data evaluasi untuk ERP!`, 'success');
+    closeErpExportModal();
+}
+
+
 function renderPoPerformance(poStats) {
     const container = document.getElementById('poPerformanceList');
     const badge = document.getElementById('overallOnTimeBadge');
