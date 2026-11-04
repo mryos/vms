@@ -288,7 +288,13 @@ function updatePoInsightsBanner() {
 // WELCOME & PIN AUTHENTICATION
 // =====================================================
 function checkWelcome() {
-    const savedPin = localStorage.getItem('ethos_pin');
+    // Bersihkan sesi lama dari localStorage agar saat pertama akses website selalu meminta PIN
+    localStorage.removeItem('ethos_pin');
+    localStorage.removeItem('ethos_nama');
+    localStorage.removeItem('ethos_user_vendors');
+
+    // Gunakan sessionStorage untuk menjaga sesi aktif hanya selama tab browser terbuka
+    const savedPin = sessionStorage.getItem('ethos_pin');
     
     // Khusus PIN 8899: Hanya boleh akses halaman Katalog Produk
     if (savedPin === '8899') {
@@ -296,8 +302,8 @@ function checkWelcome() {
         return;
     }
 
-    const savedName = localStorage.getItem('ethos_nama');
-    const savedVendors = localStorage.getItem('ethos_user_vendors');
+    const savedName = sessionStorage.getItem('ethos_nama');
+    const savedVendors = sessionStorage.getItem('ethos_user_vendors');
     const savedKriteria = localStorage.getItem('ethos_kriteria');
     const savedCategories = localStorage.getItem('ethos_categories');
 
@@ -335,6 +341,17 @@ function checkWelcome() {
             vendors = [];
         }
         updateHeaderUser(savedName, savedPin);
+        
+        // Sembunyikan welcome overlay karena sesi aktif di tab ini
+        const overlay = document.getElementById('welcomeOverlay');
+        if (overlay) {
+            overlay.classList.remove('show');
+            overlay.style.display = 'none';
+            overlay.style.opacity = '0';
+            overlay.style.visibility = 'hidden';
+            overlay.style.pointerEvents = 'none';
+        }
+
         renderVendorList();
 
         // Background fetch untuk sinkronisasi periode & PO stats terbaru dari server
@@ -461,6 +478,9 @@ async function processPinLogin(pin) {
 
     // Khusus PIN 8899: Pengguna Khusus Katalog (Langsung menuju ke katalog.html)
     if (pin === '8899') {
+        sessionStorage.setItem('ethos_pin', '8899');
+        sessionStorage.setItem('ethos_nama', 'User Katalog');
+        sessionStorage.setItem('ethos_role', 'katalog_only');
         localStorage.setItem('ethos_pin', '8899');
         localStorage.setItem('ethos_nama', 'User Katalog');
         localStorage.setItem('ethos_role', 'katalog_only');
@@ -568,9 +588,15 @@ async function processPinLogin(pin) {
         currentAssessorName = verifiedData.nama;
         userAssignedVendors = verifiedData.vendors;
 
-        localStorage.setItem('ethos_pin', currentPin);
-        localStorage.setItem('ethos_nama', currentAssessorName);
-        localStorage.setItem('ethos_user_vendors', JSON.stringify(userAssignedVendors));
+        // Simpan ke sessionStorage (hanya aktif di tab ini)
+        sessionStorage.setItem('ethos_pin', currentPin);
+        sessionStorage.setItem('ethos_nama', currentAssessorName);
+        sessionStorage.setItem('ethos_user_vendors', JSON.stringify(userAssignedVendors));
+
+        // Bersihkan localStorage agar tidak auto-login selamanya
+        localStorage.removeItem('ethos_pin');
+        localStorage.removeItem('ethos_nama');
+        localStorage.removeItem('ethos_user_vendors');
 
         updateHeaderUser(currentAssessorName, currentPin);
 
@@ -664,7 +690,11 @@ function updateRoleBasedView(pin) {
 }
 
 function doLogout() {
-    // Hapus semua data sesi dari localStorage
+    // Hapus semua data sesi dari sessionStorage dan localStorage
+    sessionStorage.removeItem('ethos_pin');
+    sessionStorage.removeItem('ethos_nama');
+    sessionStorage.removeItem('ethos_role');
+    sessionStorage.removeItem('ethos_user_vendors');
     localStorage.removeItem('ethos_pin');
     localStorage.removeItem('ethos_nama');
     localStorage.removeItem('ethos_role');

@@ -356,7 +356,7 @@
             z-index: 1000;
             background: rgba(15, 23, 42, 0.6);
             backdrop-filter: blur(8px);
-            display: none;
+            display: flex; /* Selalu tampil secara default saat halaman dimuat */
             align-items: center;
             justify-content: center;
             padding: 1rem;
@@ -475,7 +475,7 @@
 <body class="min-h-screen">
 
     <!-- ========== WELCOME OVERLAY (PIN LOGIN + GUIDE) ========== -->
-    <div class="welcome-overlay" id="welcomeOverlay">
+    <div class="welcome-overlay show" id="welcomeOverlay" style="display: flex; opacity: 1; visibility: visible;">
         <div class="welcome-card">
             <!-- Left: Panduan Penggunaan -->
             <div class="welcome-guide">
@@ -784,6 +784,6 @@
     <!-- ========== TOAST NOTIFICATION CONTAINER ========== -->
     <div class="toast-box" id="toastBox"></div>
 
-    <script src="script.js?v=20261104-4"></script>
+    <script src="script.js?v=20261104-5"></script>
 </body>
 </html>

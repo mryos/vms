@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function checkAdminAccess() {
-    const savedPin = localStorage.getItem('ethos_pin');
+    const savedPin = sessionStorage.getItem('ethos_pin') || localStorage.getItem('ethos_pin');
     const authOverlay = document.getElementById('adminAuthOverlay');
     
     // Khusus pengguna PIN 8899: dilarang akses dashboard, otomatis dialihkan ke katalog
