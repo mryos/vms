@@ -330,12 +330,72 @@
         .welcome-card {
             background: #ffffff;
             border: 1px solid #e5e7eb;
-            border-radius: 1rem;
-            padding: 2.25rem 2rem;
-            max-width: 420px;
+            border-radius: 1.25rem;
+            max-width: 780px;
             width: 100%;
+            box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.18);
+            display: flex;
+            overflow: hidden;
+        }
+        .welcome-guide {
+            flex: 1;
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            padding: 2.5rem 2rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            border-right: 1px solid #bfdbfe;
+        }
+        .welcome-form {
+            flex: 1;
+            padding: 2.5rem 2rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
             text-align: center;
-            box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.15);
+        }
+        .guide-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        .guide-step-num {
+            flex-shrink: 0;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #2563eb;
+            color: #fff;
+            font-size: 0.75rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .guide-step-text {
+            font-size: 0.82rem;
+            color: #1e3a5f;
+            font-weight: 500;
+            line-height: 1.5;
+            padding-top: 0.2rem;
+        }
+        .guide-step-text strong {
+            color: #1e40af;
+        }
+        @media (max-width: 639px) {
+            .welcome-card {
+                flex-direction: column;
+                max-width: 420px;
+            }
+            .welcome-guide {
+                border-right: none;
+                border-bottom: 1px solid #bfdbfe;
+                padding: 1.5rem 1.25rem;
+            }
+            .welcome-form {
+                padding: 1.5rem 1.25rem;
+            }
         }
 
         /* Toast Container */
@@ -379,25 +439,58 @@
 </head>
 <body class="min-h-screen">
 
-    <!-- ========== WELCOME OVERLAY (PIN LOGIN) ========== -->
+    <!-- ========== WELCOME OVERLAY (PIN LOGIN + GUIDE) ========== -->
     <div class="welcome-overlay" id="welcomeOverlay">
         <div class="welcome-card">
-            <div class="flex justify-center mb-4">
-                <img src="assets/logo-ethos.png" alt="PT Ethos Kreatif Indonesia" class="h-12 w-auto object-contain">
-            </div>
-            <h2 class="text-xl font-bold text-gray-900 mb-1">Akses Penilai Vendor</h2>
-            <p class="text-sm text-gray-500 mb-5">Masukkan Kode PIN Penilai Anda untuk melihat daftar vendor yang ditugaskan.</p>
-            
-            <div class="mb-3">
-                <input type="password" class="w-full text-center tracking-widest text-lg font-mono px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-sm" id="welcomePinInput" placeholder="Masukkan PIN" autofocus autocomplete="off">
+            <!-- Left: Panduan Penggunaan -->
+            <div class="welcome-guide">
+                <div class="flex items-center gap-2 mb-4">
+                    <img src="assets/logo-ethos.png" alt="PT Ethos Kreatif Indonesia" class="h-9 w-auto object-contain">
+                </div>
+                <h3 class="text-sm font-bold text-gray-800 mb-1">Panduan Penilaian Vendor</h3>
+                <p class="text-xs text-blue-700/70 mb-4">Ikuti langkah berikut untuk menyelesaikan penilaian:</p>
+
+                <div class="guide-step">
+                    <span class="guide-step-num">1</span>
+                    <span class="guide-step-text"><strong>Masukkan PIN</strong> yang telah diberikan oleh admin untuk mengakses daftar vendor Anda.</span>
+                </div>
+                <div class="guide-step">
+                    <span class="guide-step-num">2</span>
+                    <span class="guide-step-text"><strong>Beri nilai vendor</strong> dengan memilih ikon ⭐ bintang pada setiap kriteria penilaian.</span>
+                </div>
+                <div class="guide-step">
+                    <span class="guide-step-num">3</span>
+                    <span class="guide-step-text"><strong>Berikan catatan</strong> untuk vendor jika diperlukan sebagai masukan tambahan.</span>
+                </div>
+                <div class="guide-step" style="margin-bottom: 0;">
+                    <span class="guide-step-num">4</span>
+                    <span class="guide-step-text"><strong>Klik "Kirim Penilaian"</strong> untuk menyimpan hasil evaluasi Anda.</span>
+                </div>
             </div>
 
-            <div class="pin-error-msg text-red-600 text-xs font-semibold mb-3" id="pinErrorMsg" style="display:none;"></div>
+            <!-- Right: Form PIN -->
+            <div class="welcome-form">
+                <div class="mb-4">
+                    <div class="w-14 h-14 mx-auto rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center mb-3">
+                        <svg class="w-7 h-7 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                    </div>
+                    <h2 class="text-lg font-bold text-gray-900 mb-1">Akses Penilai</h2>
+                    <p class="text-xs text-gray-500">Masukkan Kode PIN Penilai untuk melihat daftar vendor yang ditugaskan.</p>
+                </div>
+                
+                <div class="mb-3">
+                    <input type="password" class="w-full text-center tracking-widest text-lg font-mono px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-sm" id="welcomePinInput" placeholder="Masukkan PIN" autofocus autocomplete="off">
+                </div>
 
-            <button class="w-full py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition shadow-sm hover:shadow flex items-center justify-center gap-2" id="welcomeSubmit">
-                <span class="btn-text">Masuk & Verifikasi PIN</span>
-                <span class="btn-spinner animate-spin border-2 border-white border-t-transparent rounded-full w-4 h-4" style="display:none"></span>
-            </button>
+                <div class="pin-error-msg text-red-600 text-xs font-semibold mb-3" id="pinErrorMsg" style="display:none;"></div>
+
+                <button class="w-full py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition shadow-sm hover:shadow flex items-center justify-center gap-2" id="welcomeSubmit">
+                    <span class="btn-text">Masuk & Verifikasi PIN</span>
+                    <span class="btn-spinner animate-spin border-2 border-white border-t-transparent rounded-full w-4 h-4" style="display:none"></span>
+                </button>
+
+                <p class="text-2xs text-gray-400 mt-4">Hubungi admin jika Anda belum memiliki PIN.</p>
+            </div>
         </div>
     </div>
 
