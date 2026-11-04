@@ -641,6 +641,20 @@ function updateRoleBasedView(pin) {
     if (adminNav) {
         adminNav.style.display = isAdmin ? 'flex' : 'none';
     }
+
+    // Sesuaikan lebar container main: max-w-4xl untuk penilai biasa (proporsional & rapi), max-w-7xl untuk admin
+    const mainEl = document.querySelector('main');
+    if (mainEl) {
+        mainEl.className = isAdmin ? 'mx-auto max-w-7xl px-4 lg:px-8 py-6' : 'mx-auto max-w-4xl px-4 lg:px-8 py-6';
+    }
+
+    // Sembunyikan search toolbar untuk penilai biasa (non-admin)
+    const allToolbars = document.querySelectorAll('main > div');
+    allToolbars.forEach(el => {
+        if (el.querySelector('#searchInput') && el.querySelector('#statusFilterTabs')) {
+            el.style.display = isAdmin ? '' : 'none';
+        }
+    });
 }
 
 function doLogout() {
@@ -1089,7 +1103,7 @@ function updateAssessorWelcomeCard() {
 
     if (heading) {
         if (currentAssessorName && !isAdmin) {
-            heading.textContent = `Daftar Rekanan · ${currentAssessorName}`;
+            heading.textContent = `Halo, ${currentAssessorName}! 👋`;
         } else if (isAdmin) {
             heading.textContent = 'Konsol Penilaian Vendor (Admin)';
         } else {
@@ -1099,9 +1113,13 @@ function updateAssessorWelcomeCard() {
 
     if (sub) {
         if (!isAdmin) {
-            sub.textContent = total > 0 
-                ? `Terdapat ${total} rekanan vendor yang ditugaskan kepada Anda pada periode ini.`
-                : 'Pilih rekanan di bawah untuk melakukan evaluasi performa dan mutu.';
+            if (pendingCount > 0) {
+                sub.textContent = `Anda memiliki ${pendingCount} rekanan yang perlu dinilai pada periode ${selectedPeriode || 'ini'}. Pilih vendor untuk mulai menilai.`;
+            } else if (total > 0) {
+                sub.textContent = `Semua ${total} rekanan telah selesai dinilai pada periode ${selectedPeriode || 'ini'}. Terima kasih! 🎉`;
+            } else {
+                sub.textContent = 'Belum ada rekanan yang ditugaskan untuk Anda saat ini.';
+            }
         } else {
             sub.textContent = `Monitoring seluruh penugasan evaluasi vendor periode ${selectedPeriode || '-'}.`;
         }
@@ -1127,6 +1145,13 @@ function renderVendorList(overrideList = null) {
     const list = document.getElementById('vendorList');
     const countEl = document.getElementById('vendorCount');
     if (!list) return;
+
+    const isAdmin = currentPin === '9999' || currentPin === 'admin';
+    if (!isAdmin) {
+        list.classList.add('single-col');
+    } else {
+        list.classList.remove('single-col');
+    }
 
     updateAssessorWelcomeCard();
 
@@ -1223,6 +1248,46 @@ function renderVendorList(overrideList = null) {
 
         const rowStyle = done && !isAdmin ? 'style="opacity: 0.9;"' : '';
 
+        // Tentukan apakah tampilan admin (card kompleks) atau penilai biasa (row simpel)
+        if (!isAdmin) {
+            // ========== TAMPILAN PENILAI BIASA: Compact Row Card ==========
+            return `
+            <div class="vendor-card vendor-row ${done ? 'locked' : ''} group" data-vendor="${esc(v)}" ${rowStyle} style="padding:1rem 1.25rem;">
+                <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="vendor-avatar group-hover:scale-105 transition-transform" style="background:${color}14; color:${color}; border:1px solid ${color}28;">
+                            ${initials}
+                        </div>
+                        <div class="min-w-0">
+                            <h3 class="font-bold text-sm sm:text-base text-gray-900 group-hover:text-blue-600 transition-colors leading-snug truncate" title="${esc(v)}">
+                                ${esc(v)}
+                            </h3>
+                            <div class="flex items-center gap-2 mt-0.5 flex-wrap">
+                                <span class="inline-flex items-center gap-1 text-[11px] font-medium text-gray-500">
+                                    <span>${esc(catObj.ikon || '📦')}</span>
+                                    <span>${esc(catObj.nama)}</span>
+                                </span>
+                                ${itemPreview ? `<span class="text-[10px] text-gray-400 font-medium truncate max-w-[180px]" title="${esc(itemPreview)}">${esc(itemPreview)}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        ${done 
+                            ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
+                                 <svg class="w-3 h-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                 Selesai
+                               </span>`
+                            : `<span class="inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-xl bg-blue-600 text-white group-hover:bg-blue-700 transition shadow-sm">
+                                 Beri Nilai
+                                 <span class="group-hover:translate-x-0.5 transition-transform">→</span>
+                               </span>`
+                        }
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        // ========== TAMPILAN ADMIN: Full Card dengan PO Preview ==========
         return `
         <div class="vendor-card vendor-row ${done ? 'locked' : ''} group" data-vendor="${esc(v)}" ${rowStyle}>
             <div>
