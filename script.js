@@ -118,7 +118,7 @@ let allRawOrders = []; // Seluruh daftar PO dari semua periode
 
 let activeCategories = ['all'];
 let viewMode = 'all';
-    currentStatusFilter = 'all'; // 'all' | 'pinned'
+let currentStatusFilter = 'all'; // 'all' | 'pending' | 'done'
 let ratings = {}; // Akan diisi dinamis berdasarkan kriteria aktif
 let vendorCategoryMap = {}; // { 'Nama Vendor': 'it', ... }
 let kriteriaList = []; // Diambil dari spreadsheet
@@ -1114,7 +1114,7 @@ function getVendorPoStats(vName) {
 // =====================================================
 // STATUS FILTER (SEMUA / PERLU DINILAI / SELESAI)
 // =====================================================
-let currentStatusFilter = 'all'; // 'all' | 'pending' | 'done'
+// currentStatusFilter sudah dideklarasikan di variabel global awal
 
 window.filterByStatus = function(status) {
     currentStatusFilter = status;
