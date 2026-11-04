@@ -418,7 +418,13 @@ async function refreshPoStatsFromServer(pin) {
 
 function showWelcome() {
     const overlay = document.getElementById('welcomeOverlay');
-    overlay.classList.add('show');
+    if (overlay) {
+        overlay.classList.add('show');
+        overlay.style.display = 'flex';
+        overlay.style.opacity = '1';
+        overlay.style.visibility = 'visible';
+        overlay.style.pointerEvents = 'auto';
+    }
 
     const input = document.getElementById('welcomePinInput');
     const btn = document.getElementById('welcomeSubmit');
@@ -1219,7 +1225,6 @@ function renderVendorList(overrideList = null) {
 
     const assessed = getAssessedVendorsForPeriod(selectedPeriode);
     const pinned = getPinnedVendors();
-    const isAdmin = currentPin === '9999' || currentPin === 'admin';
 
     list.innerHTML = displayVendors.map((v, i) => {
         const originalIndex = vendors.indexOf(v);
