@@ -440,6 +440,17 @@ async function refreshPoStatsFromServer(pin) {
     }
 }
 
+window.handleWelcomeSubmit = async function() {
+    const input = document.getElementById('welcomePinInput');
+    if (!input) return;
+    const pin = input.value.trim();
+    if (!pin) {
+        showPinError('Mohon masukkan Kode PIN Penilai Anda');
+        return;
+    }
+    await processPinLogin(pin);
+};
+
 function showWelcome() {
     const overlay = document.getElementById('welcomeOverlay');
     if (overlay) {
@@ -453,34 +464,40 @@ function showWelcome() {
     const input = document.getElementById('welcomePinInput');
     const btn = document.getElementById('welcomeSubmit');
     const errEl = document.getElementById('pinErrorMsg');
+    const btnText = btn ? btn.querySelector('.btn-text') : null;
+    const spinner = btn ? btn.querySelector('.btn-spinner') : null;
 
-    input.value = '';
-    errEl.style.display = 'none';
+    if (input) input.value = '';
+    if (errEl) errEl.style.display = 'none';
+    if (btn) btn.disabled = false;
+    if (btnText) btnText.textContent = 'Masuk & Verifikasi PIN';
+    if (spinner) spinner.style.display = 'none';
 
-    btn.onclick = async () => {
-        const pin = input.value.trim();
-        if (!pin) {
-            showPinError('Mohon masukkan Kode PIN Penilai Anda');
-            return;
-        }
-        await processPinLogin(pin);
-    };
+    if (btn) {
+        btn.onclick = (e) => {
+            if (e) e.preventDefault();
+            window.handleWelcomeSubmit();
+        };
+    }
 
-    input.onkeydown = async (e) => {
-        if (e.key === 'Enter') {
-            const pin = input.value.trim();
-            if (pin) await processPinLogin(pin);
-        }
-        errEl.style.display = 'none';
-        input.style.borderColor = '';
-    };
+    if (input) {
+        input.onkeydown = (e) => {
+            if (e.key === 'Enter') {
+                if (e) e.preventDefault();
+                window.handleWelcomeSubmit();
+            }
+            if (errEl) errEl.style.display = 'none';
+            input.style.borderColor = '';
+        };
+        setTimeout(() => input.focus(), 150);
+    }
 }
 
 async function processPinLogin(pin) {
     const input = document.getElementById('welcomePinInput');
     const btn = document.getElementById('welcomeSubmit');
-    const btnText = btn.querySelector('.btn-text');
-    const spinner = btn.querySelector('.btn-spinner');
+    const btnText = btn ? btn.querySelector('.btn-text') : null;
+    const spinner = btn ? btn.querySelector('.btn-spinner') : null;
     const overlay = document.getElementById('welcomeOverlay');
 
     // Khusus PIN 8899: Pengguna Khusus Katalog (Langsung menuju ke katalog.html)
@@ -495,131 +512,137 @@ async function processPinLogin(pin) {
         return;
     }
 
-    btn.disabled = true;
-    btnText.textContent = 'Memeriksa PIN...';
-    spinner.style.display = 'inline-block';
+    if (btn) btn.disabled = true;
+    if (btnText) btnText.textContent = 'Memeriksa PIN...';
+    if (spinner) spinner.style.display = 'inline-block';
 
     let verifiedData = null;
 
-    // Reset selectedPeriode agar periode tidak tersisa dari sesi sebelumnya
-    selectedPeriode = '';
+    try {
+        // Reset selectedPeriode agar periode tidak tersisa dari sesi sebelumnya
+        selectedPeriode = '';
 
-    if (SCRIPT_URL !== 'PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE') {
-        try {
-            const res = await fetch(`${SCRIPT_URL}?pin=${encodeURIComponent(pin)}`);
-            const data = await res.json();
-            if (data.status === 'success') {
-                if (data.allVendors && data.allVendors.length > 0) {
-                    allMasterVendors = data.allVendors.map(v => typeof v === 'object' ? v.nama : v);
-                    data.allVendors.forEach(v => {
-                        if (typeof v === 'object' && v.nama && v.kategori) {
-                            vendorCategoryMap[v.nama] = v.kategori;
-                        }
-                    });
+        if (SCRIPT_URL !== 'PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE') {
+            try {
+                const res = await fetch(`${SCRIPT_URL}?pin=${encodeURIComponent(pin)}`);
+                const data = await res.json();
+                if (data.status === 'success') {
+                    if (data.allVendors && data.allVendors.length > 0) {
+                        allMasterVendors = data.allVendors.map(v => typeof v === 'object' ? v.nama : v);
+                        data.allVendors.forEach(v => {
+                            if (typeof v === 'object' && v.nama && v.kategori) {
+                                vendorCategoryMap[v.nama] = v.kategori;
+                            }
+                        });
+                    }
+
+                    currentPin = pin;
+                    currentAssessorName = data.namaPenilai || 'Penilai';
+
+                    if (pin === '9999' || pin === 'admin') {
+                        userAssignedVendors = [...allMasterVendors];
+                    } else {
+                        userAssignedVendors = (data.vendors || []).map(v => typeof v === 'object' ? v.nama : v);
+                    }
+
+                    if (data.scoreSummary) scoreSummary = data.scoreSummary;
+
+                    if (data.kriteria && data.kriteria.length > 0) {
+                        kriteriaList = data.kriteria;
+                        localStorage.setItem('ethos_kriteria', JSON.stringify(kriteriaList));
+                    }
+
+                    if (data.kategori && data.kategori.length > 0) {
+                        categoriesList = data.kategori;
+                        localStorage.setItem('ethos_categories', JSON.stringify(categoriesList));
+                        renderCategoryChips(categoriesList);
+                    }
+
+                    if (data.periods && data.periodList && data.periodList.length > 0) {
+                        serverPeriods = data.periods;
+                        serverPeriodList = data.periodList;
+                    }
+
+                    if (Array.isArray(data.allRawOrders)) {
+                        allRawOrders = data.allRawOrders;
+                    }
+
+                    if (pin === '9999' || pin === 'admin') {
+                        selectedPeriode = serverPeriodList.length > 0 ? serverPeriodList[0] : '';
+                    } else {
+                        selectedPeriode = getBestPeriodForUser(userAssignedVendors);
+                    }
+                    renderPeriodChips(serverPeriodList);
+
+                    verifiedData = {
+                        pin: pin,
+                        nama: currentAssessorName,
+                        vendors: userAssignedVendors
+                    };
+                } else if (data.status === 'error') {
+                    if (pin !== 'admin' && pin !== '9999') {
+                        showPinError(data.message || 'Kode PIN tidak terdaftar di Google Spreadsheet.');
+                        return;
+                    }
                 }
+            } catch (err) {
+                console.warn('Gagal hubungi Apps Script, mencoba fallback offline PIN...', err);
+            }
+        }
 
-                currentPin = pin;
-                currentAssessorName = data.namaPenilai || 'Penilai';
-
-                if (pin === '9999' || pin === 'admin') {
-                    userAssignedVendors = [...allMasterVendors];
-                } else {
-                    userAssignedVendors = (data.vendors || []).map(v => typeof v === 'object' ? v.nama : v);
-                }
-
-                if (data.scoreSummary) scoreSummary = data.scoreSummary;
-
-                if (data.kriteria && data.kriteria.length > 0) {
-                    kriteriaList = data.kriteria;
-                    localStorage.setItem('ethos_kriteria', JSON.stringify(kriteriaList));
-                }
-
-                if (data.kategori && data.kategori.length > 0) {
-                    categoriesList = data.kategori;
-                    localStorage.setItem('ethos_categories', JSON.stringify(categoriesList));
-                    renderCategoryChips(categoriesList);
-                }
-
-                if (data.periods && data.periodList && data.periodList.length > 0) {
-                    serverPeriods = data.periods;
-                    serverPeriodList = data.periodList;
-                }
-
-                if (Array.isArray(data.allRawOrders)) {
-                    allRawOrders = data.allRawOrders;
-                }
-
-                if (pin === '9999' || pin === 'admin') {
-                    selectedPeriode = serverPeriodList.length > 0 ? serverPeriodList[0] : '';
-                } else {
-                    selectedPeriode = getBestPeriodForUser(userAssignedVendors);
-                }
-                renderPeriodChips(serverPeriodList);
-
+        // Fallback jika Apps Script offline / mode demo
+        if (!verifiedData) {
+            if (DEFAULT_PINS[pin]) {
                 verifiedData = {
                     pin: pin,
-                    nama: currentAssessorName,
-                    vendors: userAssignedVendors
+                    nama: DEFAULT_PINS[pin].nama,
+                    vendors: DEFAULT_PINS[pin].vendors
                 };
-            } else if (data.status === 'error') {
-                if (pin !== 'admin' && pin !== '9999') {
-                    showPinError(data.message || 'Kode PIN tidak terdaftar di Google Spreadsheet.');
-                    resetPinBtn(btn, btnText, spinner);
-                    return;
-                }
+            } else if (pin === 'admin' || pin === '9999') {
+                verifiedData = {
+                    pin: pin,
+                    nama: 'Administrator',
+                    vendors: allMasterVendors
+                };
             }
-        } catch (err) {
-            console.warn('Gagal hubungi Apps Script, mencoba fallback offline PIN...', err);
         }
-    }
 
-    // Fallback jika Apps Script offline / mode demo
-    if (!verifiedData) {
-        if (DEFAULT_PINS[pin]) {
-            verifiedData = {
-                pin: pin,
-                nama: DEFAULT_PINS[pin].nama,
-                vendors: DEFAULT_PINS[pin].vendors
-            };
-        } else if (pin === 'admin' || pin === '9999') {
-            verifiedData = {
-                pin: pin,
-                nama: 'Administrator',
-                vendors: allMasterVendors
-            };
+        if (verifiedData) {
+            currentPin = verifiedData.pin;
+            currentAssessorName = verifiedData.nama;
+            userAssignedVendors = verifiedData.vendors;
+
+            // Simpan ke sessionStorage (hanya aktif di tab ini)
+            sessionStorage.setItem('ethos_pin', currentPin);
+            sessionStorage.setItem('ethos_nama', currentAssessorName);
+            sessionStorage.setItem('ethos_user_vendors', JSON.stringify(userAssignedVendors));
+
+            // Bersihkan localStorage agar tidak auto-login selamanya
+            localStorage.removeItem('ethos_pin');
+            localStorage.removeItem('ethos_nama');
+            localStorage.removeItem('ethos_user_vendors');
+
+            updateHeaderUser(currentAssessorName, currentPin);
+
+            // Sembunyikan overlay paksa dengan inline style (bukan hanya class)
+            if (overlay) {
+                overlay.classList.remove('show');
+                overlay.style.display = 'none';
+                overlay.style.opacity = '0';
+                overlay.style.visibility = 'hidden';
+                overlay.style.pointerEvents = 'none';
+            }
+
+            switchPeriod(selectedPeriode);
+        } else {
+            showPinError(`PIN "${pin}" tidak terdaftar. Masukkan PIN yang valid (Contoh PIN Demo: 1001, 1002, 1003).`);
         }
+    } catch (e) {
+        console.error('Error in processPinLogin:', e);
+        showPinError('Terjadi kesalahan saat memeriksa PIN. Silakan coba lagi.');
+    } finally {
+        resetPinBtn(btn, btnText, spinner);
     }
-
-    if (verifiedData) {
-        currentPin = verifiedData.pin;
-        currentAssessorName = verifiedData.nama;
-        userAssignedVendors = verifiedData.vendors;
-
-        // Simpan ke sessionStorage (hanya aktif di tab ini)
-        sessionStorage.setItem('ethos_pin', currentPin);
-        sessionStorage.setItem('ethos_nama', currentAssessorName);
-        sessionStorage.setItem('ethos_user_vendors', JSON.stringify(userAssignedVendors));
-
-        // Bersihkan localStorage agar tidak auto-login selamanya
-        localStorage.removeItem('ethos_pin');
-        localStorage.removeItem('ethos_nama');
-        localStorage.removeItem('ethos_user_vendors');
-
-        updateHeaderUser(currentAssessorName, currentPin);
-
-        // Sembunyikan overlay paksa dengan inline style (bukan hanya class)
-        overlay.classList.remove('show');
-        overlay.style.display = 'none';
-        overlay.style.opacity = '0';
-        overlay.style.visibility = 'hidden';
-        overlay.style.pointerEvents = 'none';
-
-        switchPeriod(selectedPeriode);
-    } else {
-        showPinError(`PIN "${pin}" tidak terdaftar. Masukkan PIN yang valid (Contoh PIN Demo: 1001, 1002, 1003).`);
-    }
-
-    resetPinBtn(btn, btnText, spinner);
 }
 
 function showPinError(msg) {
@@ -729,24 +752,7 @@ function doLogout() {
     const searchInput = document.getElementById('searchInput');
     if (searchInput) searchInput.value = '';
 
-    // Tampilkan PIN overlay
-    const overlay = document.getElementById('welcomeOverlay');
-    if (overlay) {
-        overlay.classList.add('show');
-        overlay.style.display = 'flex';
-        overlay.style.opacity = '1';
-        overlay.style.visibility = 'visible';
-        overlay.style.pointerEvents = 'auto';
-    }
-
-    // Reset input PIN
-    const input = document.getElementById('welcomePinInput');
-    if (input) {
-        input.value = '';
-        setTimeout(() => input.focus(), 100);
-    }
-    const errEl = document.getElementById('pinErrorMsg');
-    if (errEl) errEl.style.display = 'none';
+    showWelcome();
 }
 
 function initHeaderUser() {
