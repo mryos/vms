@@ -356,7 +356,7 @@
             z-index: 1000;
             background: rgba(15, 23, 42, 0.6);
             backdrop-filter: blur(8px);
-            display: flex; /* Selalu tampil secara default saat halaman dimuat */
+            display: none;
             align-items: center;
             justify-content: center;
             padding: 1rem;
@@ -770,8 +770,8 @@
     </div>
 
     <!-- ========== SUCCESS OVERLAY ========== -->
-    <div class="welcome-overlay" id="successBg">
-        <div class="welcome-card">
+    <div class="welcome-overlay" id="successBg" style="display: none;">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 text-center shadow-2xl border border-gray-100 flex flex-col items-center">
             <div class="w-14 h-14 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-4 border border-emerald-100">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
             </div>
@@ -784,6 +784,6 @@
     <!-- ========== TOAST NOTIFICATION CONTAINER ========== -->
     <div class="toast-box" id="toastBox"></div>
 
-    <script src="script.js?v=20261104-5"></script>
+    <script src="script.js?v=20261104-6"></script>
 </body>
 </html>

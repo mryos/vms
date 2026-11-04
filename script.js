@@ -288,6 +288,13 @@ function updatePoInsightsBanner() {
 // WELCOME & PIN AUTHENTICATION
 // =====================================================
 function checkWelcome() {
+    // Pastikan modal sukses pengiriman tersembunyi
+    const successEl = document.getElementById('successBg');
+    if (successEl) {
+        successEl.classList.remove('show');
+        successEl.style.display = 'none';
+    }
+
     // Bersihkan sesi lama dari localStorage agar saat pertama akses website selalu meminta PIN
     localStorage.removeItem('ethos_pin');
     localStorage.removeItem('ethos_nama');
@@ -1816,14 +1823,22 @@ function initModalClose() {
     });
 
     document.getElementById('successClose').addEventListener('click', () => {
-        document.getElementById('successBg').classList.remove('show');
+        const el = document.getElementById('successBg');
+        if (el) {
+            el.classList.remove('show');
+            el.style.display = 'none';
+        }
         document.body.style.overflow = '';
     });
 
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             closeModal();
-            document.getElementById('successBg').classList.remove('show');
+            const el = document.getElementById('successBg');
+            if (el) {
+                el.classList.remove('show');
+                el.style.display = 'none';
+            }
             document.body.style.overflow = '';
         }
     });
@@ -1948,7 +1963,11 @@ function getPredikat(avg) {
 function showSuccess() {
     closeModal();
     setTimeout(() => {
-        document.getElementById('successBg').classList.add('show');
+        const el = document.getElementById('successBg');
+        if (el) {
+            el.classList.add('show');
+            el.style.display = 'flex';
+        }
     }, 250);
 }
 
