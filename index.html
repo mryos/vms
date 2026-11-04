@@ -116,50 +116,81 @@
             box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
         }
 
-        /* Vendor Grid */
+        /* Vendor Grid & Modern Cards */
         .vendor-list {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 1rem;
+            gap: 1.25rem;
         }
 
-        .vendor-row {
+        .vendor-card {
             background: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 0.75rem;
-            padding: 1.125rem 1.25rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 1rem;
+            padding: 1.25rem;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.03);
             display: flex;
-            align-items: center;
-            gap: 0.875rem;
-            cursor: pointer;
+            flex-direction: column;
+            justify-content: space-between;
             transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-            box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.03);
+            cursor: pointer;
             position: relative;
         }
-        .vendor-row:hover {
+
+        .vendor-card:hover {
             border-color: #93c5fd;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
-            transform: translateY(-1px);
+            box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.06), 0 8px 10px -6px rgb(0 0 0 / 0.04);
+            transform: translateY(-2px);
         }
-        .vendor-row.locked {
-            background: #f9fafb;
-            border-color: #f3f4f6;
+
+        .vendor-card.locked {
+            background: #f8fafc;
+            border-color: #e2e8f0;
+        }
+
+        .vendor-card.locked:hover {
+            transform: none;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.03);
+            border-color: #e2e8f0;
+        }
+
+        .status-filter-btn {
+            padding: 0.35rem 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #64748b;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+
+        .status-filter-btn:hover {
+            color: #0f172a;
+        }
+
+        .status-filter-btn.active {
+            background: #ffffff;
+            color: #2563eb;
+            box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
         }
 
         .vendor-avatar {
             width: 2.75rem;
             height: 2.75rem;
-            border-radius: 0.625rem;
+            border-radius: 0.75rem;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 700;
+            font-weight: 800;
             font-size: 0.875rem;
             flex-shrink: 0;
         }
 
         .vendor-name {
-            font-weight: 600;
+            font-weight: 700;
             font-size: 0.9375rem;
             color: #111827;
             flex: 1;
@@ -527,11 +558,27 @@
     <!-- ========== MAIN CONTENT ========== -->
     <main class="mx-auto max-w-7xl px-4 lg:px-8 py-6">
 
-        <!-- Page Intro Header -->
-        <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <!-- Assessor Welcome & Progress Card -->
+        <div class="mb-6 bg-white p-5 rounded-2xl border border-gray-200/90 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4" id="assessorWelcomeBanner">
             <div>
-                <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">Daftar Penilaian Vendor</h1>
-                <p class="mt-1 text-sm text-gray-500">Pilih vendor di bawah untuk melakukan evaluasi performa periode terkait.</p>
+                <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                        <span class="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span>
+                        Portal Penilaian Rekanan
+                    </span>
+                    <span class="text-xs text-gray-500 font-medium" id="assessorPeriodBadge">Periode Aktif</span>
+                </div>
+                <h1 class="text-xl sm:text-2xl font-black text-gray-900 tracking-tight" id="assessorWelcomeHeading">Daftar Penilaian Vendor</h1>
+                <p class="text-xs sm:text-sm text-gray-500 mt-1" id="assessorWelcomeSub">Pilih rekanan di bawah untuk melakukan evaluasi performa periode terkait.</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="px-4 py-2 bg-slate-50 rounded-xl border border-gray-200/80 flex items-center gap-3 shadow-2xs">
+                    <div class="w-8 h-8 rounded-lg bg-amber-500 text-white flex items-center justify-center font-black text-xs shadow-xs" id="assessorPendingCount">0</div>
+                    <div class="text-xs">
+                        <div class="font-bold text-gray-900" id="assessorPendingTitle">Perlu Dinilai</div>
+                        <div class="text-gray-500 text-2xs" id="assessorTotalProgress">0 rekanan</div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -619,15 +666,39 @@
             </div>
         </div>
 
-        <!-- Search & Count Row -->
-        <div class="flex items-center justify-between gap-4 mb-4">
-            <div class="relative flex-1 max-w-md">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <!-- Modern Unified Search & Filter Toolbar -->
+        <div class="bg-white p-3.5 rounded-2xl border border-gray-200/90 shadow-xs mb-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <!-- Search Input: smoothly expands and occupies left side -->
+                <div class="relative flex-1">
+                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                        </svg>
+                    </div>
+                    <input type="text" 
+                           class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50/60 hover:bg-white text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition shadow-2xs" 
+                           id="searchInput" 
+                           placeholder="Cari nama rekanan vendor..." 
+                           autocomplete="off">
                 </div>
-                <input type="text" class="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition" id="searchInput" placeholder="Cari nama vendor..." autocomplete="off">
+
+                <!-- Right Toolbar: Status Filter Tabs & Counter -->
+                <div class="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
+                    <!-- Status Filter Tabs -->
+                    <div class="inline-flex rounded-xl border border-gray-200 bg-gray-100/80 p-1 text-xs" id="statusFilterTabs">
+                        <button type="button" class="status-filter-btn active" data-status="all" onclick="filterByStatus('all')">Semua</button>
+                        <button type="button" class="status-filter-btn" data-status="pending" onclick="filterByStatus('pending')">Perlu Dinilai</button>
+                        <button type="button" class="status-filter-btn" data-status="done" onclick="filterByStatus('done')">Selesai</button>
+                    </div>
+
+                    <!-- Vendor Count Badge -->
+                    <div class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-50 border border-gray-200 text-xs font-semibold text-gray-700 whitespace-nowrap shadow-2xs">
+                        <span class="w-2 h-2 rounded-full bg-blue-600"></span>
+                        <span id="vendorCount">0 Rekanan</span>
+                    </div>
+                </div>
             </div>
-            <span class="text-xs font-medium text-gray-500 bg-white px-3 py-1.5 rounded-md border border-gray-200 shadow-sm" id="vendorCount">0 vendor</span>
         </div>
 
         <!-- Vendor List Grid -->

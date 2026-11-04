@@ -117,7 +117,8 @@ let scoreSummary = {}; // Ringkasan evaluasi dari server untuk cek lock per peri
 let allRawOrders = []; // Seluruh daftar PO dari semua periode
 
 let activeCategories = ['all'];
-let viewMode = 'all'; // 'all' | 'pinned'
+let viewMode = 'all';
+    currentStatusFilter = 'all'; // 'all' | 'pinned'
 let ratings = {}; // Akan diisi dinamis berdasarkan kriteria aktif
 let vendorCategoryMap = {}; // { 'Nama Vendor': 'it', ... }
 let kriteriaList = []; // Diambil dari spreadsheet
@@ -1052,10 +1053,82 @@ function getVendorPoStats(vName) {
 // =====================================================
 // RENDER VENDOR LIST
 // =====================================================
+
+// =====================================================
+// STATUS FILTER (SEMUA / PERLU DINILAI / SELESAI)
+// =====================================================
+let currentStatusFilter = 'all'; // 'all' | 'pending' | 'done'
+
+window.filterByStatus = function(status) {
+    currentStatusFilter = status;
+    const btns = document.querySelectorAll('.status-filter-btn');
+    btns.forEach(b => {
+        if (b.dataset.status === status) b.classList.add('active');
+        else b.classList.remove('active');
+    });
+    renderVendorList();
+};
+
+function updateAssessorWelcomeCard() {
+    const heading = document.getElementById('assessorWelcomeHeading');
+    const sub = document.getElementById('assessorWelcomeSub');
+    const periodBadge = document.getElementById('assessorPeriodBadge');
+    const pendingCountEl = document.getElementById('assessorPendingCount');
+    const pendingTitleEl = document.getElementById('assessorPendingTitle');
+    const totalProgEl = document.getElementById('assessorTotalProgress');
+
+    const isAdmin = (currentPin === '9999' || currentPin === 'admin');
+    const total = vendors.length;
+    const assessed = getAssessedVendorsForPeriod(selectedPeriode);
+    const doneCount = vendors.filter(v => assessed.includes(v)).length;
+    const pendingCount = Math.max(total - doneCount, 0);
+
+    if (periodBadge) {
+        periodBadge.textContent = selectedPeriode ? `Periode: ${selectedPeriode}` : 'Periode Aktif';
+    }
+
+    if (heading) {
+        if (currentAssessorName && !isAdmin) {
+            heading.textContent = `Daftar Rekanan · ${currentAssessorName}`;
+        } else if (isAdmin) {
+            heading.textContent = 'Konsol Penilaian Vendor (Admin)';
+        } else {
+            heading.textContent = 'Daftar Penilaian Vendor';
+        }
+    }
+
+    if (sub) {
+        if (!isAdmin) {
+            sub.textContent = total > 0 
+                ? `Terdapat ${total} rekanan vendor yang ditugaskan kepada Anda pada periode ini.`
+                : 'Pilih rekanan di bawah untuk melakukan evaluasi performa dan mutu.';
+        } else {
+            sub.textContent = `Monitoring seluruh penugasan evaluasi vendor periode ${selectedPeriode || '-'}.`;
+        }
+    }
+
+    if (pendingCountEl) {
+        pendingCountEl.textContent = pendingCount;
+        pendingCountEl.className = pendingCount === 0 
+            ? 'w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-black text-xs shadow-xs'
+            : 'w-8 h-8 rounded-lg bg-amber-500 text-white flex items-center justify-center font-black text-xs shadow-xs';
+    }
+
+    if (pendingTitleEl) {
+        pendingTitleEl.textContent = pendingCount === 0 ? 'Semua Selesai' : 'Perlu Dinilai';
+    }
+
+    if (totalProgEl) {
+        totalProgEl.textContent = `${doneCount} dari ${total} selesai`;
+    }
+}
+
 function renderVendorList(overrideList = null) {
     const list = document.getElementById('vendorList');
     const countEl = document.getElementById('vendorCount');
     if (!list) return;
+
+    updateAssessorWelcomeCard();
 
     let displayVendors = overrideList;
 
@@ -1076,6 +1149,16 @@ function renderVendorList(overrideList = null) {
             });
         }
 
+        // Filter berdasarkan Status (Semua / Perlu Dinilai / Selesai)
+        if (currentStatusFilter !== 'all') {
+            const assessedSet = new Set(getAssessedVendorsForPeriod(selectedPeriode));
+            if (currentStatusFilter === 'pending') {
+                baseList = baseList.filter(v => !assessedSet.has(v));
+            } else if (currentStatusFilter === 'done') {
+                baseList = baseList.filter(v => assessedSet.has(v));
+            }
+        }
+
         displayVendors = baseList;
     }
 
@@ -1086,19 +1169,25 @@ function renderVendorList(overrideList = null) {
     }
 
     if (countEl) {
-        countEl.textContent = `${displayVendors.length} vendor ${viewMode === 'pinned' ? '(Vendorku)' : ''}`;
+        countEl.textContent = `${displayVendors.length} Rekanan${viewMode === 'pinned' ? ' (Vendorku)' : ''}`;
     }
 
     if (displayVendors.length === 0) {
         const isAdm = currentPin === '9999' || currentPin === 'admin';
         list.innerHTML = `
-        <div style="grid-column: 1 / -1; text-align:center; padding:3rem 1.5rem; background:#fff; border:1px dashed #e5e7eb; border-radius:0.75rem; color:#6b7280;">
-            <div style="font-size:2rem; margin-bottom:0.5rem;">📋</div>
-            <div style="font-weight:700; color:#111827; margin-bottom:0.25rem;">${isAdm ? 'Tidak Ada Vendor pada Periode "' + esc(selectedPeriode) + '"' : 'Belum Ada Vendor Ditugaskan'}</div>
-            <div style="font-size:0.85rem; color:#6b7280;">
-                ${viewMode === 'pinned' ? 'Anda belum menyematkan vendor favorit.' : (isAdm ? 'Tidak ada catatan PO untuk vendor pada periode ini, atau belum cocok dengan filter pencarian.' : 'Belum ada vendor yang ditugaskan untuk PIN Penilai Anda di sheet "Akses Penilai", atau belum cocok dengan filter.')}
+        <div style="grid-column: 1 / -1; text-align:center; padding:3.5rem 1.5rem; background:#fff; border:1px dashed #cbd5e1; border-radius:1rem; color:#64748b;">
+            <div style="font-size:2.5rem; margin-bottom:0.75rem;">📋</div>
+            <div style="font-weight:700; color:#0f172a; font-size:1rem; margin-bottom:0.25rem;">
+                ${isAdm ? 'Tidak Ada Vendor pada Periode "' + esc(selectedPeriode) + '"' : (currentStatusFilter === 'pending' ? 'Semua Rekanan Sudah Selesai Dinilai 🎉' : 'Belum Ada Vendor Ditugaskan')}
             </div>
-            ${viewMode === 'pinned' ? '<button class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 shadow-sm mt-3" onclick="document.getElementById(\'btnFilterAll\').click()">🌐 Lihat Semua Vendorku</button>' : ''}
+            <div style="font-size:0.85rem; color:#64748b; max-width:440px; margin:0 auto;">
+                ${currentStatusFilter === 'pending' 
+                    ? 'Seluruh rekanan yang ditugaskan kepada Anda telah selesai dievaluasi pada periode ini.'
+                    : (viewMode === 'pinned' ? 'Anda belum menyematkan vendor favorit.' : (isAdm ? 'Tidak ada catatan PO untuk vendor pada periode ini, atau belum cocok dengan filter pencarian.' : 'Belum ada vendor yang ditugaskan untuk PIN Penilai Anda di sheet "Akses Penilai", atau belum cocok dengan filter.'))
+                }
+            </div>
+            ${viewMode === 'pinned' ? '<button class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 shadow-2xs mt-3" onclick="document.getElementById(\'btnFilterAll\').click()">🌐 Lihat Semua Vendorku</button>' : ''}
+            ${currentStatusFilter !== 'all' ? '<button class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 shadow-2xs mt-3" onclick="filterByStatus(\'all\')">Tampilkan Semua Rekanan</button>' : ''}
         </div>`;
         return;
     }
@@ -1114,25 +1203,89 @@ function renderVendorList(overrideList = null) {
         const color = AVATAR_COLORS[(originalIndex >= 0 ? originalIndex : i) % AVATAR_COLORS.length];
         const vNameStr = (v || '').toString();
         const initials = vNameStr.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2) || 'VN';
+
+        // Category info
+        const catCode = getVendorCategory(v);
+        const catObj = (categoriesList && categoriesList.find(c => c.kode === catCode)) || { nama: 'Pengadaan Barang & Jasa', ikon: '📦' };
+
         const vOrdersInfo = getAllOrdersForVendor(v);
-        const vOrders = vOrdersInfo.orders;
+        const vOrders = vOrdersInfo.orders || [];
         const itemPreview = vOrders.length > 0 ? vOrders.map(o => o.product).filter(Boolean).slice(0, 2).join(', ') : '';
 
-        const rowStyle = done && !isAdmin ? 'style="opacity: 0.65; cursor: not-allowed;"' : '';
+        // Score preview if evaluated
+        let scoreBadge = '';
+        if (done && scoreSummary && scoreSummary[v]) {
+            const sc = scoreSummary[v].avgScore;
+            if (sc != null) {
+                scoreBadge = `<span class="inline-flex items-center gap-1 text-2xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">★ ${Number(sc).toFixed(1)} / 5.0</span>`;
+            }
+        }
+
+        const rowStyle = done && !isAdmin ? 'style="opacity: 0.9;"' : '';
 
         return `
-        <div class="vendor-row ${done ? 'locked' : ''}" data-vendor="${esc(v)}" ${rowStyle}>
-            <button class="vendor-pin-btn ${isPinned ? 'pinned' : ''}" data-pin="${esc(v)}" title="${isPinned ? 'Hapus dari Vendorku' : 'Sematkan ke Vendorku'}">
-                ${isPinned ? '📌' : '📍'}
-            </button>
-            <div class="vendor-avatar" style="background:${color}12;color:${color};border:1px solid ${color}25;">${initials}</div>
-            <div style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
-                <span class="vendor-name">${esc(v)}</span>
-                ${itemPreview ? `<span style="font-size: 0.75rem; color: #2563eb; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">📦 ${esc(itemPreview)}${vOrders.length > 2 ? ` (+${vOrders.length - 2} lainnya)` : ''}</span>` : ''}
+        <div class="vendor-card vendor-row ${done ? 'locked' : ''} group" data-vendor="${esc(v)}" ${rowStyle}>
+            <div>
+                <!-- Top Row: Avatar + Name + Status Pill -->
+                <div class="flex items-start justify-between gap-3 mb-3.5">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="vendor-avatar group-hover:scale-105 transition-transform" style="background:${color}14; color:${color}; border:1px solid ${color}28;">
+                            ${initials}
+                        </div>
+                        <div class="min-w-0">
+                            <h3 class="font-bold text-sm text-gray-900 group-hover:text-blue-600 transition-colors leading-snug truncate" title="${esc(v)}">
+                                ${esc(v)}
+                            </h3>
+                            <div class="flex items-center gap-1.5 mt-1">
+                                <span class="inline-flex items-center gap-1 text-[11px] font-medium text-gray-500">
+                                    <span>${esc(catObj.ikon || '📦')}</span>
+                                    <span class="truncate max-w-[150px]">${esc(catObj.nama)}</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Status Pill -->
+                    ${done 
+                        ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex-shrink-0 shadow-2xs">
+                             <svg class="w-3 h-3 text-emerald-600" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                             Selesai
+                           </span>`
+                        : `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200/80 flex-shrink-0 shadow-2xs">
+                             <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                             Perlu Dinilai
+                           </span>`
+                    }
+                </div>
+
+                <!-- Middle Snippet: Product / PO Scope Preview -->
+                <div class="p-3 bg-slate-50/80 rounded-xl border border-slate-100 text-xs mb-4">
+                    <div class="flex items-center justify-between text-[10px] text-gray-400 font-bold mb-1 uppercase tracking-wider">
+                        <span>Ruang Lingkup / PO</span>
+                        ${vOrders.length > 0 ? `<span class="text-blue-600 font-bold">${vOrders.length} Pesanan PO</span>` : ''}
+                    </div>
+                    <div class="text-gray-700 font-medium text-xs line-clamp-2 leading-relaxed" title="${esc(itemPreview || 'Pengadaan barang & jasa operasional')}">
+                        ${itemPreview ? `📦 ${esc(itemPreview)}` : '📦 Pengadaan barang & jasa operasional'}
+                    </div>
+                </div>
             </div>
-            ${done ? '<span class="vendor-badge-done" style="background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3);">🔒 Dinilai (Terkunci)</span>' : ''}
-            ${done && isAdmin ? `<button class="vendor-unlock-btn" data-unlock="${esc(v)}" title="Buka Kunci Penilaian Periode Ini (Admin Only)" style="background:none; border:none; cursor:pointer; font-size:1.1rem; padding: 4px; margin-left: 8px;">🔓</button>` : ''}
-            ${done ? '' : '<span class="vendor-arrow">›</span>'}
+
+            <!-- Card Bottom: Meta info & Action button -->
+            <div class="pt-3 border-t border-gray-100 flex items-center justify-between">
+                <div class="flex items-center gap-1.5 text-2xs text-gray-400 font-medium">
+                    ${done 
+                        ? (scoreBadge || '<span>🔒 Terkunci</span>')
+                        : '<span class="text-amber-600/80 font-medium">⭐ Menunggu penilaian</span>'
+                    }
+                </div>
+                <div class="flex items-center gap-1.5">
+                    ${done && isAdmin ? `<button class="vendor-unlock-btn text-xs px-2.5 py-1 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 transition font-medium shadow-2xs" data-unlock="${esc(v)}" title="Buka Kunci Penilaian">🔓 Buka</button>` : ''}
+                    <span class="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl transition shadow-2xs ${done ? 'bg-gray-100 text-gray-600 group-hover:bg-gray-200' : 'bg-blue-600 text-white group-hover:bg-blue-700'}">
+                        <span>${done ? 'Lihat Nilai' : 'Beri Nilai'}</span>
+                        <span class="group-hover:translate-x-0.5 transition-transform font-bold">→</span>
+                    </span>
+                </div>
+            </div>
         </div>`;
     }).join('');
 
@@ -1149,14 +1302,6 @@ function renderVendorList(overrideList = null) {
         });
     });
 
-    // Attach pin button click
-    list.querySelectorAll('.vendor-pin-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            togglePinVendor(btn.dataset.pin);
-        });
-    });
-
     // Attach unlock button click (Admin Only)
     list.querySelectorAll('.vendor-unlock-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -1169,9 +1314,6 @@ function renderVendorList(overrideList = null) {
     });
 }
 
-/**
- * Cek apakah vendor sudah dinilai pada periode tertentu
- */
 function getAssessedVendorsForPeriod(period) {
     const assessedSet = new Set();
 
