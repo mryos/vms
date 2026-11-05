@@ -941,9 +941,11 @@ function renderPendingVendors(vendors, scoreSummary, categories, poStats) {
     if (pendingList.length === 0 && attentionList.length === 0) {
         container.innerHTML = `
         <div class="text-center py-6 px-4 bg-emerald-50/70 rounded-xl border border-emerald-100">
-            <div class="text-2xl mb-1">🎉</div>
+            <div class="w-8 h-8 mx-auto mb-1.5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+            </div>
             <div class="font-bold text-xs text-emerald-800">Semua Vendor Telah Dievaluasi</div>
-            <div class="text-2xs text-emerald-600 mt-0.5">Seluruh rekanan pada periode ini memiliki nilai dan dalam status prima (&ge; 2.5).</div>
+            <div class="text-[11px] text-emerald-600 mt-0.5">Seluruh rekanan pada periode ini memiliki nilai dan dalam status prima (&ge; 2.5).</div>
         </div>`;
         return;
     }
@@ -953,55 +955,77 @@ function renderPendingVendors(vendors, scoreSummary, categories, poStats) {
     // Peringatan jika ada vendor kritis (< 2.5)
     if (attentionList.length > 0) {
         html += `
-        <div class="mb-3 p-2.5 bg-rose-50 border border-rose-200 rounded-xl">
+        <div class="mb-2.5 p-2.5 bg-rose-50/80 border border-rose-200/80 rounded-lg">
             <div class="flex items-center gap-1.5 text-xs font-bold text-rose-800 mb-1">
-                <span>⚠️</span>
+                <svg class="w-3.5 h-3.5 text-rose-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
                 <span>Perlu Atensi Khusus (${attentionList.length} Rekanan)</span>
             </div>
             <div class="space-y-1">
                 ${attentionList.map(v => `
                     <div class="flex items-center justify-between text-xs py-0.5">
                         <span class="font-semibold text-rose-900 truncate max-w-[170px]" title="${esc(v.name)}">${esc(v.name)}</span>
-                        <span class="font-bold text-rose-700 bg-rose-100 px-1.5 py-0.2 rounded text-2xs">${v.avgScore.toFixed(2)} (${esc(v.predikat)})</span>
+                        <span class="font-bold text-rose-700 bg-rose-100 px-1.5 py-0.5 rounded text-[10.5px]">${v.avgScore.toFixed(2)} (${esc(v.predikat)})</span>
                     </div>
                 `).join('')}
             </div>
         </div>`;
     }
 
-    // Daftar vendor prioritas penilaian (Compact & Clean)
+    // Helper format kategori yang rapi
+    const formatCatDisplay = (catCode, rawName) => {
+        const map = {
+            'BarangJasa': 'Barang & Jasa',
+            'ITSoftware': 'IT & Software',
+            'PhotoVideo': 'Foto & Video',
+            'KOLInfPodcast': 'KOL & Influencer',
+            'DigitalMarketing': 'Digital Marketing',
+            'EventOrganizer': 'Event Organizer',
+            'Ekspedisi': 'Ekspedisi & Logistik',
+            'Percetakan': 'Percetakan & ATK'
+        };
+        if (map[catCode]) return map[catCode];
+        if (rawName && map[rawName]) return map[rawName];
+        if (rawName && rawName !== 'General') return rawName;
+        return catCode || 'Umum';
+    };
+
+    // Daftar vendor prioritas penilaian (Corporate Clean & Sharp Typography)
     if (pendingList.length > 0) {
         const withPoCount = pendingList.filter(p => p.totalPo > 0).length;
         html += `
-        <div class="text-xs font-bold text-gray-700 mb-1.5 flex items-center justify-between">
-            <span class="flex items-center gap-1 text-gray-800">
-                <span>🎯 Prioritas Penilaian</span>
-                ${withPoCount > 0 ? `<span class="text-2xs font-semibold text-amber-800 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200/80">${withPoCount} Ber-PO</span>` : ''}
+        <div class="text-[11px] font-semibold text-slate-700 mb-2 flex items-center justify-between pb-1.5 border-b border-slate-100">
+            <span class="flex items-center gap-1.5 text-slate-800">
+                <span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+                <span>Prioritas Penilaian</span>
+                ${withPoCount > 0 ? `<span class="text-[10px] font-semibold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/80 font-mono">${withPoCount} Ber-PO</span>` : ''}
             </span>
-            <span class="text-gray-400 font-normal text-2xs">${pendingList.length} rekanan</span>
+            <span class="text-slate-400 font-normal text-[10.5px]">${pendingList.length} rekanan</span>
         </div>
         <div class="space-y-1">
             ${pendingList.slice(0, 10).map(v => {
                 const catCode = v.kategori || 'general';
-                const catInfo = (categories && categories.find(c => c.kode === catCode)) || { nama: 'General', ikon: '📦' };
+                const catInfo = (categories && categories.find(c => c.kode === catCode)) || { nama: 'General', ikon: '' };
+                const catDisplay = formatCatDisplay(catCode, catInfo.nama);
                 const hasPo = v.totalPo > 0;
                 return `
-                <div class="flex items-center justify-between py-1 px-2 rounded-lg ${hasPo ? 'bg-amber-50/25 border border-amber-100/80 hover:bg-amber-50/60' : 'bg-gray-50/80 border border-gray-100 hover:bg-gray-100/60'} transition">
+                <div class="flex items-center justify-between py-1.5 px-2.5 rounded-lg border border-slate-200/80 bg-white hover:bg-slate-50/80 transition-all shadow-2xs mb-1.5">
                     <div class="min-w-0 pr-2">
-                        <div class="font-semibold text-xs text-gray-900 truncate leading-tight" title="${esc(v.nama)}">${esc(v.nama)}</div>
-                        <div class="flex items-center gap-1.5 text-2xs text-gray-500 mt-0.5 leading-tight">
-                            <span>${esc(catInfo.ikon)} ${esc(catInfo.nama)}</span>
-                            ${hasPo ? `<span class="font-semibold text-2xs text-amber-800 bg-amber-50 px-1 py-0.2 rounded border border-amber-200/70">${v.totalPo} PO</span>` : ''}
+                        <div class="font-bold text-[12px] text-slate-900 truncate leading-snug tracking-tight" title="${esc(v.nama)}">${esc(v.nama)}</div>
+                        <div class="flex items-center gap-1.5 text-[11px] text-slate-500 mt-0.5 leading-none">
+                            <span class="font-medium text-slate-600">${esc(catDisplay)}</span>
+                            <span class="text-slate-300">·</span>
+                            ${hasPo ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10.5px] font-semibold bg-amber-50 text-amber-800 border border-amber-200/80 font-mono">${v.totalPo} PO</span>` : '<span class="text-slate-400 text-[10.5px]">0 PO</span>'}
                         </div>
                     </div>
-                    <a href="index.html" class="inline-flex items-center gap-0.5 text-2xs font-semibold px-2 py-0.5 rounded-md border border-gray-200 bg-white text-gray-700 hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50/50 whitespace-nowrap transition shadow-2xs" title="Beri nilai sekarang">
-                        Nilai →
+                    <a href="index.html" class="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-md border border-slate-200 bg-white text-slate-700 hover:text-blue-700 hover:border-blue-300 hover:bg-blue-50/70 whitespace-nowrap transition-colors shadow-2xs" title="Beri nilai sekarang">
+                        <span>Nilai</span>
+                        <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
                     </a>
                 </div>`;
             }).join('')}
             ${pendingList.length > 10 ? `
-                <div class="text-center text-2xs text-gray-400 pt-1 font-medium">
-                    +${pendingList.length - 10} vendor lainnya
+                <div class="text-center text-[11px] text-slate-400 pt-1 font-medium">
+                    +${pendingList.length - 10} vendor lainnya dalam antrean
                 </div>
             ` : ''}
         </div>`;

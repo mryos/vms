@@ -308,6 +308,11 @@ tailwind.config = {
   .rank-badge-2 { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; font-weight: 800; }
   .rank-badge-3 { background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; font-weight: 800; }
 
+  .text-2xs {
+    font-size: 0.65rem !important; /* ~10.4px */
+    line-height: 0.9rem !important;
+  }
+
   /* Responsive adjustments */
   @media (max-width: 768px) {
     .kpi-grid { grid-template-columns: 1fr !important; }
@@ -333,9 +338,13 @@ tailwind.config = {
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
     }
-    header, footer, .filter-bar, #dashboardTabs, #adminAuthOverlay, .toast-box, .no-print, 
+    /* Strictly isolate print to only the scorecard modal */
+    body > *:not(#vendorScorecardModal) {
+      display: none !important;
+    }
+    header, footer, main, .filter-bar, #dashboardTabs, #adminAuthOverlay, #erpExportModal, .toast-box, .no-print, 
     #bentoDashboard, #sectionContracts, #sectionEvaluations, #sectionKraljic, .kpi-grid, 
-    #contractAlertBanner, .modal-backdrop {
+    #contractAlertBanner, #expiringContractsBanner, .modal-backdrop {
       display: none !important;
     }
     #vendorScorecardModal, #vendorScorecardModal > div, #scorecardScrollContainer {
@@ -711,17 +720,18 @@ tailwind.config = {
                 </div>
             </div>
 
-            <!-- 📋 Prioritas Evaluasi (6/12 cols) -->
+            <!-- Prioritas Evaluasi (6/12 cols) -->
             <div class="tremor-card bento-half flex flex-col">
                 <div class="flex items-center justify-between mb-1">
-                    <h3 class="text-sm font-bold text-gray-900 flex items-center gap-1.5">
-                        <span>📋</span> Prioritas Evaluasi
+                    <h3 class="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                        <svg class="w-4 h-4 text-purple-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                        <span>Prioritas Evaluasi</span>
                     </h3>
                     <span class="tremor-badge tremor-badge-purple" id="pendingVendorBadge">0 Belum Dinilai</span>
                 </div>
-                <p class="text-xs text-gray-500 mb-2">Vendor transaksi tinggi yang perlu dievaluasi</p>
-                <div class="overflow-y-auto flex-1 pr-1 custom-scrollbar" style="max-height:200px;" id="pendingVendorsContainer">
-                    <div class="text-center text-gray-400 py-6">Memeriksa status evaluasi vendor...</div>
+                <p class="text-[11px] text-slate-500 mb-2">Vendor dengan transaksi PO aktif yang belum memiliki rapor evaluasi</p>
+                <div class="overflow-y-auto flex-1 pr-1 custom-scrollbar" style="max-height:210px;" id="pendingVendorsContainer">
+                    <div class="text-center text-slate-400 py-6 text-xs">Memeriksa status evaluasi vendor...</div>
                 </div>
             </div>
 
@@ -1127,6 +1137,6 @@ tailwind.config = {
     <div class="success-bg" id="successBg"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-    <script src="dashboard.js?v=20261105-4"></script>
+    <script src="dashboard.js?v=20261105-5"></script>
 </body>
 </html>
