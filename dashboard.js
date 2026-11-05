@@ -2725,11 +2725,10 @@ function openVendorScorecard(vendorName) {
         <div class="pb-3 mb-3">
             <div class="flex items-start justify-between gap-4">
                 <div class="flex items-center gap-3.5">
-                    <img src="assets/logo-ethos.png" alt="PT Ethos Kreatif Indonesia" class="h-12 w-auto object-contain">
+                    <img src="assets/logo-ethos.png" alt="PT Etos Kreatif Indonesia" class="h-12 w-auto object-contain">
                     <div>
-                        <h2 class="text-base font-extrabold text-slate-900 tracking-tight leading-snug">PT ETHOS KREATIF INDONESIA</h2>
-                        <p class="text-xs text-slate-600 font-semibold">DIVISI PENGADAAN &amp; MANAJEMEN REKANAN (PROCUREMENT &amp; SCM)</p>
-                        <p class="text-[10px] text-slate-500">Head Office &amp; Operations · Vendor Management System (VMS)</p>
+                        <h2 class="text-base font-extrabold text-slate-900 tracking-tight leading-snug">PT ETOS KREATIF INDONESIA</h2>
+                        <p class="text-xs text-slate-600 font-semibold">Divisi Procurement / Vendor Management System</p>
                     </div>
                 </div>
                 <div class="border border-slate-300 p-2 text-right text-[10px] bg-slate-50 leading-tight min-w-[210px]">
@@ -2903,11 +2902,11 @@ function openVendorScorecard(vendorName) {
                         <span class="text-[10px] text-slate-300 italic">[ Tanda Tangan &amp; Stempel ]</span>
                     </div>
                     <div class="border-t border-slate-700 pt-1 font-bold text-slate-900 text-xs">Head of Operations / Direksi</div>
-                    <div class="text-[10px] text-slate-500">PT Ethos Kreatif Indonesia</div>
+                    <div class="text-[10px] text-slate-500">PT Etos Kreatif Indonesia</div>
                 </div>
             </div>
             <div class="text-[9px] text-slate-400 text-right mt-2 italic">
-                Dokumen ini dicetak secara otomatis dan tersertifikasi melalui Sistem Vendor Management System (VMS) PT Ethos Kreatif Indonesia.
+                Dokumen ini dicetak secara otomatis dan tersertifikasi melalui Sistem Vendor Management System (VMS) PT Etos Kreatif Indonesia.
             </div>
         </div>
     `;
