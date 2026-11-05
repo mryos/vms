@@ -94,6 +94,14 @@ tailwind.config = {
   }
   .tremor-table tbody tr:last-child td { border-bottom: none; }
   .tremor-table tbody tr:hover { background: #f8fafc; }
+  .tremor-table-compact thead th {
+    padding: 0.35rem 0.55rem;
+    font-size: 0.68rem;
+  }
+  .tremor-table-compact tbody td {
+    padding: 0.3rem 0.55rem;
+    font-size: 0.75rem;
+  }
 
   /* Compact scrollable table container */
   
@@ -854,27 +862,27 @@ tailwind.config = {
 
         <!-- ========== EVALUATION HISTORY TABLE ========== -->
         <div class="tremor-card mb-6" id="sectionEvaluations">
-            <div class="flex items-start justify-between gap-4 mb-4 flex-wrap">
+            <div class="flex items-start justify-between gap-3 mb-3 flex-wrap">
                 <div>
-                    <h3 class="text-base font-bold text-gray-900">Hasil Penilaian Kinerja Vendor</h3>
-                    <p class="text-xs text-gray-500 mt-0.5">Log hasil evaluasi performa vendor dari sheet Penilaian Vendor</p>
+                    <h3 class="text-sm sm:text-base font-bold text-gray-900">Hasil Penilaian Kinerja Vendor</h3>
+                    <p class="text-[11px] text-gray-500 mt-0.5">Log hasil evaluasi performa vendor dari sheet Penilaian Vendor</p>
                 </div>
                 <div class="flex items-center gap-2 flex-wrap">
-                    <input type="text" id="evalSearchInput" placeholder="Cari Penilai / Vendor / Catatan..." class="text-xs px-3 py-2 rounded-xl border border-gray-200 bg-white text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xs" style="min-width: 220px;">
-                    <span class="tremor-badge tremor-badge-gray" id="evalBadgeCount">0 Evaluasi</span>
-                    <button onclick="exportEvaluationCsv()" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 text-xs font-semibold text-gray-700 transition" title="Export ringkasan evaluasi ke CSV">
+                    <input type="text" id="evalSearchInput" placeholder="Cari Penilai / Vendor / Catatan..." class="text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs" style="min-width: 200px;">
+                    <span class="tremor-badge tremor-badge-gray text-xs" id="evalBadgeCount">0 Evaluasi</span>
+                    <button onclick="exportEvaluationCsv()" class="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 text-[11px] font-semibold text-gray-700 transition" title="Export ringkasan evaluasi ke CSV">
                         📊 CSV Ringkasan
                     </button>
-                    <button onclick="openErpExportModal()" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-xs font-semibold text-indigo-700 transition" title="Export evaluasi dengan susunan template CSV ERP (Odoo)">
+                    <button onclick="openErpExportModal()" class="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-[11px] font-semibold text-indigo-700 transition" title="Export evaluasi dengan susunan template CSV ERP (Odoo)">
                         🏢 Template ERP CSV
                     </button>
                 </div>
             </div>
             <div class="table-scroll-container">
-                <table class="tremor-table">
+                <table class="tremor-table tremor-table-compact">
                     <thead>
                         <tr>
-                            <th class="text-center" style="width: 48px;">No.</th>
+                            <th class="text-center" style="width: 44px;">No.</th>
                             <th>Tanggal</th>
                             <th>Penilai</th>
                             <th>Vendor</th>
@@ -886,9 +894,29 @@ tailwind.config = {
                         </tr>
                     </thead>
                     <tbody id="evalTableBody">
-                        <tr><td colspan="9" class="text-center text-gray-400 py-8">Memuat hasil penilaian vendor...</td></tr>
+                        <tr><td colspan="9" class="text-center text-gray-400 py-6 text-xs">Memuat hasil penilaian vendor...</td></tr>
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Evaluation Pagination Bar -->
+            <div id="evalPagination" class="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 border-t border-gray-100 bg-gray-50/60 rounded-b-xl mt-2" style="display: none;">
+                <div class="flex items-center gap-3 flex-wrap">
+                    <span class="text-xs text-gray-500 font-medium" id="evalPaginationInfo">Menampilkan 0 - 0 dari 0 evaluasi</span>
+                    <div class="flex items-center gap-1.5 text-xs text-gray-500">
+                        <span>Tampilkan:</span>
+                        <select id="evalPageSizeSelect" onchange="changeEvalPageSize(this.value)" class="tremor-select text-xs py-1 pl-2 pr-6 rounded-md border border-gray-200 bg-white shadow-2xs">
+                            <option value="5">5</option>
+                            <option value="10" selected>10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                        </select>
+                        <span>per halaman</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1.5 flex-wrap" id="evalPaginationNav">
+                    <!-- Dynamic page buttons rendered by JS -->
+                </div>
             </div>
         </div>
 

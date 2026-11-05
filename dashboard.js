@@ -12,6 +12,9 @@ let contractExpiryFilter = 'all'; // 'all' | 'expired' | 'critical' | 'warning' 
 let contractCurrentPage = 1;
 let contractPageSize = 10;
 let lastContractComplianceData = null;
+let evalCurrentPage = 1;
+let evalPageSize = 10;
+let lastEvaluationsData = null;
 let slicerState = {
     period: 'all',
     category: 'all',
@@ -218,6 +221,7 @@ function initSlicers(kategoriList, periodList) {
     if (evalSearchEl && !evalSearchEl.dataset.bound) {
         evalSearchEl.dataset.bound = 'true';
         evalSearchEl.addEventListener('input', () => {
+            evalCurrentPage = 1;
             filterAndRenderDashboard();
         });
     }
@@ -241,6 +245,9 @@ function resetAllSlicers() {
     if (catSelect) catSelect.value = 'all';
     if (compSelect) compSelect.value = 'all';
     if (tierSelect) tierSelect.value = 'all';
+
+    contractCurrentPage = 1;
+    evalCurrentPage = 1;
 
     filterAndRenderDashboard();
     showToast('Filter telah direset ke kondisi awal.', 'info');
@@ -1660,6 +1667,8 @@ function renderEvaluationsTable(evaluations) {
     const tableBody = document.getElementById('evalTableBody');
     if (!tableBody) return;
 
+    lastEvaluationsData = evaluations || [];
+
     const badgeCount = document.getElementById('evalBadgeCount');
     if (badgeCount) {
         badgeCount.textContent = evaluations && evaluations.length > 0
@@ -1667,8 +1676,11 @@ function renderEvaluationsTable(evaluations) {
             : 'Sheet: Penilaian Vendor';
     }
 
+    const paginationEl = document.getElementById('evalPagination');
+
     if (!evaluations || evaluations.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:var(--text3); padding:2rem;">Belum ada data penilaian vendor. Mulai beri penilaian dari halaman utama.</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:var(--text3); padding:2rem; font-size:0.75rem;">Belum ada data penilaian vendor. Mulai beri penilaian dari halaman utama.</td></tr>`;
+        if (paginationEl) paginationEl.style.display = 'none';
         return;
     }
 
@@ -1680,8 +1692,18 @@ function renderEvaluationsTable(evaluations) {
         return 0;
     });
 
-    tableBody.innerHTML = sorted.map((ev, idx) => {
-        const no = idx + 1;
+    const totalItems = sorted.length;
+    const totalPages = Math.ceil(totalItems / evalPageSize) || 1;
+
+    if (evalCurrentPage > totalPages) evalCurrentPage = totalPages;
+    if (evalCurrentPage < 1) evalCurrentPage = 1;
+
+    const startIndex = (evalCurrentPage - 1) * evalPageSize;
+    const endIndex = Math.min(startIndex + evalPageSize, totalItems);
+    const pagedList = sorted.slice(startIndex, endIndex);
+
+    tableBody.innerHTML = pagedList.map((ev, idx) => {
+        const no = startIndex + idx + 1;
         const score = parseFloat(ev.score) || 0;
         const color = getPredikatColor(score);
         const pred = ev.predikat || getPredikat(score);
@@ -1690,37 +1712,122 @@ function renderEvaluationsTable(evaluations) {
 
         return `
         <tr class="hover:bg-blue-50/40 transition-colors">
-            <td style="text-align:center; font-weight:700; color:#64748b; font-size:0.75rem; width:48px;">${no}</td>
-            <td style="font-size:0.75rem; color:#64748b; white-space:nowrap;">${esc(ev.timestamp)}</td>
-            <td style="font-size:0.78rem; color:#475569; white-space:nowrap;">${esc(ev.penilai)}</td>
-            <td>
-                <div class="flex items-center gap-2">
-                    <span class="inline-flex items-center justify-center w-5 h-5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-bold border border-slate-200/80 flex-shrink-0">${no}</span>
-                    <div style="font-weight:600; color:#0f172a; max-width:210px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${esc(cleanVendor)}">${esc(cleanVendor)}</div>
+            <td style="text-align:center; font-weight:700; color:#64748b; font-size:0.73rem; width:44px; padding:0.32rem 0.5rem;">${no}</td>
+            <td style="font-size:0.73rem; color:#64748b; white-space:nowrap; padding:0.32rem 0.5rem;">${esc(ev.timestamp)}</td>
+            <td style="font-size:0.75rem; color:#475569; white-space:nowrap; padding:0.32rem 0.5rem;">${esc(ev.penilai)}</td>
+            <td style="padding:0.32rem 0.5rem;">
+                <div class="flex items-center gap-1.5">
+                    <span class="inline-flex items-center justify-center w-4 h-4 rounded bg-slate-100 text-slate-700 text-[9px] font-bold border border-slate-200/80 flex-shrink-0">${no}</span>
+                    <div style="font-weight:600; color:#0f172a; max-width:200px; font-size:0.75rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${esc(cleanVendor)}">${esc(cleanVendor)}</div>
                 </div>
             </td>
-            <td style="font-size:0.75rem; color:#64748b; white-space:nowrap;">${esc(ev.periode)}</td>
-            <td style="text-align:right; font-weight:800; color:${color}; font-size:0.85rem;">${score.toFixed(2)}</td>
-            <td style="text-align:center;">
-                <span class="predikat-badge" style="background:${color}15; color:${color}; border:1px solid ${color}30; font-size:0.7rem; font-weight:700; padding:1px 6px;">
+            <td style="font-size:0.73rem; color:#64748b; white-space:nowrap; padding:0.32rem 0.5rem;">${esc(ev.periode)}</td>
+            <td style="text-align:right; font-weight:800; color:${color}; font-size:0.8rem; padding:0.32rem 0.5rem;">${score.toFixed(2)}</td>
+            <td style="text-align:center; padding:0.32rem 0.5rem;">
+                <span class="predikat-badge" style="background:${color}15; color:${color}; border:1px solid ${color}30; font-size:0.68rem; font-weight:700; padding:1px 5px; border-radius:4px;">
                     ${esc(pred)}
                 </span>
             </td>
-            <td>
-                <div style="font-size:0.75rem; color:#64748b; max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${esc(cleanCatatan)}">${esc(cleanCatatan)}</div>
+            <td style="padding:0.32rem 0.5rem;">
+                <div style="font-size:0.73rem; color:#64748b; max-width:210px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${esc(cleanCatatan)}">${esc(cleanCatatan)}</div>
             </td>
-            <td style="text-align:center; white-space:nowrap;">
-                <div class="inline-flex items-center gap-1.5 justify-center">
-                    <button onclick="openVendorScorecard('${esc(cleanVendor)}')" class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition shadow-2xs" title="Cetak Rapor Kinerja ${esc(cleanVendor)}">
+            <td style="text-align:center; white-space:nowrap; padding:0.32rem 0.5rem;">
+                <div class="inline-flex items-center gap-1 justify-center">
+                    <button onclick="openVendorScorecard('${esc(cleanVendor)}')" class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition shadow-2xs" title="Cetak Rapor Kinerja ${esc(cleanVendor)}">
                         <span>📄 Rapor</span>
                     </button>
-                    <button onclick="deleteEvaluation('${esc(cleanVendor)}', '${esc(ev.penilai || '')}', '${esc(ev.periode || '')}')" class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 transition shadow-2xs" title="Hapus penilaian agar dapat dinilai ulang">
+                    <button onclick="deleteEvaluation('${esc(cleanVendor)}', '${esc(ev.penilai || '')}', '${esc(ev.periode || '')}')" class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] font-semibold bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 transition shadow-2xs" title="Hapus penilaian agar dapat dinilai ulang">
                         <span>🗑️ Hapus</span>
                     </button>
                 </div>
             </td>
         </tr>`;
     }).join('');
+
+    renderEvalPagination(totalItems, totalPages, startIndex, endIndex);
+}
+
+function renderEvalPagination(totalItems, totalPages, startIndex, endIndex) {
+    const paginationEl = document.getElementById('evalPagination');
+    const infoEl = document.getElementById('evalPaginationInfo');
+    const navEl = document.getElementById('evalPaginationNav');
+    const sizeSelect = document.getElementById('evalPageSizeSelect');
+
+    if (!paginationEl || !infoEl || !navEl) return;
+
+    paginationEl.style.display = totalItems > 0 ? 'flex' : 'none';
+    infoEl.textContent = `Menampilkan ${totalItems === 0 ? 0 : startIndex + 1} - ${endIndex} dari ${totalItems} evaluasi`;
+
+    if (sizeSelect) {
+        sizeSelect.value = evalPageSize.toString();
+    }
+
+    if (totalPages <= 1) {
+        navEl.innerHTML = '';
+        return;
+    }
+
+    let buttonsHtml = '';
+
+    // Tombol Sebelumnya (Prev)
+    buttonsHtml += `
+        <button onclick="goToEvalPage(${evalCurrentPage - 1})" ${evalCurrentPage === 1 ? 'disabled' : ''} class="page-btn">
+            ‹ Prev
+        </button>
+    `;
+
+    // Tombol Angka Halaman
+    let startPage = Math.max(1, evalCurrentPage - 2);
+    let endPage = Math.min(totalPages, startPage + 4);
+    if (endPage - startPage < 4) {
+        startPage = Math.max(1, endPage - 4);
+    }
+
+    if (startPage > 1) {
+        buttonsHtml += `<button onclick="goToEvalPage(1)" class="page-btn">1</button>`;
+        if (startPage > 2) buttonsHtml += `<span class="text-xs text-gray-400 px-1">…</span>`;
+    }
+
+    for (let p = startPage; p <= endPage; p++) {
+        buttonsHtml += `
+            <button onclick="goToEvalPage(${p})" class="page-btn ${p === evalCurrentPage ? 'active' : ''}">
+                ${p}
+            </button>
+        `;
+    }
+
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) buttonsHtml += `<span class="text-xs text-gray-400 px-1">…</span>`;
+        buttonsHtml += `<button onclick="goToEvalPage(${totalPages})" class="page-btn">${totalPages}</button>`;
+    }
+
+    // Tombol Berikutnya (Next)
+    buttonsHtml += `
+        <button onclick="goToEvalPage(${evalCurrentPage + 1})" ${evalCurrentPage === totalPages ? 'disabled' : ''} class="page-btn">
+            Next ›
+        </button>
+    `;
+
+    navEl.innerHTML = buttonsHtml;
+}
+
+function goToEvalPage(page) {
+    evalCurrentPage = page;
+    if (lastEvaluationsData) {
+        renderEvaluationsTable(lastEvaluationsData);
+    }
+    const section = document.getElementById('sectionEvaluations');
+    if (section) {
+        section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+}
+
+function changeEvalPageSize(newSize) {
+    evalPageSize = parseInt(newSize, 10) || 10;
+    evalCurrentPage = 1;
+    if (lastEvaluationsData) {
+        renderEvaluationsTable(lastEvaluationsData);
+    }
 }
 
 // =====================================================
