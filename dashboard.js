@@ -267,7 +267,7 @@ function isPeriodMatch(itemPeriod, targetPeriod, vendorName, periodVendorsSet) {
     const cleanTargetP = (targetPeriod || '').toString().trim().toLowerCase();
     const cleanItemP = (itemPeriod || '').toString().trim().toLowerCase();
 
-    // 1. Direct equality (e.g. "q3 2026" === "q3 2026")
+    // 1. Direct equality (e.g. "q3 2026" === "q3 2026", "q1 2026" === "q1 2026")
     if (cleanItemP && cleanItemP === cleanTargetP) return true;
 
     // 2. Loose quarter & year matching (e.g. "q3", "quartal 3 2026")
@@ -279,17 +279,25 @@ function isPeriodMatch(itemPeriod, targetPeriod, vendorName, periodVendorsSet) {
             const yItem = cleanItemP.match(/(20\d{2})/);
             if (!yItem || !yTarget || yItem[1] === yTarget[1]) return true;
         }
+        return false;
     }
 
-    // 3. Smart Fallback untuk "General", "-", atau kosong:
-    // Jika penilaian belum dispesifikasikan kuartalnya (bertuliskan 'General'),
-    // tetapi vendor tersebut merupakan vendor yang terdaftar di periode yang dipilih (misal sheet Q3 2026).
+    // 3. Fallback untuk data yang berlabel 'General' / '-' / kosong:
+    // Seluruh data penilaian yang telah dilakukan pada spreadsheet adalah untuk periode Q3 2026.
+    // Oleh karena itu, label 'General' hanya dicocokkan jika filter periode yang dipilih adalah Q3 2026.
+    // Untuk periode lain (seperti Q1 2026, Q2 2026, Q4 2026), tidak akan memunculkan evaluasi ini.
     if (!cleanItemP || cleanItemP === 'general' || cleanItemP === '-') {
-        if (vendorName && periodVendorsSet) {
-            for (let pVendor of periodVendorsSet) {
-                if (isSameVendor(pVendor, vendorName)) return true;
+        const isTargetQ3 = cleanTargetP.includes('q3') || cleanTargetP.includes('kuartal 3') || cleanTargetP.includes('quartal 3');
+        if (isTargetQ3) {
+            if (vendorName && periodVendorsSet) {
+                for (let pVendor of periodVendorsSet) {
+                    if (isSameVendor(pVendor, vendorName)) return true;
+                }
+                return false;
             }
+            return true;
         }
+        return false;
     }
 
     return false;
@@ -1769,10 +1777,7 @@ function renderEvaluationsTable(evaluations) {
             <td style="font-size:0.73rem; color:#64748b; white-space:nowrap; padding:0.32rem 0.5rem;">${esc(ev.timestamp)}</td>
             <td style="font-size:0.75rem; color:#475569; white-space:nowrap; padding:0.32rem 0.5rem;">${esc(ev.penilai)}</td>
             <td style="padding:0.32rem 0.5rem;">
-                <div class="flex items-center gap-1.5">
-                    <span class="inline-flex items-center justify-center w-4 h-4 rounded bg-slate-100 text-slate-700 text-[9px] font-bold border border-slate-200/80 flex-shrink-0">${no}</span>
-                    <div style="font-weight:600; color:#0f172a; max-width:200px; font-size:0.75rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${esc(cleanVendor)}">${esc(cleanVendor)}</div>
-                </div>
+                <div style="font-weight:600; color:#0f172a; max-width:210px; font-size:0.75rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${esc(cleanVendor)}">${esc(cleanVendor)}</div>
             </td>
             <td style="font-size:0.73rem; color:#64748b; white-space:nowrap; padding:0.32rem 0.5rem;">${esc(displayPeriode)}</td>
             <td style="text-align:right; font-weight:800; color:${color}; font-size:0.8rem; padding:0.32rem 0.5rem;">${score.toFixed(2)}</td>
