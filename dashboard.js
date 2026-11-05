@@ -246,8 +246,94 @@ function resetAllSlicers() {
     showToast('Filter telah direset ke kondisi awal.', 'info');
 }
 
+function isSameVendor(n1, n2) {
+    if (!n1 || !n2) return false;
+    const s1 = n1.toString().toLowerCase().replace(/^(pt\.?|cv\.?|ud\.?|toko)\s+/i, '').replace(/[^\w\s]/gi, '').replace(/\s+/g, ' ').trim();
+    const s2 = n2.toString().toLowerCase().replace(/^(pt\.?|cv\.?|ud\.?|toko)\s+/i, '').replace(/[^\w\s]/gi, '').replace(/\s+/g, ' ').trim();
+    if (s1 === s2) return true;
+    return s1.includes(s2) || s2.includes(s1);
+}
+
+function getDeletedEvaluations() {
+    try {
+        const stored = JSON.parse(localStorage.getItem('ethos_deleted_evaluations') || '[]');
+        return Array.isArray(stored) ? stored : [];
+    } catch {
+        return [];
+    }
+}
+
+function cleanCancelledEvaluations(data) {
+    if (!data) return;
+
+    // Daftar vendor yang dibatalkan agar dapat dinilai ulang
+    const defaultCancelled = [
+        { vendor: 'PT BIZNET GIO NUSANTARA', penilai: 'ABDUS SALAM AMIRUDDIN' },
+        { vendor: 'ZAQ ATK', penilai: 'AGUNG KURNIAWAN' }
+    ];
+
+    const deletedFromStorage = getDeletedEvaluations();
+    const allCancelled = [...defaultCancelled, ...deletedFromStorage];
+
+    if (Array.isArray(data.evaluationsList)) {
+        data.evaluationsList = data.evaluationsList.filter(e => {
+            const isCancelled = allCancelled.some(c => 
+                isSameVendor(c.vendor, e.vendor) && 
+                (!c.penilai || (e.penilai && e.penilai.toLowerCase().trim().includes(c.penilai.toLowerCase().trim())) || (c.penilai && c.penilai.toLowerCase().trim().includes((e.penilai || '').toLowerCase().trim())))
+            );
+            return !isCancelled;
+        });
+    }
+
+    if (data.scoreSummary) {
+        allCancelled.forEach(c => {
+            for (let vKey in data.scoreSummary) {
+                if (isSameVendor(vKey, c.vendor)) {
+                    delete data.scoreSummary[vKey];
+                }
+            }
+        });
+    }
+}
+
+async function deleteEvaluation(vendor, penilai, periode) {
+    if (!confirm(`Hapus hasil penilaian untuk vendor "${vendor}" oleh "${penilai}"?\n\nVendor ini akan dihapus dari log dan dapat dinilai ulang.`)) {
+        return;
+    }
+
+    // 1. Simpan ke local list deleted evaluations
+    const currentDeleted = getDeletedEvaluations();
+    currentDeleted.push({ vendor, penilai, periode, timestamp: new Date().toISOString() });
+    localStorage.setItem('ethos_deleted_evaluations', JSON.stringify(currentDeleted));
+
+    // 2. Hapus dari dashboardData in memory
+    cleanCancelledEvaluations(dashboardData);
+
+    // 3. Render ulang dashboard
+    filterAndRenderDashboard();
+    showToast(`Penilaian "${vendor}" berhasil dihapus dan siap dinilai ulang.`, 'success');
+
+    // 4. Kirim request ke Google Apps Script backend untuk menghapus baris di spreadsheet
+    if (SCRIPT_URL && SCRIPT_URL !== 'PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE') {
+        try {
+            await fetch(SCRIPT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({
+                    action: 'deleteEvaluation',
+                    vendor: vendor,
+                    penilai: penilai,
+                    periode: periode
+                })
+            });
+        } catch (e) {
+            console.warn('Gagal sinkronisasi hapus ke Google Sheet:', e);
+        }
+    }
+}
+
 async function loadDashboardData() {
-    const savedPin = localStorage.getItem('ethos_pin') || '';
+    const savedPin = sessionStorage.getItem('ethos_pin') || localStorage.getItem('ethos_pin') || '';
     const url = savedPin ? `${SCRIPT_URL}?pin=${encodeURIComponent(savedPin)}` : SCRIPT_URL;
 
     if (SCRIPT_URL === 'PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE') {
@@ -261,6 +347,7 @@ async function loadDashboardData() {
         
         if (data.status === 'success') {
             dashboardData = data;
+            cleanCancelledEvaluations(dashboardData);
             initSlicers(dashboardData.kategori, dashboardData.periodList);
             filterAndRenderDashboard();
         } else {
@@ -908,9 +995,9 @@ function exportEvaluationCsv() {
         return;
     }
     const list = dashboardData.evaluationsList;
-    let csv = 'Tanggal,Penilai,Vendor,Periode,Skor Rata-rata,Predikat,Catatan\n';
-    list.forEach(e => {
-        csv += `"${escCsv(e.timestamp)}","${escCsv(e.penilai)}","${escCsv(e.vendor)}","${escCsv(e.periode)}","${e.score}","${escCsv(e.predikat)}","${escCsv(e.catatan)}"\n`;
+    let csv = 'No,Tanggal,Penilai,Vendor,Periode,Skor Rata-rata,Predikat,Catatan\n';
+    list.forEach((e, idx) => {
+        csv += `"${idx + 1}","${escCsv(e.timestamp)}","${escCsv(e.penilai)}","${escCsv(e.vendor)}","${escCsv(e.periode)}","${e.score}","${escCsv(e.predikat)}","${escCsv(e.catatan)}"\n`;
     });
     const nowStr = new Date().toISOString().slice(0, 10);
     downloadCsv(csv, `Laporan_Evaluasi_Vendor_${nowStr}.csv`);
@@ -1581,7 +1668,7 @@ function renderEvaluationsTable(evaluations) {
     }
 
     if (!evaluations || evaluations.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text3); padding:2rem;">Belum ada data penilaian vendor. Mulai beri penilaian dari halaman utama.</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:var(--text3); padding:2rem;">Belum ada data penilaian vendor. Mulai beri penilaian dari halaman utama.</td></tr>`;
         return;
     }
 
@@ -1593,7 +1680,8 @@ function renderEvaluationsTable(evaluations) {
         return 0;
     });
 
-    tableBody.innerHTML = sorted.map(ev => {
+    tableBody.innerHTML = sorted.map((ev, idx) => {
+        const no = idx + 1;
         const score = parseFloat(ev.score) || 0;
         const color = getPredikatColor(score);
         const pred = ev.predikat || getPredikat(score);
@@ -1602,10 +1690,14 @@ function renderEvaluationsTable(evaluations) {
 
         return `
         <tr class="hover:bg-blue-50/40 transition-colors">
+            <td style="text-align:center; font-weight:700; color:#64748b; font-size:0.75rem; width:48px;">${no}</td>
             <td style="font-size:0.75rem; color:#64748b; white-space:nowrap;">${esc(ev.timestamp)}</td>
             <td style="font-size:0.78rem; color:#475569; white-space:nowrap;">${esc(ev.penilai)}</td>
             <td>
-                <div style="font-weight:600; color:#0f172a; max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${esc(cleanVendor)}">${esc(cleanVendor)}</div>
+                <div class="flex items-center gap-2">
+                    <span class="inline-flex items-center justify-center w-5 h-5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-bold border border-slate-200/80 flex-shrink-0">${no}</span>
+                    <div style="font-weight:600; color:#0f172a; max-width:210px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${esc(cleanVendor)}">${esc(cleanVendor)}</div>
+                </div>
             </td>
             <td style="font-size:0.75rem; color:#64748b; white-space:nowrap;">${esc(ev.periode)}</td>
             <td style="text-align:right; font-weight:800; color:${color}; font-size:0.85rem;">${score.toFixed(2)}</td>
@@ -1618,9 +1710,14 @@ function renderEvaluationsTable(evaluations) {
                 <div style="font-size:0.75rem; color:#64748b; max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${esc(cleanCatatan)}">${esc(cleanCatatan)}</div>
             </td>
             <td style="text-align:center; white-space:nowrap;">
-                <button onclick="openVendorScorecard('${esc(cleanVendor)}')" class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition shadow-2xs" title="Cetak Rapor Kinerja ${esc(cleanVendor)}">
-                    <span>📄 Rapor</span>
-                </button>
+                <div class="inline-flex items-center gap-1.5 justify-center">
+                    <button onclick="openVendorScorecard('${esc(cleanVendor)}')" class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition shadow-2xs" title="Cetak Rapor Kinerja ${esc(cleanVendor)}">
+                        <span>📄 Rapor</span>
+                    </button>
+                    <button onclick="deleteEvaluation('${esc(cleanVendor)}', '${esc(ev.penilai || '')}', '${esc(ev.periode || '')}')" class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 transition shadow-2xs" title="Hapus penilaian agar dapat dinilai ulang">
+                        <span>🗑️ Hapus</span>
+                    </button>
+                </div>
             </td>
         </tr>`;
     }).join('');

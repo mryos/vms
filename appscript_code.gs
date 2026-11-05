@@ -452,6 +452,41 @@ function doPost(e) {
       throw new Error('Payload data tidak ditemukan.');
     }
 
+    // === ACTION: HAPUS EVALUASI (DELETE / NILAI ULANG) ===
+    if (payload.action === 'deleteEvaluation') {
+      var delVendor = payload.vendor ? payload.vendor.toString().trim() : '';
+      var delPenilai = payload.penilai ? payload.penilai.toString().trim() : '';
+      var ssDel = SpreadsheetApp.getActiveSpreadsheet();
+      var pSheet = getPenilaianVendorSheet(ssDel);
+      if (pSheet && pSheet.getLastRow() >= 2) {
+        var pData = pSheet.getDataRange().getValues();
+        var pHeaders = pData[0].map(function(h) { return h ? h.toString().trim().toLowerCase() : ''; });
+        var pIdxVendor = getHeaderIndex(pHeaders, ['nama vendor', 'vendor', 'rekanan', 'supplier']);
+        var pIdxPenilai = getHeaderIndex(pHeaders, ['nama penilai', 'penilai', 'assessor', 'user']);
+
+        var deletedCount = 0;
+        for (var r = pData.length - 1; r >= 1; r--) {
+          var rowVendor = pIdxVendor !== -1 && pData[r][pIdxVendor] ? pData[r][pIdxVendor].toString().trim() : '';
+          var rowPenilai = pIdxPenilai !== -1 && pData[r][pIdxPenilai] ? pData[r][pIdxPenilai].toString().trim() : '';
+
+          var cleanV1 = delVendor.toLowerCase().replace(/^(pt\.?|cv\.?|ud\.?|toko)\s+/i, '').replace(/[^a-z0-9]/g, '');
+          var cleanV2 = rowVendor.toLowerCase().replace(/^(pt\.?|cv\.?|ud\.?|toko)\s+/i, '').replace(/[^a-z0-9]/g, '');
+          var matchVendor = cleanV1 && cleanV2 && (cleanV1 === cleanV2 || cleanV1.indexOf(cleanV2) !== -1 || cleanV2.indexOf(cleanV1) !== -1);
+          var matchPenilai = !delPenilai || (rowPenilai && rowPenilai.toLowerCase().indexOf(delPenilai.toLowerCase()) !== -1);
+
+          if (matchVendor && matchPenilai) {
+            pSheet.deleteRow(r + 1);
+            deletedCount++;
+          }
+        }
+        return createJsonResponse({
+          status: 'success',
+          message: 'Berhasil menghapus ' + deletedCount + ' baris evaluasi untuk vendor ' + delVendor
+        });
+      }
+      return createJsonResponse({ status: 'error', message: 'Sheet Penilaian Vendor tidak ditemukan.' });
+    }
+
     var namaPenilai = payload.namaPenilai || '';
     var namaVendor = payload.namaVendor || '';
     var periodePenilaian = payload.periodePenilaian || '';

@@ -545,7 +545,12 @@ async function processPinLogin(pin) {
                         userAssignedVendors = (data.vendors || []).map(v => typeof v === 'object' ? v.nama : v);
                     }
 
-                    if (data.scoreSummary) scoreSummary = data.scoreSummary;
+                    if (data.scoreSummary) {
+                        scoreSummary = data.scoreSummary;
+                        for (let vk in scoreSummary) {
+                            if (isCancelledVendor(vk)) delete scoreSummary[vk];
+                        }
+                    }
 
                     if (data.kriteria && data.kriteria.length > 0) {
                         kriteriaList = data.kriteria;
@@ -979,6 +984,18 @@ function isSameVendor(n1, n2) {
     const c1 = clean(s1);
     const c2 = clean(s2);
     return c1.length > 2 && c2.length > 2 && (c1 === c2 || c1.includes(c2) || c2.includes(c1));
+}
+
+function isCancelledVendor(vName) {
+    if (!vName) return false;
+    const cancelled = ['PT BIZNET GIO NUSANTARA', 'ZAQ ATK'];
+    try {
+        const stored = JSON.parse(localStorage.getItem('ethos_deleted_evaluations') || '[]');
+        if (Array.isArray(stored)) {
+            stored.forEach(s => { if (s && s.vendor) cancelled.push(s.vendor); });
+        }
+    } catch (e) {}
+    return cancelled.some(c => isSameVendor(c, vName));
 }
 
 /**
@@ -1433,6 +1450,8 @@ function getAssessedVendorsForPeriod(period) {
     // 1. Dari server scoreSummary
     if (scoreSummary) {
         for (let vName in scoreSummary) {
+            if (isCancelledVendor(vName)) continue; // Abaikan vendor yang dibatalkan / dinilai ulang
+
             const vData = scoreSummary[vName];
             if (vData && Array.isArray(vData.periodeScores)) {
                 if (vData.periodeScores.some(p => p.periode === period)) {
@@ -1445,7 +1464,11 @@ function getAssessedVendorsForPeriod(period) {
     // 2. Dari localStorage per-periode
     try {
         const localList = JSON.parse(localStorage.getItem(`ethos_assessed_${period}`) || '[]');
-        localList.forEach(v => assessedSet.add(v));
+        localList.forEach(v => {
+            if (!isCancelledVendor(v)) {
+                assessedSet.add(v);
+            }
+        });
     } catch (e) {}
 
     return Array.from(assessedSet);
