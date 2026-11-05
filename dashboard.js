@@ -623,7 +623,10 @@ function renderSummaryCards(vendors, scoreSummary, cc, poStats) {
 
     if (totalContractVal > 0) {
         if (kpiSpendTitleEl) kpiSpendTitleEl.textContent = 'Nilai Kontrak';
-        if (valEl) valEl.textContent = formatRupiah(totalContractVal);
+        if (valEl) {
+            valEl.textContent = formatRupiah(totalContractVal);
+            valEl.title = formatRupiah(totalContractVal);
+        }
         if (valCountEl) valCountEl.textContent = `${totalContractsCount} kontrak aktif`;
         if (valAvgEl) {
             const avgVal = totalContractsCount > 0 ? (totalContractVal / totalContractsCount) : 0;
@@ -632,7 +635,10 @@ function renderSummaryCards(vendors, scoreSummary, cc, poStats) {
     } else {
         // Fallback cerdas: Jika nilai kontrak belum diisi/0 di spreadsheet, tampilkan Total Belanja PO riil
         if (kpiSpendTitleEl) kpiSpendTitleEl.textContent = 'Total Belanja PO';
-        if (valEl) valEl.textContent = totalPoSpend > 0 ? formatRupiah(totalPoSpend) : 'Rp 0';
+        if (valEl) {
+            valEl.textContent = totalPoSpend > 0 ? formatRupiah(totalPoSpend) : 'Rp 0';
+            valEl.title = totalPoSpend > 0 ? formatRupiah(totalPoSpend) : 'Rp 0';
+        }
         if (valCountEl) valCountEl.textContent = `${totalContractsCount} kontrak aktif`;
         if (valAvgEl) {
             valAvgEl.textContent = totalPoOrders > 0 ? `${totalPoOrders} pesanan PO terdata` : 'Portofolio Belanja';
