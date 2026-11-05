@@ -58,26 +58,25 @@ tailwind.config = {
     box-shadow: 0 4px 12px 0 rgb(0 0 0 / 0.06), 0 2px 4px -1px rgb(0 0 0 / 0.04);
   }
 
-  /* Executive KPI Cards with Accent Top Borders */
+  /* Executive KPI Cards (Clean Monochrome & Subtle Elevation) */
   .kpi-card {
     position: relative;
     overflow: hidden;
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 0.75rem;
-    padding: 0.75rem 0.85rem;
-    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.04);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border-radius: 0.875rem;
+    padding: 0.85rem 1rem;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.03);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   }
   .kpi-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 18px -4px rgb(0 0 0 / 0.08);
+    border-color: #cbd5e1;
+    box-shadow: 0 8px 18px -4px rgb(0 0 0 / 0.06);
   }
-  .kpi-card-blue { border-top: 4px solid #2563eb; }
-  .kpi-card-amber { border-top: 4px solid #f59e0b; }
-  .kpi-card-emerald { border-top: 4px solid #10b981; }
-  .kpi-card-purple { border-top: 4px solid #8b5cf6; }
-  .kpi-card-indigo { border-top: 4px solid #6366f1; }
+  .kpi-card-blue, .kpi-card-amber, .kpi-card-emerald, .kpi-card-purple, .kpi-card-indigo {
+    border-top: none;
+  }
 
   /* Tremor table - Compact & Clean */
   .tremor-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.8125rem; }
@@ -248,15 +247,48 @@ tailwind.config = {
   }
   .tremor-select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15); }
 
-  /* Tremor tabs */
-  .tremor-tab {
-    padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 600;
-    color: #64748b; border-bottom: 2px solid transparent;
-    cursor: pointer; transition: all 0.15s ease; background: none; border-top: none; border-left: none; border-right: none;
-    white-space: nowrap; display: inline-flex; align-items: center; gap: 0.35rem;
+  /* Segmented Controls Tabs (Corporate Clean) */
+  .segmented-tabs-container {
+    background: #f1f5f9;
+    padding: 0.25rem;
+    border-radius: 0.75rem;
+    display: inline-flex;
+    gap: 0.25rem;
+    border: 1px solid #e2e8f0;
   }
-  .tremor-tab:hover { color: #0f172a; }
-  .tremor-tab.active { color: #2563eb; border-bottom-color: #2563eb; }
+  .tremor-tab {
+    padding: 0.4rem 0.85rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #64748b;
+    border-radius: 0.55rem;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    background: transparent;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .tremor-tab:hover {
+    color: #0f172a;
+    background: rgba(255, 255, 255, 0.6);
+  }
+  .tremor-tab.active {
+    color: #0f172a;
+    background: #ffffff;
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.08);
+  }
+  .tremor-tab svg {
+    width: 14px;
+    height: 14px;
+    color: #64748b;
+    transition: color 0.15s ease;
+  }
+  .tremor-tab.active svg {
+    color: #2563eb;
+  }
 
   /* Toast */
   .toast-box { position: fixed; bottom: 1rem; right: 1rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.5rem; }
@@ -415,33 +447,33 @@ tailwind.config = {
                 </button>
                 <button onclick="openErpExportModal()" class="inline-flex items-center gap-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 text-xs font-semibold transition shadow-2xs hover:shadow-xs" title="Ekspor data evaluasi ke template CSV ERP / Odoo">
                     <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                    🏢 Export CSV ERP
+                    Export CSV ERP
                 </button>
             </div>
         </div>
 
-        <!-- ========== TAB NAVIGATION ========== -->
-        <div class="mb-2.5 flex items-start justify-between gap-3 flex-wrap border-b border-gray-200">
-            <div class="flex gap-1 -mb-px overflow-x-auto" id="dashboardTabs">
+        <!-- ========== TAB NAVIGATION (SEGMENTED CONTROL) ========== -->
+        <div class="mb-2.5 overflow-x-auto pb-1">
+            <div class="segmented-tabs-container" id="dashboardTabs">
                 <button class="tremor-tab active" data-tab="all">
-                    <span>📊</span>
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
                     <span>Semua Ringkasan</span>
                 </button>
                 <button class="tremor-tab" data-tab="clm">
-                    <span>📜</span>
-                    <span>Kepatuhan & Kontrak</span>
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    <span>Kepatuhan &amp; Kontrak</span>
                 </button>
                 <button class="tremor-tab" data-tab="kraljic">
-                    <span>🧩</span>
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/></svg>
                     <span>Matriks Kraljic</span>
                 </button>
                 <button class="tremor-tab" data-tab="performance">
-                    <span>⭐</span>
-                    <span>Kinerja & Evaluasi</span>
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
+                    <span>Kinerja &amp; Evaluasi</span>
                 </button>
                 <button class="tremor-tab" data-tab="orders">
-                    <span>🚚</span>
-                    <span>PO & Delivery</span>
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
+                    <span>PO &amp; Delivery</span>
                 </button>
             </div>
         </div>
@@ -450,21 +482,21 @@ tailwind.config = {
         <div class="mb-3 bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs flex items-center justify-between gap-2.5 flex-wrap filter-bar">
             <div class="flex items-center gap-2 flex-wrap">
                 <select id="slicerPeriodSelect" class="tremor-select" title="Filter Periode">
-                    <option value="all">📅 Semua Periode</option>
+                    <option value="all">Semua Periode</option>
                 </select>
                 <select id="slicerCategorySelect" class="tremor-select" title="Filter Bidang Vendor">
-                    <option value="all">📁 Semua Bidang</option>
+                    <option value="all">Semua Bidang</option>
                 </select>
                 <select id="slicerComplianceSelect" class="tremor-select" title="Filter Status Kontrak">
-                    <option value="all">📜 Semua Kontrak</option>
-                    <option value="comply">✅ Comply</option>
-                    <option value="not-comply">❌ Not Comply</option>
+                    <option value="all">Semua Kontrak</option>
+                    <option value="comply">Comply</option>
+                    <option value="not-comply">Not Comply</option>
                 </select>
                 <select id="slicerTierSelect" class="tremor-select" title="Filter Rating">
-                    <option value="all">⭐ Semua Rating</option>
-                    <option value="high">⭐ Sangat Baik (≥ 4.5)</option>
-                    <option value="good">👍 Baik (3.5 - 4.4)</option>
-                    <option value="poor">⚠️ Perlu Perhatian (&lt; 2.5)</option>
+                    <option value="all">Semua Rating</option>
+                    <option value="high">Sangat Baik (≥ 4.5)</option>
+                    <option value="good">Baik (3.5 - 4.4)</option>
+                    <option value="poor">Perlu Perhatian (&lt; 2.5)</option>
                 </select>
                 <button id="slicerResetBtn" onclick="resetAllSlicers()" class="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2 py-1 text-xs font-semibold text-gray-600 shadow-2xs hover:bg-gray-50 transition">
                     <svg class="w-3 h-3 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
@@ -476,22 +508,16 @@ tailwind.config = {
             </div>
         </div>
 
-        <!-- ========== ALERT BANNER ========== -->
-        <div class="mb-3 p-2.5 sm:p-3 rounded-xl border border-amber-200 border-l-4 border-l-amber-500 bg-amber-50/90 shadow-2xs" id="expiringContractsBanner" style="display: none;">
-            <div class="flex items-center justify-between gap-3 flex-wrap">
-                <div class="flex items-center gap-2.5">
-                    <div class="text-amber-600 flex-shrink-0">
-                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm-1-7v2h2v-2h-2zm0-8v6h2V7h-2z"/></svg>
-                    </div>
-                    <div>
-                        <span class="text-xs font-bold text-amber-900" id="alertBannerTitle">Peringatan Masa Berlaku Kontrak</span>
-                        <span class="text-[11px] text-amber-800 ml-1.5" id="alertBannerDesc">Terdapat kontrak vendor yang akan segera berakhir dalam 90 hari.</span>
-                    </div>
-                </div>
-                <button onclick="document.getElementById('sectionContracts').scrollIntoView({behavior: 'smooth'})" class="text-xs font-bold text-amber-900 hover:text-amber-950 underline whitespace-nowrap ml-auto">
-                    Lihat Detail Kontrak →
-                </button>
+        <!-- ========== SLIM ALERT BANNER ========== -->
+        <div class="mb-3 px-3 py-2 rounded-lg border border-amber-300/80 bg-amber-50/80 shadow-2xs flex items-center justify-between gap-3 flex-wrap" id="expiringContractsBanner" style="display: none;">
+            <div class="flex items-center gap-2 text-xs">
+                <svg class="w-4 h-4 text-amber-600 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm-1-7v2h2v-2h-2zm0-8v6h2V7h-2z"/></svg>
+                <span class="font-bold text-amber-900" id="alertBannerTitle">Peringatan Kontrak</span>
+                <span class="text-amber-800" id="alertBannerDesc">Terdapat kontrak vendor yang segera berakhir.</span>
             </div>
+            <button onclick="document.getElementById('sectionContracts').scrollIntoView({behavior: 'smooth'})" class="text-xs font-bold text-amber-900 hover:text-amber-950 underline whitespace-nowrap ml-auto">
+                Lihat Detail Kontrak →
+            </button>
         </div>
 
         <!-- ========== KPI CARDS GRID (5 PILLARS) ========== -->

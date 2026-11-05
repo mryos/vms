@@ -165,15 +165,15 @@ function initSlicers(kategoriList, periodList) {
     const periodSelect = document.getElementById('slicerPeriodSelect');
     if (periodSelect) {
         const list = Array.isArray(periodList) ? periodList : [];
-        periodSelect.innerHTML = `<option value="all">📅 Semua Periode</option>` +
-            list.map(p => `<option value="${esc(p)}">📅 ${esc(p)}</option>`).join('');
+        periodSelect.innerHTML = `<option value="all">Semua Periode</option>` +
+            list.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
     }
 
     // 2. Inisialisasi Category Select Options secara dinamis dari database
     const catSelect = document.getElementById('slicerCategorySelect');
     if (catSelect && kategoriList && kategoriList.length > 0) {
-        catSelect.innerHTML = `<option value="all">📁 Semua Bidang</option>` +
-            kategoriList.map(k => `<option value="${esc(k.kode)}">${k.ikon || '📦'} ${esc(k.nama)}</option>`).join('');
+        catSelect.innerHTML = `<option value="all">Semua Bidang</option>` +
+            kategoriList.map(k => `<option value="${esc(k.kode)}">${esc(k.nama)}</option>`).join('');
     }
 
     // 3. Pasang event listener untuk dropdown filter
@@ -676,19 +676,19 @@ function renderSummaryCards(vendors, scoreSummary, cc, poStats) {
     if (totalContractVal > 0) {
         if (kpiSpendTitleEl) kpiSpendTitleEl.textContent = 'Nilai Kontrak';
         if (valEl) {
-            valEl.textContent = formatRupiah(totalContractVal);
+            valEl.textContent = formatRupiahCompact(totalContractVal);
             valEl.title = formatRupiah(totalContractVal);
         }
         if (valCountEl) valCountEl.textContent = `${totalContractsCount} kontrak aktif`;
         if (valAvgEl) {
             const avgVal = totalContractsCount > 0 ? (totalContractVal / totalContractsCount) : 0;
-            valAvgEl.textContent = totalPoSpend > 0 ? `Belanja PO: ${formatRupiah(totalPoSpend)}` : `Rata-rata: ${formatRupiah(avgVal)}`;
+            valAvgEl.textContent = totalPoSpend > 0 ? `Belanja: ${formatRupiahCompact(totalPoSpend)}` : `Rata-rata: ${formatRupiahCompact(avgVal)}`;
         }
     } else {
         // Fallback cerdas: Jika nilai kontrak belum diisi/0 di spreadsheet, tampilkan Total Belanja PO riil
         if (kpiSpendTitleEl) kpiSpendTitleEl.textContent = 'Total Belanja PO';
         if (valEl) {
-            valEl.textContent = totalPoSpend > 0 ? formatRupiah(totalPoSpend) : 'Rp 0';
+            valEl.textContent = totalPoSpend > 0 ? formatRupiahCompact(totalPoSpend) : 'Rp 0';
             valEl.title = totalPoSpend > 0 ? formatRupiah(totalPoSpend) : 'Rp 0';
         }
         if (valCountEl) valCountEl.textContent = `${totalContractsCount} kontrak aktif`;
@@ -817,7 +817,7 @@ function checkExpiringContracts(cc) {
         banner.style.display = 'flex';
         const titleEl = document.getElementById('alertBannerTitle');
         const descEl = document.getElementById('alertBannerDesc');
-        if (titleEl) titleEl.textContent = `⚠️ Peringatan: ${expiring.length} Kontrak Segera Berakhir (< 90 Hari)`;
+        if (titleEl) titleEl.textContent = `Peringatan: ${expiring.length} Kontrak Segera Berakhir (< 90 Hari)`;
         if (descEl) descEl.textContent = `Vendor: ${expiring.map(e => e.vendor).slice(0, 3).join(', ')}${expiring.length > 3 ? '...' : ''}. Persiapkan proses review & perpanjangan.`;
     } else {
         banner.style.display = 'none';
@@ -1914,6 +1914,17 @@ function formatRupiah(number) {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0
     }).format(number);
+}
+
+function formatRupiahCompact(number) {
+    const val = Number(number) || 0;
+    if (val >= 1000000000) {
+        return 'Rp ' + (val / 1000000000).toLocaleString('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 2 }) + ' M';
+    }
+    if (val >= 1000000) {
+        return 'Rp ' + (val / 1000000).toLocaleString('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 2 }) + ' Jt';
+    }
+    return formatRupiah(val);
 }
 
 function getPredikat(score) {
