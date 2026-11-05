@@ -1937,9 +1937,13 @@ async function submitAssessment() {
     }
 
     const activePeriod = selectedPeriode || (serverPeriodList && serverPeriodList.length > 0 ? serverPeriodList[0] : 'Q3 2026');
+    const assessorName = currentAssessorName || 
+                         sessionStorage.getItem('ethos_nama') || 
+                         localStorage.getItem('ethos_nama') || 
+                         'Penilai';
     const payload = {
         timestamp: new Date().toISOString(),
-        namaPenilai: localStorage.getItem('ethos_nama'),
+        namaPenilai: assessorName,
         namaVendor: selectedVendor,
         periodePenilaian: activePeriod,
         kategori: vendorKategori,

@@ -1767,6 +1767,10 @@ function renderEvaluationsTable(evaluations) {
         const pred = ev.predikat || getPredikat(score);
         const cleanVendor = (ev.vendor || '').replace(/\r?\n|\r/g, ' ').trim();
         const cleanCatatan = (ev.catatan || '-').replace(/\r?\n|\r/g, ' ').trim();
+        const rawPenilai = (ev.penilai || '').trim();
+        const displayPenilai = (rawPenilai && rawPenilai !== '-' && rawPenilai.toLowerCase() !== 'null')
+            ? rawPenilai
+            : 'Tim Penilai';
         const displayPeriode = (ev.periode && ev.periode !== 'General' && ev.periode !== '-')
             ? ev.periode
             : (slicerState.period !== 'all' ? slicerState.period : (ev.periode || 'General'));
@@ -1775,7 +1779,12 @@ function renderEvaluationsTable(evaluations) {
         <tr class="hover:bg-blue-50/40 transition-colors">
             <td style="text-align:center; font-weight:700; color:#64748b; font-size:0.73rem; width:44px; padding:0.32rem 0.5rem;">${no}</td>
             <td style="font-size:0.73rem; color:#64748b; white-space:nowrap; padding:0.32rem 0.5rem;">${esc(ev.timestamp)}</td>
-            <td style="font-size:0.75rem; color:#475569; white-space:nowrap; padding:0.32rem 0.5rem;">${esc(ev.penilai)}</td>
+            <td style="font-size:0.75rem; color:#475569; white-space:nowrap; padding:0.32rem 0.5rem;">
+                <span class="inline-flex items-center gap-1 font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded text-[11px] border border-slate-200" title="Penilai: ${esc(displayPenilai)}">
+                    <svg class="w-3 h-3 text-slate-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                    <span>${esc(displayPenilai)}</span>
+                </span>
+            </td>
             <td style="padding:0.32rem 0.5rem;">
                 <div style="font-weight:600; color:#0f172a; max-width:210px; font-size:0.75rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${esc(cleanVendor)}">${esc(cleanVendor)}</div>
             </td>
@@ -2475,6 +2484,27 @@ function openVendorScorecard(vendorName) {
     const onTimePct = totalPo > 0 ? Math.round((onTimePo / totalPo) * 100) : 100;
     const latePct = totalPo > 0 ? Math.round((latePo / totalPo) * 100) : 0;
 
+    // Tentukan nama penilai / evaluator
+    const penilaiFromEvals = evals
+        .map(e => (e.penilai || '').trim())
+        .filter(p => p && p !== '-' && p.toLowerCase() !== 'null');
+    const uniqueAssessors = [...new Set(penilaiFromEvals)];
+    const displayAssessor = uniqueAssessors.length > 0 
+        ? uniqueAssessors.join(', ') 
+        : (sessionStorage.getItem('ethos_nama') || 'Tim Penilai Pengadaan');
+
+    // Tanggal evaluasi
+    const todayStr = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    const evalTimestamps = evals
+        .map(e => (e.timestamp || '').trim())
+        .filter(t => t && t !== '-');
+    const evalDateStr = evalTimestamps.length > 0 ? evalTimestamps[0] : todayStr;
+
+    // Kategori & Kontrak
+    const categoryName = vInfo.kategori || contractData?.jenisPekerjaan || (evals[0]?.kategori) || 'Barang/Jasa';
+    const contractNo = contractData?.noKontrak || 'PKS-TERDAFTAR';
+    const contractStatus = contractData?.status ? contractData.status : 'Comply (Terdaftar)';
+
     // Kumpulkan seluruh data riwayat pesanan PO milik vendor ini
     const vNameLower = vendorName.toLowerCase().trim();
     let vendorOrders = [];
@@ -2508,13 +2538,13 @@ function openVendorScorecard(vendorName) {
     let topProductsHtml = '';
     if (topProducts.length > 0) {
         topProductsHtml = `
-            <div class="mt-2.5 pt-2.5 border-t border-gray-200/80">
+            <div class="mt-2.5 pt-2 border-t border-slate-200">
                 <div class="flex items-center gap-1.5 flex-wrap text-xs">
-                    <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider mr-1">Komoditas Utama:</span>
+                    <span class="text-[10px] font-bold text-slate-600 uppercase tracking-wider mr-1">Komoditas Utama:</span>
                     ${topProducts.map(([pName, count]) => `
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-white text-gray-800 border border-gray-200 shadow-2xs">
-                            <span class="font-bold text-blue-600">${count}x</span>
-                            <span class="text-gray-700 truncate max-w-[200px]" title="${esc(pName)}">${esc(pName)}</span>
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-800 border border-slate-300">
+                            <span class="font-bold text-blue-700 font-mono">${count}x</span>
+                            <span class="text-slate-800 truncate max-w-[200px]" title="${esc(pName)}">${esc(pName)}</span>
                         </span>
                     `).join('')}
                 </div>
@@ -2522,35 +2552,36 @@ function openVendorScorecard(vendorName) {
         `;
     }
 
-    // Riwayat Log Pesanan PO Detail (Format 4 Kolom Proporsional & Bebas Terpotong)
+    // Riwayat Log Pesanan PO Detail (Format Formal Korporat & Bebas Emojis)
     let recentOrdersTableHtml = '';
     if (vendorOrders.length > 0) {
         const displayLimit = 10;
         const visibleOrders = vendorOrders.slice(0, displayLimit);
         const remainingCount = vendorOrders.length - displayLimit;
 
-        const renderPoRow = (o) => {
+        const renderPoRow = (o, rowIdx) => {
             const dev = calculateDeliveryDeviation(o.expectedDate, o.effectiveDate);
             const isFinishedOnTime = o.isOnTime;
             const statusBadge = isFinishedOnTime
-                ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">✅ Tepat Waktu</span>`
+                ? `<span class="inline-block px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-300">TEPAT WAKTU</span>`
                 : (o.status && o.status.toLowerCase().includes('proses') 
-                    ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-blue-50 text-blue-700 border border-blue-200">⏳ Proses</span>`
-                    : `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-rose-50 text-rose-700 border border-rose-200">⚠️ Terlambat</span>`);
+                    ? `<span class="inline-block px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-blue-50 text-blue-800 border border-blue-300">DALAM PROSES</span>`
+                    : `<span class="inline-block px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-rose-50 text-rose-800 border border-rose-300">TERLAMBAT</span>`);
 
             return `
-                <tr class="hover:bg-gray-50/80 border-b border-gray-100 text-[11px]">
-                    <td class="py-2 px-2.5 font-mono font-bold text-blue-700 whitespace-nowrap align-top">
+                <tr class="border-b border-slate-200 text-[11px] hover:bg-slate-50/70">
+                    <td class="py-1.5 px-2 text-center text-slate-500 font-bold border-r border-slate-200">${rowIdx + 1}</td>
+                    <td class="py-1.5 px-2 font-mono font-bold text-slate-900 whitespace-nowrap align-top border-r border-slate-200">
                         <span title="${esc(o.poNum || '-')}">${esc(o.poNum || '-')}</span>
                     </td>
-                    <td class="py-2 px-2.5 text-gray-800 font-medium align-top">
+                    <td class="py-1.5 px-2 text-slate-800 font-medium align-top border-r border-slate-200">
                         <div class="line-clamp-2" title="${esc(o.product || '-')}">${esc(o.product || '-')}</div>
                     </td>
-                    <td class="py-2 px-2.5 whitespace-nowrap align-top text-[10px]">
-                        <div class="text-gray-500 font-mono">Tgt: <span class="text-gray-700">${esc(o.expectedDate || '-')}</span></div>
-                        <div class="text-gray-500 font-mono mt-0.5">Rls: <span class="font-bold text-gray-900">${esc(o.effectiveDate || '-')}</span></div>
+                    <td class="py-1.5 px-2 whitespace-nowrap align-top text-[10px] border-r border-slate-200 font-mono">
+                        <div class="text-slate-600">Janji Kirim: <strong>${esc(o.expectedDate || '-')}</strong></div>
+                        <div class="text-slate-600 mt-0.5">Realisasi: <strong class="text-slate-900">${esc(o.effectiveDate || '-')}</strong></div>
                     </td>
-                    <td class="py-2 px-2.5 text-right whitespace-nowrap align-top">
+                    <td class="py-1.5 px-2 text-right whitespace-nowrap align-top border-r border-slate-200">
                         <div>${statusBadge}</div>
                         <div class="text-[9.5px] mt-0.5 ${dev.color}">${esc(dev.text)}</div>
                     </td>
@@ -2558,52 +2589,54 @@ function openVendorScorecard(vendorName) {
             `;
         };
 
-        const rowsHtml = visibleOrders.map(renderPoRow).join('');
+        const rowsHtml = visibleOrders.map((o, idx) => renderPoRow(o, idx)).join('');
         let hiddenRowsHtml = '';
         if (remainingCount > 0) {
-            hiddenRowsHtml = vendorOrders.slice(displayLimit).map(renderPoRow).join('');
+            hiddenRowsHtml = vendorOrders.slice(displayLimit).map((o, idx) => renderPoRow(o, displayLimit + idx)).join('');
         }
 
         recentOrdersTableHtml = `
-            <div class="mt-3.5 pt-3 border-t border-gray-200/80">
-                <div class="flex items-center justify-between mb-2">
-                    <span class="text-[11px] font-bold text-gray-700 uppercase tracking-wider">
-                        📋 Riwayat Transaksi Pemesanan (Log Detail PO):
+            <div class="mt-3 pt-2.5 border-t border-slate-200">
+                <div class="flex items-center justify-between mb-1.5">
+                    <span class="text-[10px] font-bold text-slate-700 uppercase tracking-wider">
+                        Log Detail Transaksi Pemesanan (Purchase Orders):
                     </span>
-                    <span class="text-[10px] text-gray-500 font-medium">
+                    <span class="text-[10px] text-slate-500 font-medium">
                         Menampilkan ${visibleOrders.length} dari ${vendorOrders.length} pesanan tercatat
                     </span>
                 </div>
-                <div class="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-2xs">
+                <div class="border border-slate-300 overflow-hidden bg-white">
                     <table class="w-full text-left border-collapse table-fixed">
                         <colgroup>
-                            <col class="w-[28%] sm:w-[25%]">
-                            <col class="w-[38%] sm:w-[41%]">
-                            <col class="w-[18%] sm:w-[17%]">
-                            <col class="w-[16%] sm:w-[17%]">
+                            <col class="w-[8%]">
+                            <col class="w-[24%]">
+                            <col class="w-[38%]">
+                            <col class="w-[18%]">
+                            <col class="w-[12%]">
                         </colgroup>
-                        <thead class="bg-gray-100/90 text-gray-700 font-bold uppercase text-[9.5px]">
+                        <thead class="bg-slate-100 text-slate-700 font-bold uppercase text-[9.5px]">
                             <tr>
-                                <th class="py-2 px-2.5 border-b border-gray-200">No. PO</th>
-                                <th class="py-2 px-2.5 border-b border-gray-200">Komoditas / Produk</th>
-                                <th class="py-2 px-2.5 border-b border-gray-200">Jadwal &amp; Realisasi</th>
-                                <th class="py-2 px-2.5 border-b border-gray-200 text-right">Status SLA</th>
+                                <th class="py-1.5 px-2 border-b border-r border-slate-300 text-center">No</th>
+                                <th class="py-1.5 px-2 border-b border-r border-slate-300">No. PO</th>
+                                <th class="py-1.5 px-2 border-b border-r border-slate-300">Deskripsi Komoditas / Barang</th>
+                                <th class="py-1.5 px-2 border-b border-r border-slate-300">Target &amp; Realisasi</th>
+                                <th class="py-1.5 px-2 border-b border-slate-300 text-right">Status SLA</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-100">
+                        <tbody class="divide-y divide-slate-200">
                             ${rowsHtml}
                         </tbody>
                         ${remainingCount > 0 ? `
-                        <tbody id="scorecardExtraPoRows" style="display: none;" class="divide-y divide-gray-100">
+                        <tbody id="scorecardExtraPoRows" style="display: none;" class="divide-y divide-slate-200">
                             ${hiddenRowsHtml}
                         </tbody>
                         ` : ''}
                     </table>
                 </div>
                 ${remainingCount > 0 ? `
-                    <div class="text-center mt-2.5 no-print">
-                        <button type="button" onclick="toggleScorecardExtraPo()" id="btnToggleExtraPo" class="px-3 py-1 rounded-md text-[11px] font-semibold bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 shadow-2xs transition cursor-pointer">
-                            ▼ Tampilkan Seluruh (${vendorOrders.length}) Riwayat Pesanan
+                    <div class="text-center mt-2 no-print">
+                        <button type="button" onclick="toggleScorecardExtraPo()" id="btnToggleExtraPo" class="px-3 py-1 rounded text-[11px] font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 shadow-2xs transition cursor-pointer">
+                            Tampilkan Seluruh (${vendorOrders.length}) Riwayat Pesanan
                         </button>
                     </div>
                 ` : ''}
@@ -2611,194 +2644,270 @@ function openVendorScorecard(vendorName) {
         `;
     }
 
-    // Rekomendasi Sourcing
-    let recBadge = '';
+    // Rekomendasi Sourcing (Bahasa Formal Korporat & Tanpa Emojis)
+    let recBadgeClass = '';
+    let recTitle = '';
     let recDesc = '';
     if (avgScore >= 4.0 && onTimeRatePct >= 85) {
-        recBadge = `<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">⭐ PREFERRED SUPPLIER (Prioritas Pengadaan)</span>`;
-        recDesc = 'Performa sangat memuaskan, kualitas layanan prima, dan pengiriman tepat waktu tinggi. Direkomendasikan untuk kontrak prioritas.';
+        recBadgeClass = 'bg-emerald-50 text-emerald-900 border-emerald-300';
+        recTitle = 'PREFERRED SUPPLIER (REKANAN PRIORITAS)';
+        recDesc = 'Performa operasional sangat memuaskan, kualitas layanan prima, dan kepatuhan pengiriman tinggi. Direkomendasikan untuk kontrak prioritas dan kesinambungan alokasi pemesanan utama pada periode selanjutnya.';
     } else if (avgScore >= 3.0 && onTimeRatePct >= 70) {
-        recBadge = `<span class="px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-300">✅ QUALIFIED SUPPLIER (Pertahankan)</span>`;
-        recDesc = 'Performa memenuhi standar operasional. Dapat dipertahankan untuk kerjasama berkelanjutan dengan pemantauan rutin.';
+        recBadgeClass = 'bg-blue-50 text-blue-900 border-blue-300';
+        recTitle = 'QUALIFIED SUPPLIER (REKANAN MEMENUHI STANDAR)';
+        recDesc = 'Performa operasional memenuhi standar kelayakan pengadaan. Kerjasama direkomendasikan untuk dipertahankan dengan evaluasi dan pemantauan rutin berkala.';
     } else if (avgScore >= 2.0) {
-        recBadge = `<span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">⚠️ CONDITIONAL (Perlu Pembinaan)</span>`;
-        recDesc = 'Performa di bawah ekspektasi. Dibutuhkan evaluasi dan rencana perbaikan (CAPA) sebelum alokasi penambahan pesanan.';
+        recBadgeClass = 'bg-amber-50 text-amber-900 border-amber-300';
+        recTitle = 'CONDITIONAL (PERLU PEMBINAAN & TINDAKAN KOREKTIF)';
+        recDesc = 'Performa operasional belum memenuhi standar target minimum. Diperlukan tindakan perbaikan korektif (CAPA) sebelum alokasi penambahan volume pesanan baru.';
     } else {
-        recBadge = `<span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300">❌ UNDER REVIEW (Tinjau Ulang)</span>`;
-        recDesc = 'Performa kritis / tidak memenuhi standar minimum. Disarankan peninjauan ulang kelayakan kerjasama atau penghentian kontrak.';
+        recBadgeClass = 'bg-rose-50 text-rose-900 border-rose-300';
+        recTitle = 'UNDER REVIEW (PENINJAUAN ULANG KERJASAMA)';
+        recDesc = 'Performa operasional berada pada tingkat kritis / tidak memenuhi standar minimum. Direkomendasikan peninjauan ulang kelayakan legal-operasional atau penghentian hubungan kerjasama.';
     }
 
-    const todayStr = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
     const periodLabel = (slicerState && slicerState.period !== 'all') ? slicerState.period : 'Akumulasi Seluruh Periode';
-    const docNo = `EK-VMS/REP/${new Date().getFullYear()}/${vendorName.replace(/[^a-zA-Z0-9]/g, '').slice(0, 6).toUpperCase()}`;
+    const docNo = `EK-VMS/SCD/${new Date().getFullYear()}/${vendorName.replace(/[^a-zA-Z0-9]/g, '').slice(0, 6).toUpperCase()}`;
 
     // Ekstrak catatan evaluasi
     const catatanList = evals.map(e => (e.catatan || '').trim()).filter(c => c && c !== '-');
 
+    // Ekstrak rincian kriteria jika ada
+    let allLines = [];
+    evals.forEach(e => {
+        if (Array.isArray(e.lines) && e.lines.length > 0) {
+            e.lines.forEach(line => {
+                if (!allLines.some(l => l.name === line.name)) {
+                    allLines.push(line);
+                }
+            });
+        }
+    });
+
+    let criteriaTableHtml = '';
+    if (allLines.length > 0) {
+        criteriaTableHtml = `
+            <div class="mb-4">
+                <div class="bg-slate-800 text-white px-3 py-1 text-xs font-bold uppercase tracking-wider">
+                    III. RINCIAN PARAMETER &amp; ASPEK PENILAIAN MUTU
+                </div>
+                <table class="w-full text-xs border border-slate-300 border-collapse">
+                    <thead class="bg-slate-100 text-slate-800 font-bold uppercase text-[10px]">
+                        <tr>
+                            <th class="p-1.5 border border-slate-300 text-center w-10">No</th>
+                            <th class="p-1.5 border border-slate-300 text-left">Parameter / Indikator Evaluasi Mutu</th>
+                            <th class="p-1.5 border border-slate-300 text-center w-24">Skala</th>
+                            <th class="p-1.5 border border-slate-300 text-center w-24">Skor Capaian</th>
+                            <th class="p-1.5 border border-slate-300 text-center w-28">Status Mutu</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${allLines.map((l, idx) => {
+                            const lScore = parseFloat(l.score) || 0;
+                            const lPred = getPredikat(lScore);
+                            return `
+                            <tr class="border-b border-slate-200">
+                                <td class="p-1.5 border border-slate-300 text-center text-slate-500 font-bold">${idx + 1}</td>
+                                <td class="p-1.5 border border-slate-300 font-semibold text-slate-800">${esc(l.name)}</td>
+                                <td class="p-1.5 border border-slate-300 text-center text-slate-500 font-mono">1.00 - 5.00</td>
+                                <td class="p-1.5 border border-slate-300 text-center font-bold text-slate-900 font-mono">${lScore.toFixed(2)}</td>
+                                <td class="p-1.5 border border-slate-300 text-center font-semibold text-slate-700">${esc(lPred)}</td>
+                            </tr>`;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+
     printArea.innerHTML = `
-        <div class="border-b-2 border-gray-800 pb-5 mb-6">
+        <!-- KOP SURAT RESMI KORPORAT -->
+        <div class="pb-3 mb-3">
             <div class="flex items-start justify-between gap-4">
-                <div class="flex items-center gap-4">
+                <div class="flex items-center gap-3.5">
                     <img src="assets/logo-ethos.png" alt="PT Ethos Kreatif Indonesia" class="h-12 w-auto object-contain">
                     <div>
-                        <h2 class="text-base font-extrabold text-gray-900 tracking-tight leading-snug">PT ETHOS KREATIF INDONESIA</h2>
-                        <p class="text-xs text-gray-500 font-medium">Head Office &amp; Operations · Vendor Management &amp; Procurement System</p>
+                        <h2 class="text-base font-extrabold text-slate-900 tracking-tight leading-snug">PT ETHOS KREATIF INDONESIA</h2>
+                        <p class="text-xs text-slate-600 font-semibold">DIVISI PENGADAAN &amp; MANAJEMEN REKANAN (PROCUREMENT &amp; SCM)</p>
+                        <p class="text-[10px] text-slate-500">Head Office &amp; Operations · Vendor Management System (VMS)</p>
                     </div>
                 </div>
-                <div class="text-right">
-                    <span class="inline-block px-2.5 py-0.5 rounded text-[11px] font-mono font-bold bg-gray-100 border border-gray-300 text-gray-800">${docNo}</span>
-                    <div class="text-[11px] text-gray-500 mt-1">Tanggal Terbit: <strong>${todayStr}</strong></div>
-                    <div class="text-[11px] text-gray-500">Periode: <strong>${periodLabel}</strong></div>
+                <div class="border border-slate-300 p-2 text-right text-[10px] bg-slate-50 leading-tight min-w-[210px]">
+                    <div class="font-bold text-slate-800">NO. DOKUMEN: <span class="font-mono text-slate-900">${docNo}</span></div>
+                    <div class="text-slate-600 mt-0.5">TANGGAL TERBIT: <strong>${todayStr}</strong></div>
+                    <div class="text-slate-600">KLASIFIKASI: <strong class="text-slate-900">INTERNAL / RAHASIA</strong></div>
+                    <div class="text-slate-600">STATUS: <strong class="text-blue-900">DOKUMEN RESMI VMS</strong></div>
                 </div>
             </div>
-            <div class="mt-4 text-center">
-                <h1 class="text-lg sm:text-xl font-black text-gray-900 uppercase tracking-wide">RAPOR EVALUASI &amp; KINERJA REKANAN</h1>
-                <p class="text-xs text-gray-500">Official Vendor Performance Scorecard &amp; SLA Fulfillment Report</p>
+            <!-- Double Line Rule Klasik Standard Surat Resmi Korporat -->
+            <div class="border-b-2 border-slate-900 mt-3 mb-0.5"></div>
+            <div class="border-b border-slate-400 mb-2"></div>
+
+            <div class="text-center my-2">
+                <h1 class="text-base sm:text-lg font-black text-slate-900 uppercase tracking-wider leading-snug">
+                    LEMBAR HASIL PENILAIAN &amp; RAPOR KINERJA REKANAN
+                </h1>
+                <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-widest mt-0.5">
+                    OFFICIAL VENDOR PERFORMANCE SCORECARD &amp; SERVICE LEVEL ASSESSMENT
+                </p>
             </div>
         </div>
 
-        <!-- 1. IDENTITAS REKANAN -->
-        <div class="mb-5 bg-gray-50/80 rounded-xl border border-gray-200 p-4">
-            <h3 class="text-xs font-bold text-gray-800 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-                <span>🏢</span>
-                <span>Identitas &amp; Profil Rekanan</span>
-            </h3>
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                <div>
-                    <span class="text-gray-500 block">Nama Rekanan:</span>
-                    <strong class="text-gray-900 text-sm font-bold block">${esc(vendorName)}</strong>
+        <!-- I. IDENTITAS REKANAN & INFORMASI PENILAIAN -->
+        <div class="mb-4">
+            <div class="bg-slate-800 text-white px-3 py-1 text-xs font-bold uppercase tracking-wider">
+                I. IDENTITAS REKANAN &amp; INFORMASI PENILAIAN
+            </div>
+            <table class="w-full text-xs border border-slate-300 border-collapse">
+                <tbody>
+                    <tr class="border-b border-slate-200">
+                        <td class="bg-slate-50 p-2 font-semibold text-slate-700 w-[22%] border-r border-slate-200">Nama Rekanan / Vendor</td>
+                        <td class="p-2 font-bold text-slate-900 w-[28%] border-r border-slate-200">${esc(vendorName)}</td>
+                        <td class="bg-slate-50 p-2 font-semibold text-slate-700 w-[22%] border-r border-slate-200">Penilai / Evaluator</td>
+                        <td class="p-2 font-bold text-blue-900 w-[28%]">${esc(displayAssessor)}</td>
+                    </tr>
+                    <tr class="border-b border-slate-200">
+                        <td class="bg-slate-50 p-2 font-semibold text-slate-700 border-r border-slate-200">Kategori / Klasifikasi Usaha</td>
+                        <td class="p-2 text-slate-800 border-r border-slate-200">${esc(categoryName)}</td>
+                        <td class="bg-slate-50 p-2 font-semibold text-slate-700 border-r border-slate-200">Periode Penilaian</td>
+                        <td class="p-2 font-bold text-slate-800">${esc(periodLabel)}</td>
+                    </tr>
+                    <tr class="border-b border-slate-200">
+                        <td class="bg-slate-50 p-2 font-semibold text-slate-700 border-r border-slate-200">Nomor Kontrak / PKS</td>
+                        <td class="p-2 font-mono text-slate-800 border-r border-slate-200">${esc(contractNo)}</td>
+                        <td class="bg-slate-50 p-2 font-semibold text-slate-700 border-r border-slate-200">Tanggal Pelaksanaan Evaluasi</td>
+                        <td class="p-2 text-slate-800">${esc(evalDateStr)}</td>
+                    </tr>
+                    <tr>
+                        <td class="bg-slate-50 p-2 font-semibold text-slate-700 border-r border-slate-200">Status Legalitas &amp; Kontrak</td>
+                        <td class="p-2 text-slate-800 border-r border-slate-200">${esc(contractStatus)}</td>
+                        <td class="bg-slate-50 p-2 font-semibold text-slate-700 border-r border-slate-200">Total Akumulasi Transaksi</td>
+                        <td class="p-2 font-mono font-bold text-slate-900">${formatRupiah(totalSpend)}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- II. RINGKASAN EKSEKUTIF CAPAIAN KINERJA -->
+        <div class="mb-4">
+            <div class="bg-slate-800 text-white px-3 py-1 text-xs font-bold uppercase tracking-wider">
+                II. RINGKASAN EKSEKUTIF CAPAIAN KINERJA
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 my-2">
+                <div class="border border-slate-300 bg-white p-3 text-center">
+                    <div class="text-[11px] font-bold text-slate-600 uppercase tracking-wide">Skor Kinerja Rata-Rata</div>
+                    <div class="text-2xl font-black text-slate-900 mt-1">${avgScore > 0 ? avgScore.toFixed(2) : 'Belum Dinilai'}</div>
+                    <div class="text-[11px] text-slate-500 font-semibold mt-0.5">Skala 5.00 (Indeks Mutu: ${score100}%)</div>
                 </div>
-                <div>
-                    <span class="text-gray-500 block">Kategori / Bidang:</span>
-                    <strong class="text-gray-900 block">${esc(vInfo.kategori || contractData?.jenisPekerjaan || 'Barang/Jasa')}</strong>
+                <div class="border border-slate-300 bg-white p-3 text-center">
+                    <div class="text-[11px] font-bold text-slate-600 uppercase tracking-wide">Ketepatan Pengiriman (SLA)</div>
+                    <div class="text-2xl font-black ${onTimeRatePct >= 80 ? 'text-emerald-700' : 'text-rose-700'} mt-1 font-mono">${onTimeRatePct}%</div>
+                    <div class="text-[11px] text-slate-500 font-semibold mt-0.5">${onTimePo} tepat waktu dari ${totalPo} pesanan</div>
                 </div>
-                <div>
-                    <span class="text-gray-500 block">No. Kontrak / PKS:</span>
-                    <strong class="text-gray-900 block font-mono">${esc(contractData?.noKontrak || 'PKS-TERDAFTAR')}</strong>
+                <div class="border border-slate-300 bg-white p-3 text-center">
+                    <div class="text-[11px] font-bold text-slate-600 uppercase tracking-wide">Predikat Mutu Kinerja</div>
+                    <div class="text-xl font-black text-slate-900 mt-1.5 uppercase">${esc(predikat)}</div>
+                    <div class="text-[11px] text-slate-500 font-semibold mt-0.5">${evals.length} sesi evaluasi tercatat</div>
                 </div>
-                <div>
-                    <span class="text-gray-500 block">Status Kepatuhan:</span>
-                    <strong class="text-gray-900 block">${contractData?.status ? esc(contractData.status) : 'Comply (Terdaftar)'}</strong>
+            </div>
+
+            <!-- Rekomendasi Sourcing Formal -->
+            <div class="border border-slate-300 p-2.5 text-xs bg-slate-50">
+                <div class="font-bold text-slate-800 uppercase tracking-wide mb-1">
+                    Status Rekomendasi Sourcing: 
+                    <span class="inline-block px-2 py-0.5 rounded text-[11px] font-bold border ${recBadgeClass} ml-1">
+                        ${recTitle}
+                    </span>
                 </div>
+                <div class="text-slate-600 leading-relaxed text-[11.5px] mt-1">${recDesc}</div>
             </div>
         </div>
 
-        <!-- 2. EXECUTIVE SUMMARY METRICS -->
-        <div class="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div class="p-4 rounded-xl border border-blue-200 bg-blue-50/50 text-center">
-                <div class="text-xs font-bold text-blue-900 uppercase">Skor Kinerja Rata-rata</div>
-                <div class="text-3xl font-black text-blue-600 mt-1">${avgScore > 0 ? avgScore.toFixed(2) : 'Belum Dinilai'}</div>
-                <div class="text-xs text-blue-800 font-semibold mt-1">Skala 5.00 (${score100} / 100)</div>
-            </div>
-            <div class="p-4 rounded-xl border border-emerald-200 bg-emerald-50/50 text-center">
-                <div class="text-xs font-bold text-emerald-900 uppercase">Ketepatan Pengiriman (SLA)</div>
-                <div class="text-3xl font-black text-emerald-600 mt-1">${onTimeRatePct}%</div>
-                <div class="text-xs text-emerald-800 font-semibold mt-1">${onTimePo} tepat waktu dari ${totalPo} PO</div>
-            </div>
-            <div class="p-4 rounded-xl border border-purple-200 bg-purple-50/50 text-center">
-                <div class="text-xs font-bold text-purple-900 uppercase">Predikat Evaluasi</div>
-                <div class="text-2xl font-black text-purple-700 mt-1.5">${esc(predikat)}</div>
-                <div class="text-xs text-purple-800 font-semibold mt-1">${evals.length} sesi penilaian tercatat</div>
-            </div>
-        </div>
+        <!-- III. DETAIL ASPEK EVALUASI MUTU (JIKA TERSEDIA) -->
+        ${criteriaTableHtml}
 
-        <!-- 3. STATUS REKOMENDASI PENGADAAN -->
-        <div class="mb-6 p-4 rounded-xl border border-gray-200 bg-white shadow-2xs">
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-1.5">
-                <span class="text-xs font-bold text-gray-700 uppercase tracking-wider">Status Rekomendasi Sourcing:</span>
-                <div>${recBadge}</div>
-            </div>
-            <p class="text-xs text-gray-600 leading-relaxed">${recDesc}</p>
-        </div>
-
-        <!-- 4. LOGISTIK & RIWAYAT PEMESANAN (PO SLA) -->
-        <div class="mb-6 bg-gray-50/70 rounded-xl border border-gray-200 p-4">
-            <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
-                <h3 class="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-                    <span>📦</span>
-                    <span>Rekam Jejak Pemesanan &amp; Logistik (PO SLA)</span>
-                </h3>
-                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold ${onTimeRatePct >= 80 ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-rose-100 text-rose-800 border border-rose-300'}">
-                    ${onTimeRatePct >= 80 ? '🟢 Memenuhi Standar SLA (≥80%)' : '🔴 Di Bawah Standar SLA (<80%)'}
+        <!-- IV. REKAPITULASI PEMENUHAN SLA LOGISTIK & LOG PEMESANAN (PO) -->
+        <div class="mb-4">
+            <div class="bg-slate-800 text-white px-3 py-1 text-xs font-bold uppercase tracking-wider flex items-center justify-between">
+                <span>IV. REKAPITULASI PEMENUHAN SLA LOGISTIK &amp; RIWAYAT PEMESANAN (PO)</span>
+                <span class="text-[10.5px] font-mono font-normal">
+                    Target SLA: Min. 80% Tepat Waktu
                 </span>
             </div>
 
-            <!-- Metrik Grid 4 Kolom Bersih -->
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-2.5 text-center">
-                <div class="bg-white p-2.5 rounded-lg border border-gray-200 shadow-2xs">
-                    <span class="text-[10px] font-bold text-gray-500 uppercase block">Total Pesanan PO</span>
-                    <strong class="text-base font-black text-gray-900 block mt-0.5">${totalPo} PO</strong>
-                    <span class="text-[10px] text-gray-500 font-mono font-medium block truncate" title="${totalSpend > 0 ? formatRupiah(totalSpend) : '-'}">${totalSpend > 0 ? formatRupiah(totalSpend) : '-'}</span>
+            <div class="border border-slate-300 p-3 bg-white">
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs mb-2">
+                    <div class="border border-slate-200 p-1.5 bg-slate-50">
+                        <span class="text-[10px] text-slate-500 uppercase font-bold block">Total Pesanan PO</span>
+                        <strong class="text-sm font-black text-slate-900 block font-mono">${totalPo} PO</strong>
+                    </div>
+                    <div class="border border-emerald-200 p-1.5 bg-emerald-50/50">
+                        <span class="text-[10px] text-emerald-800 uppercase font-bold block">Tepat Waktu</span>
+                        <strong class="text-sm font-black text-emerald-700 block font-mono">${onTimePo} PO (${onTimePct}%)</strong>
+                    </div>
+                    <div class="border border-rose-200 p-1.5 bg-rose-50/50">
+                        <span class="text-[10px] text-rose-800 uppercase font-bold block">Terlambat</span>
+                        <strong class="text-sm font-black text-rose-700 block font-mono">${latePo} PO (${latePct}%)</strong>
+                    </div>
+                    <div class="border border-slate-200 p-1.5 bg-slate-50">
+                        <span class="text-[10px] text-slate-500 uppercase font-bold block">Tingkat SLA Capaian</span>
+                        <strong class="text-sm font-black ${onTimeRatePct >= 80 ? 'text-emerald-700' : 'text-rose-700'} block font-mono">${onTimeRatePct}%</strong>
+                    </div>
                 </div>
-                <div class="bg-white p-2.5 rounded-lg border border-emerald-200/80 shadow-2xs">
-                    <span class="text-[10px] font-bold text-emerald-800 uppercase block">Tepat Waktu</span>
-                    <strong class="text-base font-black text-emerald-600 block mt-0.5">✅ ${onTimePo} PO</strong>
-                    <span class="text-[10px] text-emerald-700 font-semibold block">${onTimePct}% on-time</span>
-                </div>
-                <div class="bg-white p-2.5 rounded-lg border border-rose-200/80 shadow-2xs">
-                    <span class="text-[10px] font-bold text-rose-800 uppercase block">Terlambat</span>
-                    <strong class="text-base font-black text-rose-600 block mt-0.5">⚠️ ${latePo} PO</strong>
-                    <span class="text-[10px] text-rose-700 font-semibold block">${latePct}% delayed</span>
-                </div>
-                <div class="bg-white p-2.5 rounded-lg border border-blue-200/80 shadow-2xs">
-                    <span class="text-[10px] font-bold text-blue-800 uppercase block">On-Time SLA Rate</span>
-                    <strong class="text-base font-black ${onTimeRatePct >= 80 ? 'text-emerald-600' : 'text-rose-600'} block mt-0.5 font-mono">${onTimeRatePct}%</strong>
-                    <span class="text-[10px] text-gray-500 font-medium block">Target Min: 80%</span>
-                </div>
+
+                ${topProductsHtml}
+                ${recentOrdersTableHtml}
             </div>
-
-            <!-- Visual Bar SLA Ramping -->
-            <div class="mb-1">
-                <div class="w-full bg-gray-200 h-2 rounded-full overflow-hidden flex">
-                    <div style="width: ${onTimePct}%" class="bg-emerald-500 h-full" title="Tepat Waktu: ${onTimePct}%"></div>
-                    <div style="width: ${latePct}%" class="bg-rose-500 h-full" title="Terlambat: ${latePct}%"></div>
-                </div>
-            </div>
-
-            <!-- Top Komoditas yang Disuplai -->
-            ${topProductsHtml}
-
-            <!-- Log Detail Transaksi PO -->
-            ${recentOrdersTableHtml}
         </div>
 
-        <!-- 5. CATATAN & AREA PERBAIKAN -->
-        <div class="mb-8">
-            <h3 class="text-xs font-bold text-gray-800 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <span>📝</span>
-                <span>Catatan Evaluator &amp; Area Perbaikan</span>
-            </h3>
-            <div class="p-3 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-700 leading-relaxed min-h-[60px]">
+        <!-- V. CATATAN EVALUASI & TINDAK LANJUT MANAJEMEN -->
+        <div class="mb-4">
+            <div class="bg-slate-800 text-white px-3 py-1 text-xs font-bold uppercase tracking-wider">
+                V. CATATAN EVALUASI &amp; TINDAK LANJUT MANAJEMEN
+            </div>
+            <div class="border border-slate-300 p-3 text-xs bg-white min-h-[50px] leading-relaxed">
                 ${catatanList.length > 0 
-                    ? `<ul class="list-disc list-inside space-y-1">${catatanList.map(c => `<li>${esc(c)}</li>`).join('')}</ul>` 
-                    : '<p class="text-gray-400 italic">Tidak ada catatan kendala khusus yang dilaporkan oleh penilai pada periode ini.</p>'}
+                    ? `<ul class="list-disc list-inside space-y-1 text-slate-800 font-medium">${catatanList.map(c => `<li>${esc(c)}</li>`).join('')}</ul>` 
+                    : '<p class="text-slate-400 italic">Tidak ada catatan kendala khusus yang dilaporkan oleh evaluator pada periode ini. Kinerja operasional berjalan sesuai parameter standar.</p>'}
             </div>
         </div>
 
-        <!-- 6. LEMBAR PENGESAHAN TANDA TANGAN -->
-        <div class="pt-6 border-t border-gray-200">
-            <div class="grid grid-cols-3 gap-6 text-center text-xs">
-                <div>
-                    <span class="text-gray-500 block mb-1">Dipersiapkan Oleh:</span>
-                    <strong class="text-gray-900 block font-bold">Procurement / Purchasing</strong>
-                    <div class="h-16"></div>
-                    <div class="border-b border-gray-400 mx-6"></div>
-                    <span class="text-[10px] text-gray-400 mt-1 block">Staff Pengadaan</span>
+        <!-- VI. LEMBAR PENGESAHAN TANDA TANGAN RESMI -->
+        <div class="mt-6 pt-3 border-t-2 border-slate-800 print-avoid-break">
+            <div class="text-center font-bold text-slate-800 text-xs uppercase tracking-wider mb-2.5">
+                LEMBAR PENGESAHAN EVALUASI KINERJA REKANAN
+            </div>
+            <div class="grid grid-cols-3 gap-3 text-center text-xs">
+                <div class="border border-slate-300 p-2.5 bg-white">
+                    <div class="text-slate-500 text-[10px] uppercase font-bold">Dipersiapkan / Dinilai Oleh:</div>
+                    <div class="font-bold text-slate-900 mt-0.5 text-[11px]">Evaluator / Penilai Teknis</div>
+                    <div class="h-14 flex items-center justify-center">
+                        <span class="text-[10px] text-slate-300 italic">[ Tanda Tangan ]</span>
+                    </div>
+                    <div class="border-t border-slate-700 pt-1 font-bold text-slate-900 text-xs">${esc(displayAssessor)}</div>
+                    <div class="text-[10px] text-slate-500">Staff Pengadaan / Assessor</div>
                 </div>
-                <div>
-                    <span class="text-gray-500 block mb-1">Ditinjau Oleh:</span>
-                    <strong class="text-gray-900 block font-bold">Vendor Management</strong>
-                    <div class="h-16"></div>
-                    <div class="border-b border-gray-400 mx-6"></div>
-                    <span class="text-[10px] text-gray-400 mt-1 block">VMS Officer / Supervisor</span>
+                <div class="border border-slate-300 p-2.5 bg-white">
+                    <div class="text-slate-500 text-[10px] uppercase font-bold">Diperiksa Oleh:</div>
+                    <div class="font-bold text-slate-900 mt-0.5 text-[11px]">Vendor Management System</div>
+                    <div class="h-14 flex items-center justify-center">
+                        <span class="text-[10px] text-slate-300 italic">[ Tanda Tangan ]</span>
+                    </div>
+                    <div class="border-t border-slate-700 pt-1 font-bold text-slate-900 text-xs">Supervisor Pengadaan</div>
+                    <div class="text-[10px] text-slate-500">VMS Officer / Procurement Lead</div>
                 </div>
-                <div>
-                    <span class="text-gray-500 block mb-1">Disetujui Oleh:</span>
-                    <strong class="text-gray-900 block font-bold">Management</strong>
-                    <div class="h-16"></div>
-                    <div class="border-b border-gray-400 mx-6"></div>
-                    <span class="text-[10px] text-gray-400 mt-1 block">Direksi / Head of Operations</span>
+                <div class="border border-slate-300 p-2.5 bg-white">
+                    <div class="text-slate-500 text-[10px] uppercase font-bold">Disetujui Oleh:</div>
+                    <div class="font-bold text-slate-900 mt-0.5 text-[11px]">Manajemen Operasional</div>
+                    <div class="h-14 flex items-center justify-center">
+                        <span class="text-[10px] text-slate-300 italic">[ Tanda Tangan &amp; Stempel ]</span>
+                    </div>
+                    <div class="border-t border-slate-700 pt-1 font-bold text-slate-900 text-xs">Head of Operations / Direksi</div>
+                    <div class="text-[10px] text-slate-500">PT Ethos Kreatif Indonesia</div>
                 </div>
+            </div>
+            <div class="text-[9px] text-slate-400 text-right mt-2 italic">
+                Dokumen ini dicetak secara otomatis dan tersertifikasi melalui Sistem Vendor Management System (VMS) PT Ethos Kreatif Indonesia.
             </div>
         </div>
     `;

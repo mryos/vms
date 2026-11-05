@@ -287,15 +287,30 @@ tailwind.config = {
 
   /* Print Styles for Scorecard (FITUR 5) */
   @media print {
-    body { background: white !important; color: black !important; padding: 0 !important; margin: 0 !important; }
-    header, footer, .filter-bar, #dashboardTabs, #adminAuthOverlay, .toast-box, .no-print, #bentoDashboard, #sectionContracts, #sectionEvaluations, #bentoDashboard, #sectionKraljic, .kpi-grid, #contractAlertBanner {
+    @page {
+      size: A4 portrait;
+      margin: 12mm 15mm 12mm 15mm;
+    }
+    html, body {
+      background: white !important;
+      color: #0f172a !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      font-size: 10pt !important;
+      line-height: 1.35 !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    header, footer, .filter-bar, #dashboardTabs, #adminAuthOverlay, .toast-box, .no-print, 
+    #bentoDashboard, #sectionContracts, #sectionEvaluations, #sectionKraljic, .kpi-grid, 
+    #contractAlertBanner, .modal-backdrop {
       display: none !important;
     }
     #vendorScorecardModal, #vendorScorecardModal > div, #scorecardScrollContainer {
       position: static !important;
       inset: auto !important;
       display: block !important;
-      background: none !important;
+      background: white !important;
       padding: 0 !important;
       margin: 0 !important;
       box-shadow: none !important;
@@ -314,6 +329,20 @@ tailwind.config = {
       border: none !important;
       box-shadow: none !important;
       box-sizing: border-box !important;
+    }
+    .print-avoid-break {
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+    }
+    table {
+      page-break-inside: auto;
+    }
+    tr {
+      page-break-inside: avoid;
+      page-break-after: auto;
+    }
+    thead {
+      display: table-header-group;
     }
   }
 
@@ -959,20 +988,22 @@ tailwind.config = {
     <div id="vendorScorecardModal" onclick="if(event.target === this) closeVendorScorecard()" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/75 backdrop-blur-sm p-2 sm:p-4 md:p-6 overflow-hidden" style="display: none;">
         <div class="w-full max-w-4xl bg-white rounded-2xl border border-gray-200 shadow-2xl overflow-hidden flex flex-col h-[94vh] sm:h-[90vh]">
             <!-- Modal Action Header (STICKY & Non-Printable) -->
-            <div class="flex-shrink-0 flex items-center justify-between px-4 sm:px-6 py-3 bg-gray-900 text-white border-b border-gray-800 shadow-sm no-print">
+            <div class="flex-shrink-0 flex items-center justify-between px-4 sm:px-6 py-3 bg-slate-900 text-white border-b border-slate-800 shadow-sm no-print">
                 <div class="flex items-center gap-2.5">
-                    <span class="text-base sm:text-lg">📄</span>
+                    <div class="w-8 h-8 rounded-lg bg-blue-600/30 border border-blue-500/40 flex items-center justify-center text-blue-400">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    </div>
                     <div>
-                        <h3 class="text-xs sm:text-sm font-bold text-white tracking-wide">Rapor Kinerja Rekanan (Vendor Scorecard)</h3>
-                        <p class="text-[10px] text-gray-400 hidden sm:block">Pratinjau dokumen resmi siap cetak / simpan PDF</p>
+                        <h3 class="text-xs sm:text-sm font-bold text-white tracking-wide">Dokumen Resmi Rapor Kinerja Rekanan (Vendor Scorecard)</h3>
+                        <p class="text-[10px] text-slate-400 hidden sm:block">Format standar korporat PT Ethos Kreatif Indonesia · Siap cetak / simpan PDF</p>
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
                     <button onclick="window.print()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-sm transition cursor-pointer">
-                        <span>🖨️</span>
-                        <span>Cetak / PDF</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4H7v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                        <span>Cetak Dokumen / Simpan PDF</span>
                     </button>
-                    <button onclick="closeVendorScorecard()" class="inline-flex items-center gap-1 px-2.5 py-1.5 text-gray-300 hover:text-white rounded-lg bg-gray-800 hover:bg-gray-700 text-xs font-semibold transition cursor-pointer" title="Tutup Rapor (Esc)">
+                    <button onclick="closeVendorScorecard()" class="inline-flex items-center gap-1 px-2.5 py-1.5 text-slate-300 hover:text-white rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold transition cursor-pointer" title="Tutup Rapor (Esc)">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                         <span class="hidden sm:inline">Tutup</span>
                     </button>
