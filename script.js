@@ -1936,10 +1936,12 @@ async function submitAssessment() {
         }
     }
 
+    const activePeriod = selectedPeriode || (serverPeriodList && serverPeriodList.length > 0 ? serverPeriodList[0] : 'Q3 2026');
     const payload = {
+        timestamp: new Date().toISOString(),
         namaPenilai: localStorage.getItem('ethos_nama'),
         namaVendor: selectedVendor,
-        periodePenilaian: selectedPeriode,
+        periodePenilaian: activePeriod,
         kategori: vendorKategori,
         skor: combinedSkor,
         rataRata: avgR,
@@ -1949,7 +1951,7 @@ async function submitAssessment() {
 
     if (SCRIPT_URL === 'PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE') {
         await new Promise(r => setTimeout(r, 800));
-        saveAssessedForPeriod(selectedVendor, selectedPeriode);
+        saveAssessedForPeriod(selectedVendor, activePeriod);
         renderVendorList();
         showSuccess();
         resetBtn(btn, btnText, spinner);
@@ -1964,7 +1966,7 @@ async function submitAssessment() {
             body: JSON.stringify(payload)
         });
 
-        saveAssessedForPeriod(selectedVendor, selectedPeriode);
+        saveAssessedForPeriod(selectedVendor, activePeriod);
         renderVendorList();
         showSuccess();
     } catch (err) {

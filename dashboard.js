@@ -261,6 +261,40 @@ function isSameVendor(n1, n2) {
     return s1.includes(s2) || s2.includes(s1);
 }
 
+function isPeriodMatch(itemPeriod, targetPeriod, vendorName, periodVendorsSet) {
+    if (!targetPeriod || targetPeriod === 'all') return true;
+
+    const cleanTargetP = (targetPeriod || '').toString().trim().toLowerCase();
+    const cleanItemP = (itemPeriod || '').toString().trim().toLowerCase();
+
+    // 1. Direct equality (e.g. "q3 2026" === "q3 2026")
+    if (cleanItemP && cleanItemP === cleanTargetP) return true;
+
+    // 2. Loose quarter & year matching (e.g. "q3", "quartal 3 2026")
+    if (cleanItemP && cleanItemP !== 'general' && cleanItemP !== '-') {
+        const qTarget = cleanTargetP.match(/(?:q|quartal|kuartal)\s*([1-4])/);
+        const qItem = cleanItemP.match(/(?:q|quartal|kuartal)\s*([1-4])/);
+        if (qTarget && qItem && qTarget[1] === qItem[1]) {
+            const yTarget = cleanTargetP.match(/(20\d{2})/);
+            const yItem = cleanItemP.match(/(20\d{2})/);
+            if (!yItem || !yTarget || yItem[1] === yTarget[1]) return true;
+        }
+    }
+
+    // 3. Smart Fallback untuk "General", "-", atau kosong:
+    // Jika penilaian belum dispesifikasikan kuartalnya (bertuliskan 'General'),
+    // tetapi vendor tersebut merupakan vendor yang terdaftar di periode yang dipilih (misal sheet Q3 2026).
+    if (!cleanItemP || cleanItemP === 'general' || cleanItemP === '-') {
+        if (vendorName && periodVendorsSet) {
+            for (let pVendor of periodVendorsSet) {
+                if (isSameVendor(pVendor, vendorName)) return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 function getDeletedEvaluations() {
     try {
         const stored = JSON.parse(localStorage.getItem('ethos_deleted_evaluations') || '[]');
@@ -379,6 +413,7 @@ function filterAndRenderDashboard() {
     const categories = dashboardData.kategori || [];
 
     // Jika filter periode dipilih secara spesifik
+    let periodVendorNames = null;
     if (slicerState.period !== 'all') {
         const selectedPeriodData = (dashboardData.periods && dashboardData.periods[slicerState.period]) ? dashboardData.periods[slicerState.period] : null;
         if (selectedPeriodData) {
@@ -393,12 +428,14 @@ function filterAndRenderDashboard() {
             rawPO = { totalOrders: 0, totalOnTime: 0, overallOnTimePct: 0, totalValue: 0, vendorMap: {} };
         }
 
-        // Filter skor evaluasi hanya yang dinilai pada periode tersebut
+        periodVendorNames = new Set(rawVendors.map(v => v.nama));
+
+        // Filter skor evaluasi hanya yang dinilai pada periode tersebut (dengan smart period matching)
         const periodScores = {};
         for (let name in rawScore) {
             const vData = rawScore[name];
             if (vData && Array.isArray(vData.periodeScores)) {
-                const matchScores = vData.periodeScores.filter(p => p.periode === slicerState.period);
+                const matchScores = vData.periodeScores.filter(p => isPeriodMatch(p.periode, slicerState.period, name, periodVendorNames));
                 if (matchScores.length > 0) {
                     const avg = matchScores.reduce((sum, s) => sum + s.score, 0) / matchScores.length;
                     periodScores[name] = {
@@ -406,6 +443,10 @@ function filterAndRenderDashboard() {
                         predikat: matchScores[0].predikat || getPredikat(avg),
                         periodeScores: matchScores
                     };
+                }
+            } else if (vData && vData.avgScore !== undefined) {
+                if (isPeriodMatch(vData.predikat, slicerState.period, name, periodVendorNames)) {
+                    periodScores[name] = vData;
                 }
             }
         }
@@ -539,9 +580,12 @@ function filterAndRenderDashboard() {
     // Filter Evaluations List (dari sheet Penilaian Vendor)
     let filteredEvals = dashboardData.evaluationsList ? [...dashboardData.evaluationsList] : [];
 
-    // Filter by periode
+    // Filter by periode (dengan smart period matching)
     if (slicerState.period !== 'all') {
-        filteredEvals = filteredEvals.filter(ev => ev.periode === slicerState.period);
+        if (!periodVendorNames) {
+            periodVendorNames = new Set(rawVendors.map(v => v.nama));
+        }
+        filteredEvals = filteredEvals.filter(ev => isPeriodMatch(ev.periode, slicerState.period, ev.vendor, periodVendorNames));
     }
 
     // Filter by kategori vendor
@@ -1715,6 +1759,9 @@ function renderEvaluationsTable(evaluations) {
         const pred = ev.predikat || getPredikat(score);
         const cleanVendor = (ev.vendor || '').replace(/\r?\n|\r/g, ' ').trim();
         const cleanCatatan = (ev.catatan || '-').replace(/\r?\n|\r/g, ' ').trim();
+        const displayPeriode = (ev.periode && ev.periode !== 'General' && ev.periode !== '-')
+            ? ev.periode
+            : (slicerState.period !== 'all' ? slicerState.period : (ev.periode || 'General'));
 
         return `
         <tr class="hover:bg-blue-50/40 transition-colors">
@@ -1727,7 +1774,7 @@ function renderEvaluationsTable(evaluations) {
                     <div style="font-weight:600; color:#0f172a; max-width:200px; font-size:0.75rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${esc(cleanVendor)}">${esc(cleanVendor)}</div>
                 </div>
             </td>
-            <td style="font-size:0.73rem; color:#64748b; white-space:nowrap; padding:0.32rem 0.5rem;">${esc(ev.periode)}</td>
+            <td style="font-size:0.73rem; color:#64748b; white-space:nowrap; padding:0.32rem 0.5rem;">${esc(displayPeriode)}</td>
             <td style="text-align:right; font-weight:800; color:${color}; font-size:0.8rem; padding:0.32rem 0.5rem;">${score.toFixed(2)}</td>
             <td style="text-align:center; padding:0.32rem 0.5rem;">
                 <span class="predikat-badge" style="background:${color}15; color:${color}; border:1px solid ${color}30; font-size:0.68rem; font-weight:700; padding:1px 5px; border-radius:4px;">
