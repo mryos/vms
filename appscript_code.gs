@@ -369,17 +369,52 @@ function doGet(e) {
         var namaPenilai = assessorResult.namaPenilai;
         var assignedVendors = assessorResult.assignedVendors;
 
-        // Buat filteredPeriods khusus penilai ini (selalu menampilkan vendor yang ditugaskan & sertakan rawOrders!)
+        // Buat filteredPeriods khusus penilai ini
+        // Hanya tampilkan vendor yang ditugaskan DAN memiliki data PO di periode tersebut
         var filteredPeriods = {};
         for (var pKey in periods) {
           var pObj = periods[pKey];
+
+          // Kumpulkan nama vendor yang memiliki PO di periode ini
+          var periodVendorNames = {};
+          if (pObj.rawOrders && pObj.rawOrders.length > 0) {
+            pObj.rawOrders.forEach(function(o) {
+              if (o.vendor) periodVendorNames[o.vendor.toLowerCase().trim()] = true;
+            });
+          }
+          if (pObj.poStats && pObj.poStats.vendorMap) {
+            for (var vk in pObj.poStats.vendorMap) {
+              periodVendorNames[vk.toLowerCase().trim()] = true;
+            }
+          }
+
+          // Filter: hanya vendor yang ditugaskan DAN memiliki PO di periode ini
+          var periodAssigned = assignedVendors;
+          var hasPeriodPoData = Object.keys(periodVendorNames).length > 0;
+          if (hasPeriodPoData) {
+            periodAssigned = assignedVendors.filter(function(av) {
+              var avName = (typeof av === 'object' ? (av.nama || '') : av.toString()).toLowerCase().trim();
+              // Cek kecocokan langsung atau fuzzy
+              for (var pvn in periodVendorNames) {
+                if (avName === pvn) return true;
+                var normAv = avName.replace(/[^a-z0-9]/g, '');
+                var normPv = pvn.replace(/[^a-z0-9]/g, '');
+                if (normAv === normPv) return true;
+                if (normAv.length > 4 && normPv.length > 4 && (normAv.indexOf(normPv) !== -1 || normPv.indexOf(normAv) !== -1)) return true;
+              }
+              return false;
+            });
+            // Jika tidak ada match sama sekali, tetap tampilkan semua assigned (safety fallback)
+            if (periodAssigned.length === 0) periodAssigned = assignedVendors;
+          }
+
           filteredPeriods[pKey] = {
             id: pObj.id,
             label: pObj.label,
             sheetName: pObj.sheetName,
             year: pObj.year,
             quarter: pObj.quarter,
-            vendors: assignedVendors,
+            vendors: periodAssigned,
             poStats: pObj.poStats,
             rawOrders: pObj.rawOrders || []
           };

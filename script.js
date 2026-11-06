@@ -936,7 +936,8 @@ function renderPeriodChips(periodList) {
 }
 
 /**
- * Berpindah periode: secara instan memuat vendor & PO stats dari sheet periode tersebut
+ * Berpindah periode: secara instan memuat vendor & PO stats dari sheet periode tersebut.
+ * Vendor yang ditampilkan difilter agar hanya muncul jika memiliki PO di periode ini.
  */
 function switchPeriod(periodId) {
     selectedPeriode = periodId;
@@ -958,12 +959,50 @@ function switchPeriod(periodId) {
             : (allMasterVendors.length > 0 ? allMasterVendors : DEFAULT_VENDORS);
         processVendorData(pVendors);
     } else {
-        // Penilai biasa HANYA melihat vendor yang ditugaskan kepada mereka!
-        processVendorData(userAssignedVendors);
+        // Penilai biasa: filter vendor yang ditugaskan agar hanya tampil yang memiliki PO di periode ini
+        const filtered = filterVendorsByPeriodPo(userAssignedVendors, periodId);
+        processVendorData(filtered.length > 0 ? filtered : userAssignedVendors);
     }
 
     updatePoInsightsBanner();
     renderVendorList();
+}
+
+/**
+ * Filter daftar vendor: hanya kembalikan vendor yang memiliki data PO pada periode tertentu.
+ * Digunakan agar vendor Q2 tidak muncul saat memilih Q3, dan sebaliknya.
+ */
+function filterVendorsByPeriodPo(vendorList, periodId) {
+    if (!vendorList || vendorList.length === 0) return [];
+    if (!serverPeriods || !serverPeriods[periodId]) return vendorList;
+
+    const pObj = serverPeriods[periodId];
+
+    // Kumpulkan semua nama vendor yang memiliki PO di periode ini
+    const poVendorNames = new Set();
+
+    if (pObj.rawOrders && pObj.rawOrders.length > 0) {
+        pObj.rawOrders.forEach(o => {
+            if (o.vendor) poVendorNames.add(o.vendor.toLowerCase().trim());
+        });
+    }
+
+    if (pObj.poStats && pObj.poStats.vendorMap) {
+        for (let k in pObj.poStats.vendorMap) {
+            poVendorNames.add(k.toLowerCase().trim());
+        }
+    }
+
+    // Jika tidak ada data PO sama sekali di periode ini, tampilkan semua vendor yang ditugaskan
+    if (poVendorNames.size === 0) return vendorList;
+
+    return vendorList.filter(v => {
+        const vName = (typeof v === 'object' ? (v.nama || '') : v.toString());
+        for (const pvn of poVendorNames) {
+            if (isSameVendor(vName, pvn)) return true;
+        }
+        return false;
+    });
 }
 
 // =====================================================
