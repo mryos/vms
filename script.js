@@ -2,7 +2,7 @@
 // KONFIGURASI
 // =====================================================
 // Ganti URL di bawah dengan URL Web App Google Apps Script Anda
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxugRLhYSb9vUs8D1h09jt24w8vKsJr8Y7CMf6hccKKwyQLQx60zs26W7_0EMHSiig6kA/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzaGjRTxk4cXDMj2AOyj4M9m2T3LdwhZNpS2oHHfDev5qxLg1sFTeORxomRxr1LmEVY4w/exec';
 
 // Daftar vendor default (fallback offline)
 const DEFAULT_VENDORS = [
