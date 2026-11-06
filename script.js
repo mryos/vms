@@ -999,18 +999,15 @@ function isCancelledVendor(vName) {
 }
 
 /**
- * Mengambil seluruh PO yang dimiliki suatu vendor:
- * 1. Pertama cek di periode aktif (selectedPeriode)
- * 2. Jika tidak ada, cari di seluruh periode yang ada (misal Q3 2026, Q2 2026, dll.)
- * 3. Jika masih tidak ada, cari di allRawOrders & vendorMap
+ * Mengambil PO yang dimiliki suatu vendor HANYA pada periode yang dipilih (selectedPeriode).
+ * Tidak lagi fallback ke periode lain agar saat menilai Q3, hanya PO Q3 yang muncul.
  */
 function getAllOrdersForVendor(vendorName) {
     if (!vendorName) return { orders: [], period: selectedPeriode };
 
     let foundOrders = [];
-    let detectedPeriod = selectedPeriode;
 
-    // 1. Cek periode aktif terlebih dahulu
+    // 1. Cek periode aktif (selectedPeriode) — HANYA periode ini
     if (serverPeriods && serverPeriods[selectedPeriode]) {
         const cur = serverPeriods[selectedPeriode];
         if (cur.rawOrders && cur.rawOrders.length > 0) {
@@ -1026,37 +1023,7 @@ function getAllOrdersForVendor(vendorName) {
         }
     }
 
-    // 2. Jika tidak ada di periode aktif, cari di seluruh periode lain (seperti Q3 2026, Q4 2026, Q2 2026)
-    if (foundOrders.length === 0 && serverPeriods) {
-        for (let pKey in serverPeriods) {
-            if (pKey === selectedPeriode) continue;
-            const pObj = serverPeriods[pKey];
-            let pOrders = [];
-            if (pObj.rawOrders && pObj.rawOrders.length > 0) {
-                pOrders = pObj.rawOrders.filter(o => isSameVendor(o.vendor, vendorName));
-            }
-            if (pOrders.length === 0 && pObj.poStats && pObj.poStats.vendorMap) {
-                for (let k in pObj.poStats.vendorMap) {
-                    if (isSameVendor(k, vendorName)) {
-                        pOrders = pObj.poStats.vendorMap[k].recentOrders || [];
-                        break;
-                    }
-                }
-            }
-            if (pOrders.length > 0) {
-                foundOrders = pOrders;
-                detectedPeriod = pKey;
-                break;
-            }
-        }
-    }
-
-    // 3. Cek di allRawOrders jika ada
-    if (foundOrders.length === 0 && Array.isArray(allRawOrders) && allRawOrders.length > 0) {
-        foundOrders = allRawOrders.filter(o => isSameVendor(o.vendor, vendorName));
-    }
-
-    // 4. Fallback ke global poStats
+    // 2. Fallback: cek di poStats global (sudah difilter per periode oleh switchPeriod)
     if (foundOrders.length === 0 && poStats && poStats.vendorMap) {
         for (let k in poStats.vendorMap) {
             if (isSameVendor(k, vendorName)) {
@@ -1066,7 +1033,7 @@ function getAllOrdersForVendor(vendorName) {
         }
     }
 
-    return { orders: foundOrders, period: detectedPeriod };
+    return { orders: foundOrders, period: selectedPeriode };
 }
 
 /**
@@ -1108,21 +1075,19 @@ function getBestPeriodForUser(assignedVendors) {
 function getVendorPoStats(vName) {
     if (!vName) return null;
 
-    // 1. Cek poStats periode saat ini
+    // Hanya cek poStats periode saat ini (sudah difilter oleh switchPeriod)
     if (poStats && poStats.vendorMap) {
         for (let k in poStats.vendorMap) {
             if (isSameVendor(k, vName)) return poStats.vendorMap[k];
         }
     }
 
-    // 2. Cek di seluruh serverPeriods
-    if (serverPeriods) {
-        for (let pKey in serverPeriods) {
-            const pObj = serverPeriods[pKey];
-            if (pObj && pObj.poStats && pObj.poStats.vendorMap) {
-                for (let k in pObj.poStats.vendorMap) {
-                    if (isSameVendor(k, vName)) return pObj.poStats.vendorMap[k];
-                }
+    // Cek di serverPeriods untuk periode aktif saja
+    if (serverPeriods && serverPeriods[selectedPeriode]) {
+        const pObj = serverPeriods[selectedPeriode];
+        if (pObj && pObj.poStats && pObj.poStats.vendorMap) {
+            for (let k in pObj.poStats.vendorMap) {
+                if (isSameVendor(k, vName)) return pObj.poStats.vendorMap[k];
             }
         }
     }
@@ -1539,11 +1504,8 @@ function openModal(vendorName) {
         console.warn('resetForm error:', e);
     }
 
-    // Deteksi PO dan periode yang cocok untuk vendor ini
+    // Ambil PO vendor HANYA pada periode yang dipilih (tidak pindah periode)
     const poInfo = getAllOrdersForVendor(vendorName);
-    if (poInfo.period && poInfo.period !== selectedPeriode) {
-        selectedPeriode = poInfo.period;
-    }
 
     const titleEl = document.getElementById('modalVendorName');
     if (titleEl) titleEl.textContent = vendorName;
