@@ -894,8 +894,8 @@ function partitionPoSheetByDate(sheet, masterMap) {
     var effDate = idxEff !== -1 ? data[i][idxEff] : '';
     var item = idxItem !== -1 && data[i][idxItem] ? data[i][idxItem].toString().trim() : 'Barang/Jasa';
 
-    // Tentukan Kuartal dan Tahun dari Tanggal PO
-    var pInfo = extractQuarterAndYear(rawDate || expDate);
+    // Tentukan Kuartal dan Tahun dari Tanggal PO (atau nomor PO)
+    var pInfo = extractQuarterAndYear(rawDate || expDate, noPo);
     var pId = pInfo.id;
 
     if (!periodGroups[pId]) {
@@ -1037,29 +1037,60 @@ function partitionPoSheetByDate(sheet, masterMap) {
 }
 
 /**
- * Ekstrak Kuartal dan Tahun dari nilai tanggal
+ * Ekstrak Kuartal dan Tahun dari nilai tanggal atau nomor PO
  */
-function extractQuarterAndYear(dateVal) {
-  if (!dateVal) return { id: 'General', year: 2026, quarter: 0 };
-
-  try {
-    var d = new Date(dateVal);
-    if (!isNaN(d.getTime())) {
-      var year = d.getFullYear();
-      var month = d.getMonth() + 1; // 1-12
+function extractQuarterAndYear(dateVal, noPo) {
+  if (dateVal) {
+    if (dateVal instanceof Date && !isNaN(dateVal.getTime())) {
+      var year = dateVal.getFullYear();
+      var month = dateVal.getMonth() + 1;
       var quarter = Math.floor((month - 1) / 3) + 1;
-      return {
-        id: 'Q' + quarter + ' ' + year,
-        year: year,
-        quarter: quarter
-      };
+      return { id: 'Q' + quarter + ' ' + year, year: year, quarter: quarter };
     }
-  } catch(e) {}
+    var str = dateVal.toString().trim();
+    var isoMatch = str.match(/(20\d{2})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+    if (isoMatch) {
+      var year = parseInt(isoMatch[1], 10);
+      var month = parseInt(isoMatch[2], 10);
+      if (month >= 1 && month <= 12) {
+        var quarter = Math.floor((month - 1) / 3) + 1;
+        return { id: 'Q' + quarter + ' ' + year, year: year, quarter: quarter };
+      }
+    }
+    var ddmmyyyyMatch = str.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](20\d{2})/);
+    if (ddmmyyyyMatch) {
+      var year = parseInt(ddmmyyyyMatch[3], 10);
+      var month = parseInt(ddmmyyyyMatch[2], 10);
+      if (month >= 1 && month <= 12) {
+        var quarter = Math.floor((month - 1) / 3) + 1;
+        return { id: 'Q' + quarter + ' ' + year, year: year, quarter: quarter };
+      }
+    }
+    try {
+      var d = new Date(str);
+      if (!isNaN(d.getTime())) {
+        var year = d.getFullYear();
+        var month = d.getMonth() + 1;
+        var quarter = Math.floor((month - 1) / 3) + 1;
+        return { id: 'Q' + quarter + ' ' + year, year: year, quarter: quarter };
+      }
+    } catch(e) {}
+  }
 
-  var str = dateVal.toString();
-  var yMatch = str.match(/(20\d{2})/);
-  var year = yMatch ? parseInt(yMatch[1], 10) : 2026;
-  return { id: 'Tahun ' + year, year: year, quarter: 0 };
+  // Fallback: deteksi tanggal dari nomor PO (misal: PO/EKI/S/2026/06/29/221 -> Q2 2026)
+  if (noPo) {
+    var poMatch = noPo.toString().match(/(20\d{2})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+    if (poMatch) {
+      var year = parseInt(poMatch[1], 10);
+      var month = parseInt(poMatch[2], 10);
+      if (month >= 1 && month <= 12) {
+        var quarter = Math.floor((month - 1) / 3) + 1;
+        return { id: 'Q' + quarter + ' ' + year, year: year, quarter: quarter };
+      }
+    }
+  }
+
+  return { id: 'General', year: 2026, quarter: 0 };
 }
 
 function mergePoStats(target, source) {
@@ -1268,7 +1299,8 @@ function parsePoFromSheet(sheet, masterMap) {
       effectiveDate: (effDate && effDate.toString().trim() !== '-') ? formatDate(effDate) : 'Belum Diterima',
       status: status,
       isOnTime: isOnTime,
-      nilai: nilai
+      nilai: nilai,
+      periode: sheet.getName().trim()
     };
 
     rawOrders.push(orderObj);
