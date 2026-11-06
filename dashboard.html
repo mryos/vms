@@ -329,16 +329,18 @@ tailwind.config = {
   }
   #scorecardPrintArea {
     font-size: 11pt !important;
-    line-height: 1.35 !important;
+    line-height: 1.4 !important;
     color: #0f172a !important;
   }
   #scorecardPrintArea table {
     font-size: 11pt !important;
     font-family: Arial, Helvetica, sans-serif !important;
+    border-collapse: collapse !important;
   }
   #scorecardPrintArea th,
   #scorecardPrintArea td {
     font-family: Arial, Helvetica, sans-serif !important;
+    font-size: 11pt !important;
   }
 
   /* Print Styles for Scorecard (FITUR 5) */
@@ -1070,7 +1072,7 @@ tailwind.config = {
 
             <!-- Scorecard Scrollable Document Container -->
             <div class="flex-1 overflow-y-auto bg-gray-100/70 p-2 sm:p-4 flex justify-center" id="scorecardScrollContainer">
-                <div id="scorecardPrintArea" class="w-full max-w-[760px] bg-white p-4 sm:p-6 shadow-sm rounded-xl border border-gray-200/80 font-sans text-gray-900">
+                <div id="scorecardPrintArea" class="w-full max-w-[840px] bg-white p-5 sm:p-7 shadow-sm rounded-xl border border-gray-200/80 font-sans text-gray-900">
                     <!-- Dynamically populated by renderScorecardDocument() -->
                 </div>
             </div>
