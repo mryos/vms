@@ -2522,13 +2522,7 @@ function openVendorScorecard(vendorName) {
     const latePct = totalPo > 0 ? Math.round((latePo / totalPo) * 100) : 0;
 
     // Tentukan nama penilai / evaluator
-    const penilaiFromEvals = evals
-        .map(e => (e.penilai || '').trim())
-        .filter(p => p && p !== '-' && p.toLowerCase() !== 'null');
-    const uniqueAssessors = [...new Set(penilaiFromEvals)];
-    const displayAssessor = uniqueAssessors.length > 0 
-        ? uniqueAssessors.join(', ') 
-        : (sessionStorage.getItem('ethos_nama') || 'Tim Penilai Pengadaan');
+    const displayAssessor = 'Arief Yanuar Rachman';
 
     // Tanggal evaluasi
     const todayStr = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -2762,29 +2756,28 @@ function openVendorScorecard(vendorName) {
     printArea.innerHTML = `
         <!-- KOP SURAT RESMI KORPORAT -->
         <div class="pb-2 mb-2">
-            <div class="flex items-center justify-between gap-3">
-                <div class="flex items-center gap-2.5">
-                    <img src="assets/logo-ethos.png" alt="PT Etos Kreatif Indonesia" class="h-9 w-auto object-contain">
-                    <div>
-                        <h2 class="text-sm font-extrabold text-slate-900 tracking-tight leading-snug">PT ETOS KREATIF INDONESIA</h2>
-                        <p class="text-[10.5px] text-slate-600 font-semibold leading-tight">Divisi Procurement / Vendor Management System</p>
-                    </div>
+            <div class="flex items-center justify-between gap-4">
+                <div class="flex-1 max-w-[340px]">
+                    <img src="assets/header-ethos.png" alt="PT Etos Kreatif Indonesia" class="w-full h-auto max-h-[65px] object-contain object-left">
                 </div>
-                <div class="border border-slate-300 py-1 px-2 text-right text-[9px] bg-slate-50 leading-tight min-w-[180px]">
+                <div class="border border-slate-300 py-1 px-2.5 text-right text-[9.5pt] bg-slate-50 leading-tight min-w-[190px]">
                     <div class="font-bold text-slate-800">NO. DOKUMEN: <span class="font-mono text-slate-900">${docNo}</span></div>
                     <div class="text-slate-600 mt-0.5">TANGGAL: <strong>${todayStr}</strong></div>
                     <div class="text-slate-600">KLASIFIKASI: <strong class="text-slate-900">INTERNAL / RAHASIA</strong></div>
                 </div>
             </div>
+            <div class="text-left px-0.5 mt-1 mb-1">
+                <p class="text-[10pt] text-slate-600 font-semibold leading-tight">Divisi Procurement / Vendor Management System</p>
+            </div>
             <!-- Double Line Rule Klasik Standard Surat Resmi Korporat -->
-            <div class="border-b-2 border-slate-900 mt-1.5 mb-0.5"></div>
-            <div class="border-b border-slate-300 mb-1.5"></div>
+            <div class="border-b-2 border-slate-900 mt-1 mb-0.5"></div>
+            <div class="border-b border-slate-300 mb-2"></div>
 
-            <div class="text-center my-1">
-                <h1 class="text-sm sm:text-base font-black text-slate-900 uppercase tracking-wide leading-tight">
+            <div class="text-center my-1.5">
+                <h1 class="text-base sm:text-lg font-black text-slate-900 uppercase tracking-wide leading-tight">
                     LEMBAR HASIL PENILAIAN &amp; RAPOR KINERJA REKANAN
                 </h1>
-                <p class="text-[9.5px] font-semibold text-slate-500 uppercase tracking-widest mt-0.5">
+                <p class="text-[9.5pt] font-semibold text-slate-500 uppercase tracking-widest mt-0.5">
                     OFFICIAL VENDOR PERFORMANCE SCORECARD &amp; SERVICE LEVEL ASSESSMENT
                 </p>
             </div>
@@ -2911,41 +2904,58 @@ function openVendorScorecard(vendorName) {
 
         <!-- VI. LEMBAR PENGESAHAN TANDA TANGAN RESMI -->
         <div class="mt-3.5 pt-2 border-t-2 border-slate-800 print-avoid-break">
-            <div class="text-center font-bold text-slate-800 text-[10px] uppercase tracking-wider mb-1.5">
+            <div class="text-center font-bold text-slate-800 text-[10.5pt] uppercase tracking-wider mb-2">
                 LEMBAR PENGESAHAN EVALUASI KINERJA REKANAN
             </div>
-            <div class="grid grid-cols-3 gap-2 text-center text-xs">
-                <div class="border border-slate-300 p-1.5 bg-white">
-                    <div class="text-slate-500 text-[9px] uppercase font-bold">Dipersiapkan / Dinilai Oleh:</div>
-                    <div class="font-bold text-slate-900 mt-0.5 text-[10px]">Evaluator / Penilai Teknis</div>
-                    <div class="h-10 flex items-center justify-center">
-                        <span class="text-[9px] text-slate-300 italic">[ Tanda Tangan ]</span>
+            <div class="grid grid-cols-3 gap-3 text-center">
+                <div class="border border-slate-300 p-2 bg-white flex flex-col justify-between">
+                    <div>
+                        <div class="text-slate-500 text-[9pt] uppercase font-bold">Dipersiapkan / Dinilai Oleh:</div>
+                        <div class="font-bold text-slate-900 mt-0.5 text-[9.5pt]">Evaluator / Penilai Teknis</div>
                     </div>
-                    <div class="border-t border-slate-700 pt-0.5 font-bold text-slate-900 text-[10px]">${esc(displayAssessor)}</div>
-                    <div class="text-[8.5px] text-slate-500">Staff Pengadaan / Assessor</div>
+                    <div class="h-12 flex items-center justify-center my-1">
+                        <span class="text-[8.5pt] text-slate-300 italic">[ Tanda Tangan ]</span>
+                    </div>
+                    <div>
+                        <div class="border-t border-slate-700 pt-1 font-bold text-slate-900 text-[10pt]">Arief Yanuar Rachman</div>
+                        <div class="text-[9pt] text-slate-600 font-medium">Contract &amp; Compliance Officer</div>
+                    </div>
                 </div>
-                <div class="border border-slate-300 p-1.5 bg-white">
-                    <div class="text-slate-500 text-[9px] uppercase font-bold">Diperiksa Oleh:</div>
-                    <div class="font-bold text-slate-900 mt-0.5 text-[10px]">Vendor Management System</div>
-                    <div class="h-10 flex items-center justify-center">
-                        <span class="text-[9px] text-slate-300 italic">[ Tanda Tangan ]</span>
+                <div class="border border-slate-300 p-2 bg-white flex flex-col justify-between">
+                    <div>
+                        <div class="text-slate-500 text-[9pt] uppercase font-bold">Diperiksa Oleh:</div>
+                        <div class="font-bold text-slate-900 mt-0.5 text-[9.5pt]">Vendor Management System</div>
                     </div>
-                    <div class="border-t border-slate-700 pt-0.5 font-bold text-slate-900 text-[10px]">Supervisor Pengadaan</div>
-                    <div class="text-[8.5px] text-slate-500">VMS Officer / Procurement Lead</div>
+                    <div class="h-12 flex items-center justify-center my-1">
+                        <span class="text-[8.5pt] text-slate-300 italic">[ Tanda Tangan ]</span>
+                    </div>
+                    <div>
+                        <div class="border-t border-slate-700 pt-1 font-bold text-slate-900 text-[10pt]">Murtiyoso</div>
+                        <div class="text-[9pt] text-slate-600 font-medium">Supervisor</div>
+                    </div>
                 </div>
-                <div class="border border-slate-300 p-1.5 bg-white">
-                    <div class="text-slate-500 text-[9px] uppercase font-bold">Disetujui Oleh:</div>
-                    <div class="font-bold text-slate-900 mt-0.5 text-[10px]">Manajemen Operasional</div>
-                    <div class="h-10 flex items-center justify-center">
-                        <span class="text-[9px] text-slate-300 italic">[ Tanda Tangan &amp; Stempel ]</span>
+                <div class="border border-slate-300 p-2 bg-white flex flex-col justify-between">
+                    <div>
+                        <div class="text-slate-500 text-[9pt] uppercase font-bold">Disetujui Oleh:</div>
+                        <div class="font-bold text-slate-900 mt-0.5 text-[9.5pt]">Manajer Procurement</div>
                     </div>
-                    <div class="border-t border-slate-700 pt-0.5 font-bold text-slate-900 text-[10px]">Head of Operations / Direksi</div>
-                    <div class="text-[8.5px] text-slate-500">PT Etos Kreatif Indonesia</div>
+                    <div class="h-12 flex items-center justify-center my-1">
+                        <span class="text-[8.5pt] text-slate-300 italic">[ Tanda Tangan &amp; Stempel ]</span>
+                    </div>
+                    <div>
+                        <div class="border-t border-slate-700 pt-1 font-bold text-slate-900 text-[10pt]">Achmad Yani Aziz</div>
+                        <div class="text-[9pt] text-slate-600 font-medium">Pjs. VP SSD &amp; Procurement</div>
+                    </div>
                 </div>
             </div>
-            <div class="text-[8.5px] text-slate-400 text-right mt-1.5 italic">
+            <div class="text-[8.5pt] text-slate-400 text-right mt-1.5 italic">
                 Dokumen ini dicetak secara otomatis dan tersertifikasi melalui Sistem Vendor Management System (VMS) PT Etos Kreatif Indonesia.
             </div>
+        </div>
+
+        <!-- FOOTER RESMI DENGAN GAMBAR -->
+        <div class="mt-3 pt-1 print-avoid-break">
+            <img src="assets/footer-ethos.png" alt="PT Etos Kreatif Indonesia Footer" class="w-full h-auto object-contain">
         </div>
     `;
 
