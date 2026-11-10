@@ -1795,7 +1795,175 @@ function getVendorScoreSummary(ss) {
 }
 
 /**
- * Mendapatkan data kepatuhan kontrak (KPI Point 4)
+ * Standarisasi dan klasifikasi Tahap Progress Kontrak (Workflow Lifecycle)
+ */
+function normalizeContractStage(rawStage, rawStatus, tglSelesai) {
+  var s = (rawStage || '').toString().trim().toLowerCase();
+  
+  if (s.indexOf('pengajuan') !== -1 || s.indexOf('masuk legal') !== -1 || s.indexOf('ajukan') !== -1) {
+    return {
+      step: 1,
+      key: 'pengajuan',
+      label: '1. Pengajuan ke Legal',
+      percent: 15,
+      badgeColor: '#2563eb',
+      badgeBg: '#eff6ff',
+      isRevision: false,
+      isRenvoi: false,
+      isFinal: false
+    };
+  }
+  if (s.indexOf('draft') !== -1 || s.indexOf('penyusunan') !== -1) {
+    return {
+      step: 2,
+      key: 'draft',
+      label: '2. Draft Keluar',
+      percent: 35,
+      badgeColor: '#4f46e5',
+      badgeBg: '#eef2ff',
+      isRevision: false,
+      isRenvoi: false,
+      isFinal: false
+    };
+  }
+  if (s.indexOf('paraf vendor') !== -1 || s.indexOf('review vendor') !== -1) {
+    return {
+      step: 3,
+      key: 'paraf_vendor',
+      label: '3. Paraf Vendor',
+      percent: 50,
+      badgeColor: '#d97706',
+      badgeBg: '#fffbeb',
+      isRevision: false,
+      isRenvoi: false,
+      isFinal: false
+    };
+  }
+  if (s.indexOf('paraf ethos') !== -1 || s.indexOf('paraf internal') !== -1 || (s.indexOf('paraf') !== -1 && s.indexOf('vendor') === -1)) {
+    return {
+      step: 4,
+      key: 'paraf_ethos',
+      label: '4. Paraf Ethos',
+      percent: 65,
+      badgeColor: '#7c3aed',
+      badgeBg: '#f5f3ff',
+      isRevision: false,
+      isRenvoi: false,
+      isFinal: false
+    };
+  }
+  if (s.indexOf('revisi') !== -1) {
+    return {
+      step: 5,
+      key: 'revisi',
+      label: '5. Revisi',
+      percent: 60,
+      badgeColor: '#e11d48',
+      badgeBg: '#fff1f2',
+      isRevision: true,
+      isRenvoi: false,
+      isFinal: false
+    };
+  }
+  if (s.indexOf('renvoi') !== -1) {
+    return {
+      step: 6,
+      key: 'renvoi',
+      label: '6. Renvoi',
+      percent: 75,
+      badgeColor: '#ea580c',
+      badgeBg: '#fff7ed',
+      isRevision: false,
+      isRenvoi: true,
+      isFinal: false
+    };
+  }
+  if (s.indexOf('tanda tangan') !== -1 || s.indexOf('ttd') !== -1 || s.indexOf('signing') !== -1 || s.indexOf('e-sign') !== -1) {
+    return {
+      step: 7,
+      key: 'ttd',
+      label: '7. Tanda Tangan',
+      percent: 85,
+      badgeColor: '#0d9488',
+      badgeBg: '#f0fdfa',
+      isRevision: false,
+      isRenvoi: false,
+      isFinal: false
+    };
+  }
+  if (s.indexOf('aktif') !== -1 || s.indexOf('selesai') !== -1 || s.indexOf('berlaku') !== -1 || s.indexOf('done') !== -1) {
+    return {
+      step: 8,
+      key: 'aktif',
+      label: '8. Aktif / Selesai',
+      percent: 100,
+      badgeColor: '#16a34a',
+      badgeBg: '#f0fdf4',
+      isRevision: false,
+      isRenvoi: false,
+      isFinal: true
+    };
+  }
+  if (s.indexOf('expired') !== -1 || s.indexOf('kadaluarsa') !== -1 || s.indexOf('berakhir') !== -1) {
+    return {
+      step: 9,
+      key: 'expired',
+      label: '9. Berakhir / Expired',
+      percent: 100,
+      badgeColor: '#64748b',
+      badgeBg: '#f8fafc',
+      isRevision: false,
+      isRenvoi: false,
+      isFinal: true
+    };
+  }
+
+  // Jika ada custom teks dari sheet
+  if (rawStage && rawStage.toString().trim() !== '') {
+    return {
+      step: 0,
+      key: 'lainnya',
+      label: rawStage.toString().trim(),
+      percent: 50,
+      badgeColor: '#475569',
+      badgeBg: '#f1f5f9',
+      isRevision: false,
+      isRenvoi: false,
+      isFinal: false
+    };
+  }
+
+  // Default fallback: bila status Comply dan masih berlaku, anggap Aktif
+  var isComply = (rawStatus || '').toString().toLowerCase().indexOf('comply') !== -1;
+  if (isComply) {
+    return {
+      step: 8,
+      key: 'aktif',
+      label: '8. Aktif / Selesai',
+      percent: 100,
+      badgeColor: '#16a34a',
+      badgeBg: '#f0fdf4',
+      isRevision: false,
+      isRenvoi: false,
+      isFinal: true
+    };
+  }
+
+  return {
+    step: 1,
+    key: 'pengajuan',
+    label: '1. Pengajuan ke Legal',
+    percent: 15,
+    badgeColor: '#2563eb',
+    badgeBg: '#eff6ff',
+    isRevision: false,
+    isRenvoi: false,
+    isFinal: false
+  };
+}
+
+/**
+ * Mendapatkan data kepatuhan kontrak & progress lifecycle (Contract Repository & Compliance)
  */
 function getContractCompliance(ss) {
   var sheet = getKontrakVendorSheet(ss);
@@ -1806,6 +1974,23 @@ function getContractCompliance(ss) {
     uniqueContractedVendors: 0,
     uniqueCompliantVendors: 0,
     vendorComplianceRate: 100,
+    stageCounts: {
+      all: 0,
+      pengajuan: 0,
+      draft: 0,
+      paraf_vendor: 0,
+      paraf_ethos: 0,
+      revisi: 0,
+      renvoi: 0,
+      ttd: 0,
+      aktif: 0,
+      expired: 0,
+      lainnya: 0
+    },
+    totalActive: 0,
+    totalInProgress: 0,
+    totalRevisiRenvoi: 0,
+    totalOverdueSla: 0,
     list: []
   };
 
@@ -1822,7 +2007,7 @@ function getContractCompliance(ss) {
 
   for (var r = 0; r < Math.min(data.length, 5); r++) {
     var candidateHeaders = data[r].map(function(h) { return h ? h.toString().trim().toLowerCase() : ''; });
-    var foundNo = getHeaderIndex(candidateHeaders, ['no kontrak', 'nomor kontrak', 'kode kontrak', 'no', 'kontrak']);
+    var foundNo = getHeaderIndex(candidateHeaders, ['no kontrak', 'nomor kontrak', 'kode kontrak', 'no', 'kontrak', 'id kontrak']);
     var foundVendor = getHeaderIndex(candidateHeaders, ['vendor', 'nama vendor', 'rekanan', 'supplier', 'partner']);
     if (foundNo !== -1 || foundVendor !== -1) {
       headerRowIdx = r;
@@ -1836,26 +2021,45 @@ function getContractCompliance(ss) {
   if (idxVendor === -1 && idxNo === -1) {
     headerRowIdx = 0;
     headers = data[0].map(function(h) { return h ? h.toString().trim().toLowerCase() : ''; });
-    idxNo = getHeaderIndex(headers, ['no kontrak', 'nomor kontrak', 'kode kontrak', 'no', 'kontrak']);
+    idxNo = getHeaderIndex(headers, ['no kontrak', 'nomor kontrak', 'kode kontrak', 'no', 'kontrak', 'id kontrak']);
     idxVendor = getHeaderIndex(headers, ['vendor', 'nama vendor', 'rekanan', 'supplier', 'partner']);
   }
 
-  var idxPekerjaan = getHeaderIndex(headers, ['jenis pekerjaan', 'pekerjaan', 'ruang lingkup', 'deskripsi', 'uraian', 'item']);
-  var idxMulai = getHeaderIndex(headers, ['tanggal mulai', 'tgl mulai', 'mulai', 'start date']);
-  var idxSelesai = getHeaderIndex(headers, ['tanggal selesai', 'tanggal berakhir', 'tgl selesai', 'tgl berakhir', 'end date', 'deadline']);
-  var idxKelengkapan = getHeaderIndex(headers, ['kelengkapan dokumen', 'kelengkapan', 'dokumen', 'status dokumen']);
-  var idxNilai = getHeaderIndex(headers, ['nilai kontrak', 'nilai', 'nominal', 'amount', 'harga', 'total']);
+  var idxPekerjaan = getHeaderIndex(headers, ['jenis pekerjaan', 'pekerjaan', 'ruang lingkup', 'deskripsi', 'uraian', 'item', 'scope of work', 'scope']);
+  var idxDivisi = getHeaderIndex(headers, ['pic / divisi', 'pic', 'divisi', 'dept', 'departemen', 'pemohon', 'user', 'pic pengaju', 'divisi pemohon']);
+  var idxTglPengajuan = getHeaderIndex(headers, ['tanggal pengajuan ke legal', 'tgl pengajuan ke legal', 'tgl pengajuan', 'tanggal pengajuan', 'tgl masuk legal', 'tanggal masuk', 'tgl ajukan', 'tgl request', 'pengajuan legal']);
+  var idxMulai = getHeaderIndex(headers, ['tanggal mulai kontrak', 'tgl mulai kontrak', 'tanggal mulai', 'tgl mulai', 'mulai', 'start date', 'periode awal']);
+  var idxSelesai = getHeaderIndex(headers, ['tanggal selesai kontrak', 'tgl selesai kontrak', 'tanggal selesai', 'tanggal berakhir', 'tgl selesai', 'tgl berakhir', 'end date', 'deadline', 'masa berlaku', 'periode akhir']);
+  var idxTahap = getHeaderIndex(headers, ['tahap progress pengerjaan', 'tahap progress', 'progress pengerjaan', 'progress', 'tahap', 'status progress', 'tahapan', 'current stage', 'workflow', 'status pengerjaan', 'tahap pengerjaan']);
+  var idxTargetSla = getHeaderIndex(headers, ['target selesai sla', 'target selesai', 'target legal', 'sla target', 'sla', 'target draft', 'deadline proses']);
+  var idxTglRealisasi = getHeaderIndex(headers, ['tanggal realisasi ttd', 'tgl realisasi ttd', 'tgl realisasi', 'tanggal selesai proses', 'tgl ttd', 'tanggal ttd', 'tgl sah', 'realisasi ttd']);
+  var idxRevisi = getHeaderIndex(headers, ['status revisi / renvoi', 'status revisi', 'revisi', 'renvoi', 'revisi / renvoi', 'catatan revisi', 'addendum', 'keterangan revisi']);
+  var idxKelengkapan = getHeaderIndex(headers, ['kelengkapan dokumen', 'kelengkapan', 'dokumen', 'status dokumen', 'legalitas']);
+  var idxNilai = getHeaderIndex(headers, ['nilai kontrak (rp)', 'nilai kontrak', 'nilai', 'nominal', 'amount', 'harga', 'total', 'nominal kontrak']);
   var idxStatus = getHeaderIndex(headers, ['status kepatuhan', 'status', 'kepatuhan', 'compliance']);
-  var idxKeterangan = getHeaderIndex(headers, ['keterangan', 'catatan', 'remarks', 'note']);
+  var idxLink = getHeaderIndex(headers, ['link dokumen kontrak', 'link dokumen', 'link draft', 'link', 'url', 'dokumen link', 'drive link', 'file kontrak', 'lampiran']);
+  var idxKeterangan = getHeaderIndex(headers, ['keterangan', 'catatan', 'remarks', 'note', 'catatan tambahan']);
 
   var uniqueVendors = {};
+  var now = new Date();
+  var todayZero = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 
   for (var i = headerRowIdx + 1; i < data.length; i++) {
     var noKontrak = idxNo !== -1 && data[i][idxNo] ? data[i][idxNo].toString().trim() : (data[i][0] ? data[i][0].toString().trim() : '');
     var vendor = idxVendor !== -1 && data[i][idxVendor] ? data[i][idxVendor].toString().trim() : (data[i][1] ? data[i][1].toString().trim() : '');
+    if (!noKontrak || !vendor || noKontrak.toLowerCase() === 'no kontrak' || noKontrak.toLowerCase() === 'nomor kontrak') {
+      continue;
+    }
+
     var jenisPekerjaan = idxPekerjaan !== -1 && data[i][idxPekerjaan] ? data[i][idxPekerjaan].toString().trim() : '-';
+    var picDivisi = idxDivisi !== -1 && data[i][idxDivisi] ? data[i][idxDivisi].toString().trim() : '-';
+    var tglPengajuan = idxTglPengajuan !== -1 && data[i][idxTglPengajuan] ? formatDate(data[i][idxTglPengajuan]) : '-';
     var tglMulai = idxMulai !== -1 && data[i][idxMulai] ? formatDate(data[i][idxMulai]) : '-';
     var tglSelesai = idxSelesai !== -1 && data[i][idxSelesai] ? formatDate(data[i][idxSelesai]) : '-';
+    var rawTahap = idxTahap !== -1 && data[i][idxTahap] ? data[i][idxTahap].toString().trim() : '';
+    var targetSelesai = idxTargetSla !== -1 && data[i][idxTargetSla] ? formatDate(data[i][idxTargetSla]) : '-';
+    var tglRealisasi = idxTglRealisasi !== -1 && data[i][idxTglRealisasi] ? formatDate(data[i][idxTglRealisasi]) : '-';
+    var statusRevisi = idxRevisi !== -1 && data[i][idxRevisi] ? data[i][idxRevisi].toString().trim() : '';
     var kelengkapan = idxKelengkapan !== -1 && data[i][idxKelengkapan] ? data[i][idxKelengkapan].toString().trim() : 'Lengkap';
     
     var rawNilai = idxNilai !== -1 ? data[i][idxNilai] : 0;
@@ -1868,31 +2072,126 @@ function getContractCompliance(ss) {
     }
 
     var status = idxStatus !== -1 && data[i][idxStatus] ? data[i][idxStatus].toString().trim() : 'Comply';
+    var linkDokumen = idxLink !== -1 && data[i][idxLink] ? data[i][idxLink].toString().trim() : '';
     var keterangan = idxKeterangan !== -1 && data[i][idxKeterangan] ? data[i][idxKeterangan].toString().trim() : '';
 
-    if (noKontrak && vendor && noKontrak.toLowerCase() !== 'no kontrak') {
-      stats.totalContracts++;
-      var isComply = status.toLowerCase() === 'comply';
-      if (isComply) stats.totalCompliantContracts++;
+    // Normalisasi Tahap Progress
+    var stageObj = normalizeContractStage(rawTahap, status, tglSelesai);
 
-      if (!uniqueVendors[vendor]) {
-        uniqueVendors[vendor] = { total: 0, comply: 0 };
+    // Hitung Selisih Hari Masa Berlaku Kontrak
+    var daysRemaining = null;
+    var expiryCategory = 'safe';
+    if (tglSelesai && tglSelesai !== '-' && !tglSelesai.toLowerCase().includes('belum')) {
+      var endParsed = new Date(tglSelesai);
+      if (!isNaN(endParsed.getTime())) {
+        var endZero = new Date(endParsed.getFullYear(), endParsed.getMonth(), endParsed.getDate()).getTime();
+        daysRemaining = Math.ceil((endZero - todayZero) / 86400000);
+        if (daysRemaining < 0) {
+          expiryCategory = 'expired';
+          if (stageObj.step === 8) {
+            stageObj = normalizeContractStage('expired', status, tglSelesai);
+          }
+        } else if (daysRemaining <= 30) {
+          expiryCategory = 'critical';
+        } else if (daysRemaining <= 90) {
+          expiryCategory = 'warning';
+        } else {
+          expiryCategory = 'safe';
+        }
       }
-      uniqueVendors[vendor].total++;
-      if (isComply) uniqueVendors[vendor].comply++;
-
-      stats.list.push({
-        noKontrak: noKontrak,
-        vendor: vendor,
-        jenisPekerjaan: jenisPekerjaan,
-        tglMulai: tglMulai,
-        tglSelesai: tglSelesai,
-        kelengkapan: kelengkapan,
-        nilai: nilai,
-        status: status,
-        keterangan: keterangan
-      });
     }
+
+    // Hitung Selisih Hari Pengerjaan / Aging (Sejak diajukan)
+    var selisihHariPengerjaan = null;
+    if (tglPengajuan && tglPengajuan !== '-') {
+      var submitParsed = new Date(tglPengajuan);
+      if (!isNaN(submitParsed.getTime())) {
+        var submitZero = new Date(submitParsed.getFullYear(), submitParsed.getMonth(), submitParsed.getDate()).getTime();
+        var finishZero = todayZero;
+        if (tglRealisasi && tglRealisasi !== '-') {
+          var realParsed = new Date(tglRealisasi);
+          if (!isNaN(realParsed.getTime())) {
+            finishZero = new Date(realParsed.getFullYear(), realParsed.getMonth(), realParsed.getDate()).getTime();
+          }
+        }
+        selisihHariPengerjaan = Math.max(0, Math.floor((finishZero - submitZero) / 86400000));
+      }
+    }
+
+    // Hitung Status SLA
+    var slaStatus = '-';
+    var isOverdueSla = false;
+    if (stageObj.isFinal) {
+      slaStatus = 'Selesai';
+    } else if (targetSelesai && targetSelesai !== '-') {
+      var targetParsed = new Date(targetSelesai);
+      if (!isNaN(targetParsed.getTime())) {
+        var targetZero = new Date(targetParsed.getFullYear(), targetParsed.getMonth(), targetParsed.getDate()).getTime();
+        var diffSla = Math.ceil((targetZero - todayZero) / 86400000);
+        if (diffSla < 0) {
+          slaStatus = 'Overdue (' + Math.abs(diffSla) + ' hari)';
+          isOverdueSla = true;
+        } else if (diffSla <= 3) {
+          slaStatus = 'Mendekati (' + diffSla + ' hari)';
+        } else {
+          slaStatus = 'On Track (' + diffSla + ' hari)';
+        }
+      }
+    }
+
+    stats.totalContracts++;
+    var isComply = status.toLowerCase() === 'comply';
+    if (isComply) stats.totalCompliantContracts++;
+
+    if (!uniqueVendors[vendor]) {
+      uniqueVendors[vendor] = { total: 0, comply: 0 };
+    }
+    uniqueVendors[vendor].total++;
+    if (isComply) uniqueVendors[vendor].comply++;
+
+    // Akumulasi metrics
+    stats.stageCounts.all++;
+    if (stats.stageCounts[stageObj.key] !== undefined) {
+      stats.stageCounts[stageObj.key]++;
+    } else {
+      stats.stageCounts.lainnya++;
+    }
+
+    if (stageObj.step === 8) stats.totalActive++;
+    if (stageObj.step >= 1 && stageObj.step <= 7) stats.totalInProgress++;
+    if (stageObj.isRevision || stageObj.isRenvoi) stats.totalRevisiRenvoi++;
+    if (isOverdueSla) stats.totalOverdueSla++;
+
+    stats.list.push({
+      noKontrak: noKontrak,
+      vendor: vendor,
+      jenisPekerjaan: jenisPekerjaan,
+      picDivisi: picDivisi,
+      tglPengajuan: tglPengajuan,
+      tglMulai: tglMulai,
+      tglSelesai: tglSelesai,
+      tahapProgress: stageObj.label,
+      stageKey: stageObj.key,
+      progressStep: stageObj.step,
+      progressPercent: stageObj.percent,
+      badgeColor: stageObj.badgeColor,
+      badgeBg: stageObj.badgeBg,
+      isRevision: stageObj.isRevision,
+      isRenvoi: stageObj.isRenvoi,
+      targetSelesai: targetSelesai,
+      tglRealisasi: tglRealisasi,
+      statusRevisi: statusRevisi,
+      selisihHariMasaBerlaku: daysRemaining,
+      expiryCategory: expiryCategory,
+      selisihHariPengerjaan: selisihHariPengerjaan,
+      slaStatus: slaStatus,
+      isOverdueSla: isOverdueSla,
+      kelengkapan: kelengkapan,
+      nilai: nilai,
+      status: status,
+      linkDokumen: linkDokumen,
+      keterangan: keterangan
+    });
   }
 
   var berkontrakCount = 0;
@@ -2016,6 +2315,184 @@ function initAllDatabaseSheets(ss) {
     sheetPenilaian = ss.insertSheet(SHEET_PENILAIAN_VENDOR);
     setupSheetPenilaianHeaders(sheetPenilaian);
   }
+
+  // Inisialisasi atau migrasi struktur kolom sheet Kontrak Vendor
+  setupSheetKontrakVendor(ss);
+}
+
+/**
+ * Setup & Migrasi Struktur Kolom Sheet Kontrak Vendor
+ * Mendukung tracking progress lifecycle (Pengajuan, Draft, Paraf Vendor/Ethos, Revisi, Renvoi, TTD, Aktif),
+ * selisih hari masa berlaku, durasi proses SLA, dan link dokumen draft.
+ */
+function setupSheetKontrakVendor(ss) {
+  if (!ss) ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss) return;
+  
+  var sheet = getKontrakVendorSheet(ss);
+  var standardHeaders = [
+    'No Kontrak',
+    'Nama Vendor',
+    'Ruang Lingkup / Jenis Pekerjaan',
+    'PIC / Divisi',
+    'Tanggal Pengajuan ke Legal',
+    'Tanggal Mulai Kontrak',
+    'Tanggal Selesai Kontrak',
+    'Tahap Progress Pengerjaan',
+    'Target Selesai SLA',
+    'Tanggal Realisasi TTD',
+    'Status Revisi / Renvoi',
+    'Kelengkapan Dokumen',
+    'Nilai Kontrak (Rp)',
+    'Status Kepatuhan',
+    'Link Dokumen Kontrak',
+    'Keterangan'
+  ];
+
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_KONTRAK);
+    sheet.appendRow(standardHeaders);
+    
+    var today = new Date();
+    function offsetDate(days) {
+      var d = new Date(today.getTime() + days * 86400000);
+      return Utilities.formatDate(d, Session.getScriptTimeZone() || 'Asia/Jakarta', 'yyyy-MM-dd');
+    }
+    
+    var sampleRows = [
+      [
+        'KTR/ETHOS/2026/001', 'PT BIZNET GIO NUSANTARA', 'Cloud Server Infrastructure & Maintenance',
+        'IT & Software', offsetDate(-45), offsetDate(-30), offsetDate(335),
+        '8. Aktif / Selesai', offsetDate(-32), offsetDate(-30),
+        'Tidak Ada Revisi', 'Lengkap (KTP, NPWP, Akta, Rekening)', 125000000,
+        'Comply', 'https://drive.google.com/', 'Kontrak aktif tahunan, performa SLA stabil'
+      ],
+      [
+        'KTR/ETHOS/2026/002', 'CHIPSET COMPUTER - EKI', 'Pengadaan Perangkat Hardware & Laptop Kantor',
+        'Procurement', offsetDate(-14), offsetDate(-2), offsetDate(180),
+        '7. Tanda Tangan', offsetDate(-1), '',
+        'Final Draft Disetujui', 'Lengkap', 85000000,
+        'Comply', 'https://drive.google.com/', 'Menunggu penandatanganan basah Direksi'
+      ],
+      [
+        'KTR/ETHOS/2026/003', 'MULTINDO MEDIA KREASI UTAMA, PT (Kreasi)', 'Jasa Produksi Konten Video & Creative Campaign Q3-Q4',
+        'Branding & Marketing', offsetDate(-10), offsetDate(5), offsetDate(120),
+        '6. Renvoi', offsetDate(2), '',
+        'Renvoi Pasal 7 Hak Cipta & Output Video', 'Lengkap (NPWP, NIB)', 65000000,
+        'Comply', 'https://drive.google.com/', 'Proses penyesuaian klausul hak cipta'
+      ],
+      [
+        'KTR/ETHOS/2026/004', 'PT.GLOBAL JET EXPRESS', 'Ekspedisi & Distribusi Logistik Nasional',
+        'Operasional / Logistik', offsetDate(-8), offsetDate(7), offsetDate(365),
+        '5. Revisi', offsetDate(0), '',
+        'Revisi SLA Pengiriman & Klausul Asuransi', 'Lengkap', 150000000,
+        'Comply', 'https://drive.google.com/', 'Vendor meminta klausul klaim asuransi direvisi'
+      ],
+      [
+        'KTR/ETHOS/2026/005', 'Toko HERO', 'Pengadaan ATK & Perlengkapan Operasional Kantor',
+        'General Affairs', offsetDate(-5), offsetDate(10), offsetDate(90),
+        '4. Paraf Ethos', offsetDate(3), '',
+        'Belum Ada Revisi', 'Lengkap', 28000000,
+        'Comply', 'https://drive.google.com/', 'Draft disetujui vendor, sedang paraf internal Ethos'
+      ],
+      [
+        'KTR/ETHOS/2026/006', 'CV MANDIRI JAYA KREASI', 'Jasa Desain Booth & Event Exhibition Launching',
+        'Event Organizer', offsetDate(-4), offsetDate(15), offsetDate(45),
+        '3. Paraf Vendor', offsetDate(4), '',
+        'Draft Dikirim ke Vendor', 'Menunggu NPWP Baru', 45000000,
+        'Comply', 'https://drive.google.com/', 'Draft kontrak sedang diteliti oleh Legal Vendor'
+      ],
+      [
+        'KTR/ETHOS/2026/007', 'PT SOLUSI DIGITAL MEDIA', 'Jasa Social Media Management & Influencer Campaign',
+        'Digital Marketing', offsetDate(-2), offsetDate(20), offsetDate(180),
+        '2. Draft Keluar', offsetDate(5), '',
+        'Draft Awal Legal', 'Lengkap', 90000000,
+        'Comply', 'https://drive.google.com/', 'Draft dari Legal Ethos sudah keluar, review internal'
+      ],
+      [
+        'KTR/ETHOS/2026/008', 'KOL MANAGEMENT NUSANTARA', 'Jasa Endorsement Brand Ambassador Q3',
+        'Branding', offsetDate(-1), offsetDate(25), offsetDate(90),
+        '1. Pengajuan ke Legal', offsetDate(6), '',
+        'Tahap Awal', 'Menunggu Draft Perjanjian', 50000000,
+        'Comply', 'https://drive.google.com/', 'Dokumen penawaran dan draft ToR baru masuk ke Legal'
+      ],
+      [
+        'KTR/ETHOS/2025/088', 'PT SUMBER MAKMUR LOGISTIK', 'Penyewaan Armada Truk Pengiriman Luar Kota',
+        'Operasional', offsetDate(-380), offsetDate(-365), offsetDate(-15),
+        '9. Berakhir / Expired', offsetDate(-370), offsetDate(-365),
+        'Kontrak Selesai', 'Lengkap', 110000000,
+        'Comply', 'https://drive.google.com/', 'Masa berlaku kontrak habis, dalam evaluasi perpanjangan'
+      ]
+    ];
+    
+    for (var i = 0; i < sampleRows.length; i++) {
+      sheet.appendRow(sampleRows[i]);
+    }
+    
+    styleHeaders(sheet, standardHeaders.length);
+    sheet.setColumnWidth(1, 160);
+    sheet.setColumnWidth(2, 220);
+    sheet.setColumnWidth(3, 260);
+    sheet.setColumnWidth(4, 140);
+    sheet.setColumnWidth(5, 120);
+    sheet.setColumnWidth(6, 110);
+    sheet.setColumnWidth(7, 110);
+    sheet.setColumnWidth(8, 160);
+    sheet.setColumnWidth(9, 120);
+    sheet.setColumnWidth(10, 120);
+    sheet.setColumnWidth(11, 180);
+    sheet.setColumnWidth(12, 160);
+    sheet.setColumnWidth(13, 130);
+    sheet.setColumnWidth(14, 120);
+    sheet.setColumnWidth(15, 160);
+    sheet.setColumnWidth(16, 220);
+  } else {
+    // Sheet sudah ada: periksa kolom yang belum ada dan tambahkan di baris header tanpa merusak data!
+    var lastCol = sheet.getLastColumn();
+    if (lastCol > 0) {
+      var existingHeaders = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) {
+        return h ? h.toString().trim().toLowerCase() : '';
+      });
+      
+      var checkHeaders = [
+        { key: 'pic / divisi', label: 'PIC / Divisi' },
+        { key: 'tanggal pengajuan', label: 'Tanggal Pengajuan ke Legal' },
+        { key: 'tahap progress', label: 'Tahap Progress Pengerjaan' },
+        { key: 'target selesai sla', label: 'Target Selesai SLA' },
+        { key: 'tanggal realisasi', label: 'Tanggal Realisasi TTD' },
+        { key: 'status revisi', label: 'Status Revisi / Renvoi' },
+        { key: 'link dokumen', label: 'Link Dokumen Kontrak' }
+      ];
+      
+      var colsToAdd = [];
+      for (var c = 0; c < checkHeaders.length; c++) {
+        var found = false;
+        for (var e = 0; e < existingHeaders.length; e++) {
+          if (existingHeaders[e].indexOf(checkHeaders[c].key) !== -1 || checkHeaders[c].key.indexOf(existingHeaders[e]) !== -1) {
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          colsToAdd.push(checkHeaders[c].label);
+        }
+      }
+      
+      if (colsToAdd.length > 0) {
+        for (var a = 0; a < colsToAdd.length; a++) {
+          sheet.getRange(1, lastCol + 1 + a).setValue(colsToAdd[a]);
+        }
+        var newTotalCols = lastCol + colsToAdd.length;
+        styleHeaders(sheet, newTotalCols);
+      }
+    }
+  }
+
+  try {
+    SpreadsheetApp.getUi().alert('Berhasil! Struktur kolom sheet "Kontrak Vendor" telah disiapkan & diperbarui dengan 16 kolom standar (termasuk Tahap Progress, SLA, Revisi/Renvoi, dll).');
+  } catch (e) {
+    Logger.log('setupSheetKontrakVendor complete');
+  }
 }
 
 function styleHeaders(sheet, numCols) {
@@ -2092,6 +2569,7 @@ function onOpen() {
     SpreadsheetApp.getUi()
       .createMenu('⚡ Evaluasi Vendor')
       .addItem('Buat / Pastikan 9 Sheet Kategori Penilaian', 'createCategorySheets')
+      .addItem('Setup / Perbarui Kolom Sheet Kontrak Vendor', 'setupSheetKontrakVendor')
       .addItem('Inisialisasi Seluruh Sheet Sistem', 'initAllDatabaseSheets')
       .addToUi();
   } catch (e) {}

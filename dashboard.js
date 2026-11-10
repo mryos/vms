@@ -9,6 +9,7 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzaGjRTxk4cXDMj2AOyj
 let dashboardData = null;
 let activeTab = 'all';
 let contractExpiryFilter = 'all'; // 'all' | 'expired' | 'critical' | 'warning' | 'safe'
+let contractStageFilter = 'all'; // 'all' | 'pengajuan' | 'draft' | 'paraf_vendor' | 'paraf_ethos' | 'revisi' | 'renvoi' | 'ttd' | 'aktif'
 let contractCurrentPage = 1;
 let contractPageSize = 10;
 let lastContractComplianceData = null;
@@ -245,6 +246,16 @@ function resetAllSlicers() {
     if (catSelect) catSelect.value = 'all';
     if (compSelect) compSelect.value = 'all';
     if (tierSelect) tierSelect.value = 'all';
+
+    contractExpiryFilter = 'all';
+    contractStageFilter = 'all';
+    const contractSearchInput = document.getElementById('contractSearchInput');
+    if (contractSearchInput) contractSearchInput.value = '';
+
+    const btnExpAll = document.getElementById('btnExpAll');
+    if (btnExpAll) filterContractsByExpiry('all');
+    const btnStageAll = document.getElementById('btnStageAll');
+    if (btnStageAll) filterContractsByStage('all');
 
     contractCurrentPage = 1;
     evalCurrentPage = 1;
@@ -1069,13 +1080,17 @@ function exportContractCsv() {
         return;
     }
     const list = dashboardData.contractCompliance.list;
-    let csv = 'No Kontrak,Vendor,Ruang Lingkup,Tgl Mulai,Tgl Selesai,Kelengkapan,Nilai Kontrak,Status,Keterangan\n';
+    let csv = 'No Kontrak,Vendor,Ruang Lingkup,Divisi/PIC,Tgl Pengajuan Legal,Tgl Mulai,Tgl Selesai,Tahap Progress,Target SLA,Tgl Realisasi TTD,Status Revisi/Renvoi,Sisa Hari Masa Berlaku,Durasi Pengerjaan (Hari),Status SLA,Kelengkapan Dokumen,Nilai Kontrak,Status Kepatuhan,Link Dokumen,Keterangan\n';
     list.forEach(c => {
-        csv += `"${escCsv(c.noKontrak)}","${escCsv(c.vendor)}","${escCsv(c.jenisPekerjaan)}","${escCsv(c.tglMulai)}","${escCsv(c.tglSelesai)}","${escCsv(c.kelengkapan)}","${c.nilai || 0}","${escCsv(c.status)}","${escCsv(c.keterangan)}"\n`;
+        const stage = normalizeContractStageFrontend(c.tahapProgress, c.status, c.tglSelesai);
+        const daysRemaining = getContractDaysRemaining(c.tglSelesai);
+        const processDays = getContractProcessDays(c.tglPengajuan, c.tglRealisasi);
+        const slaStatus = c.slaStatus || '-';
+        csv += `"${escCsv(c.noKontrak)}","${escCsv(c.vendor)}","${escCsv(c.jenisPekerjaan || '-')}","${escCsv(c.picDivisi || '-')}","${escCsv(c.tglPengajuan || '-')}","${escCsv(c.tglMulai || '-')}","${escCsv(c.tglSelesai || '-')}","${escCsv(stage.label)}","${escCsv(c.targetSelesai || '-')}","${escCsv(c.tglRealisasi || '-')}","${escCsv(c.statusRevisi || '-')}","${daysRemaining !== null ? daysRemaining : '-'}","${processDays !== null ? processDays : '-'}","${escCsv(slaStatus)}","${escCsv(c.kelengkapan || '-')}","${c.nilai || 0}","${escCsv(c.status || 'Comply')}","${escCsv(c.linkDokumen || '-')}","${escCsv(c.keterangan || '-')}"\n`;
     });
     const nowStr = new Date().toISOString().slice(0, 10);
-    downloadCsv(csv, `Laporan_Kontrak_Vendor_${nowStr}.csv`);
-    showToast('Laporan kontrak berhasil diunduh.', 'success');
+    downloadCsv(csv, `Laporan_Contract_Repository_Compliance_${nowStr}.csv`);
+    showToast('Laporan Contract Repository & Compliance berhasil diunduh.', 'success');
 }
 
 function exportEvaluationCsv() {
@@ -1512,11 +1527,67 @@ function getContractDaysRemaining(dateStr) {
     return Math.ceil((target - now) / (1000 * 60 * 60 * 24));
 }
 
+function getContractProcessDays(tglPengajuan, tglRealisasi) {
+    if (!tglPengajuan || tglPengajuan === '-' || tglPengajuan.toLowerCase().includes('belum')) return null;
+    const submit = new Date(tglPengajuan);
+    if (isNaN(submit.getTime())) return null;
+    let end = new Date();
+    if (tglRealisasi && tglRealisasi !== '-' && !tglRealisasi.toLowerCase().includes('belum')) {
+        const r = new Date(tglRealisasi);
+        if (!isNaN(r.getTime())) end = r;
+    }
+    submit.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
+    return Math.max(0, Math.floor((end - submit) / (1000 * 60 * 60 * 24)));
+}
+
+function normalizeContractStageFrontend(rawStage, rawStatus, tglSelesai) {
+    const s = (rawStage || '').toString().trim().toLowerCase();
+    
+    if (s.includes('pengajuan') || s.includes('masuk legal') || s.includes('ajukan')) {
+        return { step: 1, key: 'pengajuan', label: '1. Pengajuan ke Legal', percent: 15, badgeColor: '#2563eb', badgeBg: '#eff6ff', isRevision: false, isRenvoi: false, isFinal: false };
+    }
+    if (s.includes('draft') || s.includes('penyusunan')) {
+        return { step: 2, key: 'draft', label: '2. Draft Keluar', percent: 35, badgeColor: '#4f46e5', badgeBg: '#eef2ff', isRevision: false, isRenvoi: false, isFinal: false };
+    }
+    if (s.includes('paraf vendor') || s.includes('review vendor')) {
+        return { step: 3, key: 'paraf_vendor', label: '3. Paraf Vendor', percent: 50, badgeColor: '#d97706', badgeBg: '#fffbeb', isRevision: false, isRenvoi: false, isFinal: false };
+    }
+    if (s.includes('paraf ethos') || s.includes('paraf internal') || (s.includes('paraf') && !s.includes('vendor'))) {
+        return { step: 4, key: 'paraf_ethos', label: '4. Paraf Ethos', percent: 65, badgeColor: '#7c3aed', badgeBg: '#f5f3ff', isRevision: false, isRenvoi: false, isFinal: false };
+    }
+    if (s.includes('revisi')) {
+        return { step: 5, key: 'revisi', label: '5. Revisi', percent: 60, badgeColor: '#e11d48', badgeBg: '#fff1f2', isRevision: true, isRenvoi: false, isFinal: false };
+    }
+    if (s.includes('renvoi')) {
+        return { step: 6, key: 'renvoi', label: '6. Renvoi', percent: 75, badgeColor: '#ea580c', badgeBg: '#fff7ed', isRevision: false, isRenvoi: true, isFinal: false };
+    }
+    if (s.includes('tanda tangan') || s.includes('ttd') || s.includes('signing') || s.includes('e-sign')) {
+        return { step: 7, key: 'ttd', label: '7. Tanda Tangan', percent: 85, badgeColor: '#0d9488', badgeBg: '#f0fdfa', isRevision: false, isRenvoi: false, isFinal: false };
+    }
+    if (s.includes('aktif') || s.includes('selesai') || s.includes('berlaku') || s.includes('done')) {
+        return { step: 8, key: 'aktif', label: '8. Aktif / Selesai', percent: 100, badgeColor: '#16a34a', badgeBg: '#f0fdf4', isRevision: false, isRenvoi: false, isFinal: true };
+    }
+    if (s.includes('expired') || s.includes('kadaluarsa') || s.includes('berakhir')) {
+        return { step: 9, key: 'expired', label: '9. Berakhir / Expired', percent: 100, badgeColor: '#64748b', badgeBg: '#f8fafc', isRevision: false, isRenvoi: false, isFinal: true };
+    }
+
+    if (rawStage && rawStage.toString().trim() !== '') {
+        return { step: 0, key: 'lainnya', label: rawStage.toString().trim(), percent: 50, badgeColor: '#475569', badgeBg: '#f1f5f9', isRevision: false, isRenvoi: false, isFinal: false };
+    }
+
+    const isComply = (rawStatus || '').toString().toLowerCase().includes('comply');
+    if (isComply) {
+        return { step: 8, key: 'aktif', label: '8. Aktif / Selesai', percent: 100, badgeColor: '#16a34a', badgeBg: '#f0fdf4', isRevision: false, isRenvoi: false, isFinal: true };
+    }
+
+    return { step: 1, key: 'pengajuan', label: '1. Pengajuan ke Legal', percent: 15, badgeColor: '#2563eb', badgeBg: '#eff6ff', isRevision: false, isRenvoi: false, isFinal: false };
+}
+
 function filterContractsByExpiry(filter) {
     contractExpiryFilter = filter;
     contractCurrentPage = 1;
     
-    // Update button styles
     const btnIds = {
         'all': 'btnExpAll',
         'expired': 'btnExpExpired',
@@ -1531,11 +1602,54 @@ function filterContractsByExpiry(filter) {
             if (key === filter) {
                 btn.className = 'px-2.5 py-1 rounded-lg bg-blue-600 text-white font-bold transition shadow-2xs';
             } else {
-                btn.className = 'px-2.5 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200/80 transition font-medium';
+                btn.className = 'px-2.5 py-1 rounded-lg bg-white text-gray-700 hover:bg-gray-100 border border-gray-200/80 transition font-medium';
             }
         }
     }
     
+    if (lastContractComplianceData) {
+        renderContractTable(lastContractComplianceData);
+    } else if (dashboardData && dashboardData.contractCompliance) {
+        renderContractTable(dashboardData.contractCompliance);
+    }
+}
+
+function filterContractsByStage(stage) {
+    contractStageFilter = stage;
+    contractCurrentPage = 1;
+
+    const btnIds = {
+        'all': 'btnStageAll',
+        'pengajuan': 'btnStagePengajuan',
+        'draft': 'btnStageDraft',
+        'paraf_vendor': 'btnStageParafVendor',
+        'paraf_ethos': 'btnStageParafEthos',
+        'revisi': 'btnStageRevisi',
+        'renvoi': 'btnStageRenvoi',
+        'ttd': 'btnStageTtd',
+        'aktif': 'btnStageAktif'
+    };
+
+    for (const key in btnIds) {
+        const btn = document.getElementById(btnIds[key]);
+        if (btn) {
+            if (key === stage) {
+                btn.className = 'px-2.5 py-1 rounded-lg bg-indigo-600 text-white font-bold transition shadow-2xs';
+            } else {
+                btn.className = 'px-2.5 py-1 rounded-lg bg-white text-gray-700 hover:bg-gray-100 border border-gray-200/80 transition font-medium';
+            }
+        }
+    }
+
+    if (lastContractComplianceData) {
+        renderContractTable(lastContractComplianceData);
+    } else if (dashboardData && dashboardData.contractCompliance) {
+        renderContractTable(dashboardData.contractCompliance);
+    }
+}
+
+function debounceContractSearch() {
+    contractCurrentPage = 1;
     if (lastContractComplianceData) {
         renderContractTable(lastContractComplianceData);
     } else if (dashboardData && dashboardData.contractCompliance) {
@@ -1549,21 +1663,36 @@ function renderContractTable(cc) {
     if (!tableBody) return;
 
     if (!cc || !cc.list || cc.list.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text3); padding:2rem;">Belum ada data kontrak vendor terdaftar di sheet 'Kontrak Vendor'.</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text3); padding:2.5rem;">Belum ada data kontrak vendor terdaftar di sheet 'Kontrak Vendor'.</td></tr>`;
         const badgeCount = document.getElementById('contractBadgeCount');
         if (badgeCount) badgeCount.textContent = `0 Kontrak`;
         renderContractPaginationUI(0, 1, 0, 0);
         return;
     }
 
-    // Hitung counter kategori masa berlaku (Fitur 2)
+    // Hitung seluruh metrik pipeline & filter counter
     let countExpired = 0;
     let countCritical = 0;
     let countWarning = 0;
     let countSafe = 0;
 
+    let countPengajuan = 0;
+    let countDraft = 0;
+    let countParafVendor = 0;
+    let countParafEthos = 0;
+    let countRevisi = 0;
+    let countRenvoi = 0;
+    let countTtd = 0;
+    let countAktif = 0;
+
+    let totalValue = 0;
+
     cc.list.forEach(c => {
+        const stage = normalizeContractStageFrontend(c.tahapProgress, c.status, c.tglSelesai);
+        c._stageObj = stage;
+
         const days = getContractDaysRemaining(c.tglSelesai);
+        c._daysRemaining = days;
         if (days !== null) {
             if (days < 0) countExpired++;
             else if (days <= 30) countCritical++;
@@ -1572,8 +1701,39 @@ function renderContractTable(cc) {
         } else {
             countSafe++;
         }
+
+        if (stage.key === 'pengajuan') countPengajuan++;
+        else if (stage.key === 'draft') countDraft++;
+        else if (stage.key === 'paraf_vendor') countParafVendor++;
+        else if (stage.key === 'paraf_ethos') countParafEthos++;
+        else if (stage.key === 'revisi') countRevisi++;
+        else if (stage.key === 'renvoi') countRenvoi++;
+        else if (stage.key === 'ttd') countTtd++;
+        else if (stage.key === 'aktif') countAktif++;
+
+        if (c.nilai) totalValue += Number(c.nilai) || 0;
     });
 
+    // Update Pipeline Funnel Cards
+    const elSumTotal = document.getElementById('summaryTotalContracts');
+    const elSumActive = document.getElementById('summaryActiveContractsCount');
+    const elSumVal = document.getElementById('summaryTotalValue');
+    const elSumLegal = document.getElementById('summaryLegalDraftCount');
+    const elSumParaf = document.getElementById('summaryParafCount');
+    const elSumRev = document.getElementById('summaryRevisiRenvoiCount');
+    const elSumTtd = document.getElementById('summaryTtdAktifCount');
+    const elSumExp = document.getElementById('summaryExpiringCount');
+
+    if (elSumTotal) elSumTotal.textContent = cc.list.length;
+    if (elSumActive) elSumActive.textContent = `${countAktif} aktif`;
+    if (elSumVal) elSumVal.textContent = totalValue > 0 ? formatRupiah(totalValue) : 'Rp 0';
+    if (elSumLegal) elSumLegal.textContent = countPengajuan + countDraft;
+    if (elSumParaf) elSumParaf.textContent = countParafVendor + countParafEthos;
+    if (elSumRev) elSumRev.textContent = countRevisi + countRenvoi;
+    if (elSumTtd) elSumTtd.textContent = countTtd + countAktif;
+    if (elSumExp) elSumExp.textContent = countExpired + countCritical;
+
+    // Update Expiry Pill Badges
     const elCountExpired = document.getElementById('countExpExpired');
     const elCountCritical = document.getElementById('countExpCritical');
     const elCountWarning = document.getElementById('countExpWarning');
@@ -1584,27 +1744,55 @@ function renderContractTable(cc) {
     if (elCountWarning) elCountWarning.textContent = countWarning;
     if (elCountSafe) elCountSafe.textContent = countSafe;
 
-    // Filter daftar kontrak berdasarkan contractExpiryFilter
+    // Update Stage Pill Badges
+    const elCountPengajuan = document.getElementById('countStagePengajuan');
+    const elCountDraft = document.getElementById('countStageDraft');
+    const elCountParafVendor = document.getElementById('countStageParafVendor');
+    const elCountParafEthos = document.getElementById('countStageParafEthos');
+    const elCountRevisi = document.getElementById('countStageRevisi');
+    const elCountRenvoi = document.getElementById('countStageRenvoi');
+    const elCountTtd = document.getElementById('countStageTtd');
+    const elCountAktif = document.getElementById('countStageAktif');
+
+    if (elCountPengajuan) elCountPengajuan.textContent = countPengajuan;
+    if (elCountDraft) elCountDraft.textContent = countDraft;
+    if (elCountParafVendor) elCountParafVendor.textContent = countParafVendor;
+    if (elCountParafEthos) elCountParafEthos.textContent = countParafEthos;
+    if (elCountRevisi) elCountRevisi.textContent = countRevisi;
+    if (elCountRenvoi) elCountRenvoi.textContent = countRenvoi;
+    if (elCountTtd) elCountTtd.textContent = countTtd;
+    if (elCountAktif) elCountAktif.textContent = countAktif;
+
+    // Filter list berdasarkan Expiry, Stage, dan Search input
     let displayList = cc.list;
+
+    // 1. Expiry Filter
     if (contractExpiryFilter === 'expired') {
-        displayList = displayList.filter(c => {
-            const d = getContractDaysRemaining(c.tglSelesai);
-            return d !== null && d < 0;
-        });
+        displayList = displayList.filter(c => c._daysRemaining !== null && c._daysRemaining < 0);
     } else if (contractExpiryFilter === 'critical') {
-        displayList = displayList.filter(c => {
-            const d = getContractDaysRemaining(c.tglSelesai);
-            return d !== null && d >= 0 && d <= 30;
-        });
+        displayList = displayList.filter(c => c._daysRemaining !== null && c._daysRemaining >= 0 && c._daysRemaining <= 30);
     } else if (contractExpiryFilter === 'warning') {
-        displayList = displayList.filter(c => {
-            const d = getContractDaysRemaining(c.tglSelesai);
-            return d !== null && d > 30 && d <= 90;
-        });
+        displayList = displayList.filter(c => c._daysRemaining !== null && c._daysRemaining > 30 && c._daysRemaining <= 90);
     } else if (contractExpiryFilter === 'safe') {
+        displayList = displayList.filter(c => c._daysRemaining === null || c._daysRemaining > 90);
+    }
+
+    // 2. Stage Filter
+    if (contractStageFilter !== 'all') {
+        displayList = displayList.filter(c => c._stageObj && c._stageObj.key === contractStageFilter);
+    }
+
+    // 3. Search Filter
+    const searchQuery = document.getElementById('contractSearchInput')?.value.trim().toLowerCase();
+    if (searchQuery) {
         displayList = displayList.filter(c => {
-            const d = getContractDaysRemaining(c.tglSelesai);
-            return d === null || d > 90;
+            return (c.noKontrak && c.noKontrak.toLowerCase().includes(searchQuery)) ||
+                   (c.vendor && c.vendor.toLowerCase().includes(searchQuery)) ||
+                   (c.jenisPekerjaan && c.jenisPekerjaan.toLowerCase().includes(searchQuery)) ||
+                   (c.picDivisi && c.picDivisi.toLowerCase().includes(searchQuery)) ||
+                   (c.tahapProgress && c.tahapProgress.toLowerCase().includes(searchQuery)) ||
+                   (c.statusRevisi && c.statusRevisi.toLowerCase().includes(searchQuery)) ||
+                   (c.keterangan && c.keterangan.toLowerCase().includes(searchQuery));
         });
     }
 
@@ -1615,7 +1803,7 @@ function renderContractTable(cc) {
     }
 
     if (totalItems === 0) {
-        tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#94a3b8; padding:2rem;">Tidak ada kontrak pada kategori masa berlaku ini.</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:#94a3b8; padding:2.5rem;">Tidak ada kontrak pada kategori filter yang dipilih.</td></tr>`;
         renderContractPaginationUI(0, 1, 0, 0);
         return;
     }
@@ -1636,31 +1824,115 @@ function renderContractTable(cc) {
         const isDocComplete = c.kelengkapan && c.kelengkapan.toLowerCase().includes('lengkap');
         const docColor = isDocComplete ? '#0284c7' : '#f59e0b';
 
+        const stage = c._stageObj || normalizeContractStageFrontend(c.tahapProgress, c.status, c.tglSelesai);
+        const days = c._daysRemaining !== undefined ? c._daysRemaining : getContractDaysRemaining(c.tglSelesai);
+        const processDays = getContractProcessDays(c.tglPengajuan, c.tglRealisasi);
+
         const cleanVendor = (c.vendor || '').replace(/\r?\n|\r/g, ' ').trim();
         const cleanJenis = (c.jenisPekerjaan || '-').replace(/\r?\n|\r/g, ' ').trim();
+        const cleanDivisi = (c.picDivisi || '-').replace(/\r?\n|\r/g, ' ').trim();
+
+        // Badge Sisa Hari Masa Berlaku
+        let expiryBadgeHtml = '';
+        if (days !== null) {
+            if (days < 0) {
+                expiryBadgeHtml = `<span class="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">🔴 Lewat ${Math.abs(days)} hari</span>`;
+            } else if (days <= 30) {
+                expiryBadgeHtml = `<span class="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200">🟡 Sisa ${days} hari</span>`;
+            } else if (days <= 90) {
+                expiryBadgeHtml = `<span class="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold bg-orange-100 text-orange-900 border border-orange-200">🟠 Sisa ${days} hari</span>`;
+            } else {
+                expiryBadgeHtml = `<span class="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">🟢 Sisa ${days} hari</span>`;
+            }
+        } else {
+            expiryBadgeHtml = `<span class="text-[10px] text-gray-400">Tidak terbatas</span>`;
+        }
+
+        // Revisi / Renvoi Badge
+        let revisionBadgeHtml = '';
+        if (stage.isRevision || stage.isRenvoi || (c.statusRevisi && c.statusRevisi.trim() !== '' && c.statusRevisi !== '-')) {
+            const revText = c.statusRevisi || (stage.isRenvoi ? 'Proses Renvoi' : 'Proses Revisi');
+            revisionBadgeHtml = `<div class="inline-flex items-center gap-1 text-[9.5px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded mt-1 truncate max-w-[150px]" title="${esc(revText)}">⚠️ ${esc(revText)}</div>`;
+        }
+
+        // Link Dokumen Icon
+        let linkDocHtml = '';
+        if (c.linkDokumen && c.linkDokumen.trim() !== '' && c.linkDokumen !== '-') {
+            linkDocHtml = `<a href="${esc(c.linkDokumen)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-[10px] text-blue-600 hover:text-blue-800 font-semibold hover:underline mt-0.5 cursor-pointer" title="Buka Dokumen Google Drive">
+                <span>🔗 Draft Drive</span>
+            </a>`;
+        }
 
         return `
         <tr class="hover:bg-blue-50/40 transition-colors">
-            <td style="font-weight:700; color:#2563eb; font-size:0.78rem; white-space:nowrap;">#${esc(c.noKontrak)}</td>
+            <!-- 1. No Kontrak & Divisi -->
             <td>
-                <div style="font-weight:600; color:#0f172a; max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${esc(cleanVendor)}">${esc(cleanVendor)}</div>
+                <button onclick="openContractDetailModal('${esc(c.noKontrak)}')" class="font-bold text-blue-600 hover:text-blue-800 hover:underline text-[12px] text-left cursor-pointer transition">
+                    #${esc(c.noKontrak)}
+                </button>
+                <div class="text-[10px] text-slate-500 font-medium flex items-center gap-1 mt-0.5">
+                    <span>🏢</span> <span class="truncate max-w-[130px]" title="${esc(cleanDivisi)}">${esc(cleanDivisi)}</span>
+                </div>
+                ${c.tglPengajuan && c.tglPengajuan !== '-' ? `<div class="text-[9.5px] text-slate-400">Ajuan: ${esc(c.tglPengajuan)}</div>` : ''}
             </td>
+
+            <!-- 2. Vendor & Ruang Lingkup -->
             <td>
-                <div style="font-size:0.78rem; color:#475569; max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${esc(cleanJenis)}">${esc(cleanJenis)}</div>
+                <div class="font-bold text-slate-900 text-xs truncate max-w-[200px]" title="${esc(cleanVendor)}">${esc(cleanVendor)}</div>
+                <div class="text-[11px] text-slate-500 truncate max-w-[190px] mt-0.5" title="${esc(cleanJenis)}">${esc(cleanJenis)}</div>
             </td>
-            <td style="font-size:0.75rem; color:#64748b; white-space:nowrap;">
-                ${esc(c.tglMulai || '-')} &ndash; ${esc(c.tglSelesai || '-')}
+
+            <!-- 3. Tahap Progress Pengerjaan (Workflow) -->
+            <td>
+                <div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md font-bold text-[10.5px]" style="background:${stage.badgeBg}; color:${stage.badgeColor}; border:1px solid ${stage.badgeColor}35;">
+                    ${esc(stage.label)}
+                </div>
+                <div class="w-full bg-slate-200/80 rounded-full h-1.5 mt-1 overflow-hidden" style="max-width:130px;">
+                    <div class="h-1.5 rounded-full transition-all duration-300" style="width:${stage.percent}%; background:${stage.badgeColor};"></div>
+                </div>
+                <div class="flex items-center justify-between text-[9.5px] text-slate-400 mt-0.5" style="max-width:130px;">
+                    <span>${stage.percent}% Selesai</span>
+                    ${c.slaStatus && c.slaStatus !== '-' ? `<span class="${c.isOverdueSla ? 'text-rose-600 font-bold' : 'text-slate-400'}">${esc(c.slaStatus)}</span>` : ''}
+                </div>
+                ${revisionBadgeHtml}
             </td>
+
+            <!-- 4. Masa Berlaku & Selisih Hari -->
+            <td>
+                <div class="text-[11px] text-slate-700 font-medium whitespace-nowrap mb-0.5">
+                    ${esc(c.tglMulai || '-')} &ndash; ${esc(c.tglSelesai || '-')}
+                </div>
+                <div>${expiryBadgeHtml}</div>
+                <div class="text-[10px] text-slate-500 mt-1 flex items-center gap-1">
+                    <span>⏱️</span> <span>${processDays !== null ? processDays + ' hari proses' : '-'}</span>
+                </div>
+            </td>
+
+            <!-- 5. Kelengkapan Dokumen -->
             <td>
                 <span class="predikat-badge" style="background:${docColor}15; color:${docColor}; border:1px solid ${docColor}30; font-size:0.68rem; font-weight:600; padding:1px 6px;">
-                    ${esc(c.kelengkapan)}
+                    ${esc(c.kelengkapan || 'Lengkap')}
                 </span>
+                <div>${linkDocHtml}</div>
             </td>
-            <td style="text-align:right; font-weight:700; color:#0f172a; font-size:0.78rem; white-space:nowrap;">${c.nilai ? formatRupiah(c.nilai) : '-'}</td>
+
+            <!-- 6. Nilai Kontrak -->
+            <td style="text-align:right; font-weight:700; color:#0f172a; font-size:0.78rem; white-space:nowrap;">
+                ${c.nilai ? formatRupiah(c.nilai) : '-'}
+            </td>
+
+            <!-- 7. Kepatuhan -->
             <td style="text-align:center;">
                 <span class="predikat-badge" style="background:${statusColor}15; color:${statusColor}; border:1px solid ${statusColor}30; font-size:0.7rem; font-weight:700; padding:1px 6px;">
                     ${isComply ? '✓ Comply' : '✗ Not Comply'}
                 </span>
+            </td>
+
+            <!-- 8. Aksi Detail -->
+            <td style="text-align:center;">
+                <button onclick="openContractDetailModal('${esc(c.noKontrak)}')" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold text-xs transition border border-blue-200 cursor-pointer shadow-2xs" title="Lihat Lifecycle Timeline & Detail Lengkap">
+                    <span>🔍</span> <span>Detail</span>
+                </button>
             </td>
         </tr>`;
     }).join('');
@@ -1743,6 +2015,367 @@ function changeContractPageSize(newSize) {
     if (lastContractComplianceData) {
         renderContractTable(lastContractComplianceData);
     }
+}
+
+// =====================================================
+// MODAL DETAIL KONTRAK & WORKFLOW LIFECYCLE TIMELINE
+// =====================================================
+function openContractDetailModal(noKontrak) {
+    const modal = document.getElementById('contractDetailModal');
+    if (!modal) return;
+
+    const list = (lastContractComplianceData && lastContractComplianceData.list) ? lastContractComplianceData.list : (dashboardData?.contractCompliance?.list || []);
+    const c = list.find(item => item.noKontrak && item.noKontrak.toString().trim() === noKontrak.toString().trim()) || list[0];
+    if (!c) {
+        showToast('Data kontrak tidak ditemukan.', 'error');
+        return;
+    }
+
+    const titleEl = document.getElementById('cdmNoKontrak');
+    const subEl = document.getElementById('cdmVendorSubtitle');
+    const contentEl = document.getElementById('contractDetailContent');
+
+    if (titleEl) titleEl.textContent = `Kontrak #${c.noKontrak}`;
+    if (subEl) subEl.textContent = `${c.vendor} · ${c.jenisPekerjaan || 'Ruang Lingkup'}`;
+
+    const stage = c._stageObj || normalizeContractStageFrontend(c.tahapProgress, c.status, c.tglSelesai);
+    const days = c._daysRemaining !== undefined ? c._daysRemaining : getContractDaysRemaining(c.tglSelesai);
+    const processDays = getContractProcessDays(c.tglPengajuan, c.tglRealisasi);
+    const isComply = c.status && c.status.toLowerCase() === 'comply';
+
+    // Standar 7 Tahapan Stepper
+    const workflowSteps = [
+        { num: 1, key: 'pengajuan', title: 'Pengajuan ke Legal', desc: 'ToR & Penawaran' },
+        { num: 2, key: 'draft', title: 'Draft Keluar', desc: 'Drafting Legalitas' },
+        { num: 3, key: 'paraf_vendor', title: 'Paraf Vendor', desc: 'Review Rekanan' },
+        { num: 4, key: 'paraf_ethos', title: 'Paraf Ethos', desc: 'Review Internal' },
+        { num: 5, key: 'revisi', title: 'Revisi / Renvoi', desc: 'Klausul & Pasal' },
+        { num: 6, key: 'ttd', title: 'Tanda Tangan', desc: 'Direksi & Rekanan' },
+        { num: 7, key: 'aktif', title: 'Aktif & Sah', desc: 'Berlaku Efektif' }
+    ];
+
+    const currentStepNum = stage.step;
+    const hasRevision = stage.isRevision || stage.isRenvoi || (c.statusRevisi && c.statusRevisi.trim() !== '' && c.statusRevisi !== '-');
+
+    let stepperHtml = `
+    <div class="bg-slate-50 border border-slate-200/90 rounded-2xl p-4 shadow-2xs">
+        <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Siklus Pengerjaan Kontrak</span>
+                <span class="px-2 py-0.5 rounded-full text-[11px] font-black" style="background:${stage.badgeBg}; color:${stage.badgeColor}; border:1px solid ${stage.badgeColor}40;">
+                    ${esc(stage.label)}
+                </span>
+            </div>
+            <span class="text-xs font-bold text-slate-700">${stage.percent}% Selesai</span>
+        </div>
+
+        <!-- Progress Bar Stepper Visual -->
+        <div class="w-full bg-slate-200/80 rounded-full h-2 mb-4 overflow-hidden">
+            <div class="h-2 rounded-full transition-all duration-500" style="width:${stage.percent}%; background:${stage.badgeColor};"></div>
+        </div>
+
+        <!-- 7 Steps Visual Badges -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 text-center text-xs">
+    `;
+
+    workflowSteps.forEach(st => {
+        let stateClass = '';
+        let iconHtml = '';
+        let stepBorder = 'border-slate-200';
+        let stepBg = 'bg-white';
+        let textColor = 'text-slate-600';
+
+        if (st.num < 5) {
+            if (currentStepNum > st.num || currentStepNum >= 7) {
+                // Completed
+                stepBorder = 'border-emerald-300';
+                stepBg = 'bg-emerald-50/70';
+                textColor = 'text-emerald-800 font-bold';
+                iconHtml = '✓';
+            } else if (currentStepNum === st.num) {
+                // Active
+                stepBorder = 'border-blue-500 shadow-xs ring-2 ring-blue-100';
+                stepBg = 'bg-blue-50';
+                textColor = 'text-blue-900 font-black';
+                iconHtml = '▶';
+            } else {
+                // Pending
+                iconHtml = st.num;
+                textColor = 'text-slate-400';
+            }
+        } else if (st.num === 5) {
+            // Revisi / Renvoi step
+            if (hasRevision) {
+                if (currentStepNum === 5 || currentStepNum === 6) {
+                    stepBorder = 'border-rose-400 shadow-xs ring-2 ring-rose-100';
+                    stepBg = 'bg-rose-50';
+                    textColor = 'text-rose-900 font-black';
+                    iconHtml = '⚠️';
+                } else if (currentStepNum > 6) {
+                    stepBorder = 'border-amber-300';
+                    stepBg = 'bg-amber-50';
+                    textColor = 'text-amber-800 font-bold';
+                    iconHtml = '✓';
+                } else {
+                    iconHtml = '5';
+                    textColor = 'text-slate-400';
+                }
+            } else {
+                // Skipped / Normal bypass
+                if (currentStepNum >= 7) {
+                    stepBorder = 'border-slate-200';
+                    stepBg = 'bg-slate-100/60';
+                    textColor = 'text-slate-400';
+                    iconHtml = '—';
+                } else {
+                    iconHtml = '5';
+                    textColor = 'text-slate-400';
+                }
+            }
+        } else if (st.num === 6) {
+            // Tanda Tangan
+            if (currentStepNum > 7) {
+                stepBorder = 'border-emerald-300';
+                stepBg = 'bg-emerald-50/70';
+                textColor = 'text-emerald-800 font-bold';
+                iconHtml = '✓';
+            } else if (currentStepNum === 7) {
+                stepBorder = 'border-teal-500 shadow-xs ring-2 ring-teal-100';
+                stepBg = 'bg-teal-50';
+                textColor = 'text-teal-900 font-black';
+                iconHtml = '▶';
+            } else {
+                iconHtml = '6';
+                textColor = 'text-slate-400';
+            }
+        } else if (st.num === 7) {
+            // Aktif & Sah
+            if (currentStepNum >= 8) {
+                stepBorder = 'border-emerald-500 shadow-xs';
+                stepBg = 'bg-emerald-100/80';
+                textColor = 'text-emerald-900 font-black';
+                iconHtml = '🎉';
+            } else {
+                iconHtml = '7';
+                textColor = 'text-slate-400';
+            }
+        }
+
+        stepperHtml += `
+            <div class="border ${stepBorder} ${stepBg} rounded-xl p-2 flex flex-col items-center justify-between transition-all">
+                <div class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${textColor} mb-1 bg-white/80 shadow-2xs">
+                    ${iconHtml}
+                </div>
+                <div class="text-[10px] font-bold ${textColor} leading-tight">${st.title}</div>
+                <div class="text-[8.5px] text-slate-400 mt-0.5">${st.desc}</div>
+            </div>
+        `;
+    });
+
+    stepperHtml += `
+        </div>
+    </div>
+    `;
+
+    // 2-Column Info Grid
+    let infoHtml = `
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
+        <!-- Kolom Kiri: Workflow & Legal SLA -->
+        <div class="bg-gray-50/80 border border-gray-200/80 rounded-xl p-3.5 space-y-2.5">
+            <h4 class="font-bold text-slate-900 text-[11px] uppercase tracking-wider flex items-center gap-1.5 border-b border-gray-200/80 pb-1.5">
+                <span>⚖️</span> Informasi Legalitas &amp; SLA
+            </h4>
+            
+            <div class="flex justify-between items-center">
+                <span class="text-slate-500">Nomor Kontrak:</span>
+                <strong class="text-blue-600 font-mono font-bold">#${esc(c.noKontrak)}</strong>
+            </div>
+
+            <div class="flex justify-between items-center">
+                <span class="text-slate-500">PIC / Divisi Pengaju:</span>
+                <strong class="text-slate-800">${esc(c.picDivisi || '-')}</strong>
+            </div>
+
+            <div class="flex justify-between items-center">
+                <span class="text-slate-500">Tanggal Pengajuan:</span>
+                <strong class="text-slate-800">${esc(c.tglPengajuan || '-')}</strong>
+            </div>
+
+            <div class="flex justify-between items-center">
+                <span class="text-slate-500">Durasi Pengerjaan:</span>
+                <strong class="text-slate-800">${processDays !== null ? `${processDays} Hari Kalender` : '-'}</strong>
+            </div>
+
+            <div class="flex justify-between items-center">
+                <span class="text-slate-500">Target Selesai SLA:</span>
+                <strong class="text-slate-800">${esc(c.targetSelesai || '-')}</strong>
+            </div>
+
+            <div class="flex justify-between items-center">
+                <span class="text-slate-500">Status SLA:</span>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${c.isOverdueSla ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'}">
+                    ${esc(c.slaStatus || (stage.isFinal ? 'Selesai' : 'On Track'))}
+                </span>
+            </div>
+
+            <div class="flex justify-between items-center">
+                <span class="text-slate-500">Tanggal Realisasi TTD:</span>
+                <strong class="text-slate-800">${esc(c.tglRealisasi || (stage.isFinal ? 'Selesai' : 'Dalam Proses'))}</strong>
+            </div>
+        </div>
+
+        <!-- Kolom Kanan: Masa Berlaku & Komersial -->
+        <div class="bg-gray-50/80 border border-gray-200/80 rounded-xl p-3.5 space-y-2.5">
+            <h4 class="font-bold text-slate-900 text-[11px] uppercase tracking-wider flex items-center gap-1.5 border-b border-gray-200/80 pb-1.5">
+                <span>💼</span> Komersial &amp; Masa Berlaku
+            </h4>
+
+            <div class="flex justify-between items-center">
+                <span class="text-slate-500">Mitra Rekanan:</span>
+                <strong class="text-slate-900 truncate max-w-[170px]" title="${esc(c.vendor)}">${esc(c.vendor)}</strong>
+            </div>
+
+            <div class="flex justify-between items-center">
+                <span class="text-slate-500">Nilai Kontrak:</span>
+                <strong class="text-slate-900 font-bold">${c.nilai ? formatRupiah(c.nilai) : '-'}</strong>
+            </div>
+
+            <div class="flex justify-between items-center">
+                <span class="text-slate-500">Periode Kontrak:</span>
+                <strong class="text-slate-800">${esc(c.tglMulai || '-')} &ndash; ${esc(c.tglSelesai || '-')}</strong>
+            </div>
+
+            <div class="flex justify-between items-center">
+                <span class="text-slate-500">Sisa Masa Berlaku:</span>
+                ${days !== null ? (
+                    days < 0 ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800">Lewat ${Math.abs(days)} Hari (Expired)</span>` :
+                    days <= 30 ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900">Kritis Sisa ${days} Hari</span>` :
+                    `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">Sisa ${days} Hari (Aman)</span>`
+                ) : '<span class="text-slate-400">-</span>'}
+            </div>
+
+            <div class="flex justify-between items-center">
+                <span class="text-slate-500">Kelengkapan Dokumen:</span>
+                <strong class="text-slate-800">${esc(c.kelengkapan || 'Lengkap')}</strong>
+            </div>
+
+            <div class="flex justify-between items-center">
+                <span class="text-slate-500">Kepatuhan Regulasi:</span>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${isComply ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
+                    ${isComply ? '✓ Comply' : '✗ Not Comply'}
+                </span>
+            </div>
+
+            <div class="flex justify-between items-center">
+                <span class="text-slate-500">File Draft / Naskah:</span>
+                ${c.linkDokumen && c.linkDokumen.trim() !== '' && c.linkDokumen !== '-' ? `
+                    <a href="${esc(c.linkDokumen)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] transition cursor-pointer">
+                        <span>🔗 Buka File Drive</span>
+                    </a>
+                ` : '<span class="text-slate-400">Belum ada link</span>'}
+            </div>
+        </div>
+    </div>
+    `;
+
+    // Catatan Revisi & Renvoi jika ada
+    let revisionDetailHtml = '';
+    if (hasRevision) {
+        revisionDetailHtml = `
+        <div class="bg-rose-50 border border-rose-200 rounded-xl p-3.5 text-xs text-rose-900">
+            <div class="flex items-center gap-2 font-bold mb-1">
+                <span>🔄</span>
+                <span>Catatan Revisi / Renvoi Kontrak:</span>
+            </div>
+            <p class="text-rose-800 text-[11.5px] leading-relaxed">
+                ${esc(c.statusRevisi || 'Terdapat penyesuaian klausul kontrak yang sedang diproses oleh tim Legal.')}
+            </p>
+        </div>
+        `;
+    }
+
+    // Catatan Tambahan
+    let remarksHtml = '';
+    if (c.keterangan && c.keterangan.trim() !== '' && c.keterangan !== '-') {
+        remarksHtml = `
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-700">
+            <strong class="text-slate-900 block mb-0.5">📝 Catatan Tambahan:</strong>
+            <p class="text-slate-600 leading-relaxed">${esc(c.keterangan)}</p>
+        </div>
+        `;
+    }
+
+    if (contentEl) {
+        contentEl.innerHTML = stepperHtml + infoHtml + revisionDetailHtml + remarksHtml;
+    }
+
+    modal.style.display = 'flex';
+}
+
+function closeContractDetailModal() {
+    const modal = document.getElementById('contractDetailModal');
+    if (modal) modal.style.display = 'none';
+}
+
+// =====================================================
+// MODAL PANDUAN KOLOM SHEET KONTRAK VENDOR
+// =====================================================
+function openContractGuideModal() {
+    const modal = document.getElementById('contractGuideModal');
+    if (modal) modal.style.display = 'flex';
+}
+
+function closeContractGuideModal() {
+    const modal = document.getElementById('contractGuideModal');
+    if (modal) modal.style.display = 'none';
+}
+
+function copyContractHeadersToClipboard() {
+    const headers = [
+        'No Kontrak',
+        'Nama Vendor',
+        'Ruang Lingkup / Jenis Pekerjaan',
+        'PIC / Divisi',
+        'Tanggal Pengajuan ke Legal',
+        'Tanggal Mulai Kontrak',
+        'Tanggal Selesai Kontrak',
+        'Tahap Progress Pengerjaan',
+        'Target Selesai SLA',
+        'Tanggal Realisasi TTD',
+        'Status Revisi / Renvoi',
+        'Kelengkapan Dokumen',
+        'Nilai Kontrak (Rp)',
+        'Status Kepatuhan',
+        'Link Dokumen Kontrak',
+        'Keterangan'
+    ];
+    const textToCopy = headers.join('\t');
+    
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            showToast('16 Header Kolom berhasil disalin ke Clipboard! Tinggal paste di Baris 1 Sheet Google.', 'success');
+        }).catch(() => {
+            fallbackCopyText(textToCopy);
+        });
+    } else {
+        fallbackCopyText(textToCopy);
+    }
+}
+
+function fallbackCopyText(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+        document.execCommand('copy');
+        showToast('16 Header Kolom berhasil disalin ke Clipboard!', 'success');
+    } catch (e) {
+        prompt('Silakan salin header di bawah ini:', text);
+    }
+    document.body.removeChild(ta);
 }
 
 function renderEvaluationsTable(evaluations) {
@@ -2569,16 +3202,14 @@ function openVendorScorecard(vendorName) {
     let topProductsHtml = '';
     if (topProducts.length > 0) {
         topProductsHtml = `
-            <div class="mt-2.5 pt-2 border-t border-slate-200">
-                <div class="flex items-center gap-2 flex-wrap text-[11pt]">
-                    <span class="font-bold text-slate-700 uppercase tracking-wider mr-1">Komoditas Utama:</span>
-                    ${topProducts.map(([pName, count]) => `
-                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[11pt] font-medium bg-slate-100 text-slate-800 border border-slate-300">
-                            <span class="font-bold text-blue-700 font-mono">${count}x</span>
-                            <span class="text-slate-800 truncate max-w-[220px]" title="${esc(pName)}">${esc(pName)}</span>
-                        </span>
-                    `).join('')}
-                </div>
+            <div class="py-1.5 border-t border-slate-200 flex items-center gap-2 flex-wrap text-[9.5pt]">
+                <span class="font-bold text-slate-700 uppercase tracking-wider mr-1">Komoditas Utama:</span>
+                ${topProducts.map(([pName, count]) => `
+                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[9pt] font-medium bg-slate-100 text-slate-800 border border-slate-300">
+                        <span class="font-bold text-blue-700 font-mono">${count}x</span>
+                        <span class="text-slate-800 truncate max-w-[220px]" title="${esc(pName)}">${esc(pName)}</span>
+                    </span>
+                `).join('')}
             </div>
         `;
     }
@@ -2594,28 +3225,28 @@ function openVendorScorecard(vendorName) {
             const dev = calculateDeliveryDeviation(o.expectedDate, o.effectiveDate);
             const isFinishedOnTime = o.isOnTime;
             const statusBadge = isFinishedOnTime
-                ? `<span class="inline-block px-2 py-0.5 rounded text-[11pt] font-bold bg-emerald-50 text-emerald-800 border border-emerald-300 leading-tight">TEPAT WAKTU</span>`
+                ? `<span class="inline-block px-1.5 py-0.5 rounded text-[8.5pt] font-bold bg-emerald-50 text-emerald-800 border border-emerald-300 leading-none">TEPAT WAKTU</span>`
                 : (o.status && o.status.toLowerCase().includes('proses') 
-                    ? `<span class="inline-block px-2 py-0.5 rounded text-[11pt] font-bold bg-blue-50 text-blue-800 border border-blue-300 leading-tight">DALAM PROSES</span>`
-                    : `<span class="inline-block px-2 py-0.5 rounded text-[11pt] font-bold bg-rose-50 text-rose-800 border border-rose-300 leading-tight">TERLAMBAT</span>`);
+                    ? `<span class="inline-block px-1.5 py-0.5 rounded text-[8.5pt] font-bold bg-blue-50 text-blue-800 border border-blue-300 leading-none">DALAM PROSES</span>`
+                    : `<span class="inline-block px-1.5 py-0.5 rounded text-[8.5pt] font-bold bg-rose-50 text-rose-800 border border-rose-300 leading-none">TERLAMBAT</span>`);
 
             return `
-                <tr class="border-b border-slate-200 text-[11pt] hover:bg-slate-50/70">
+                <tr class="hover:bg-slate-50/50">
                     <td class="py-1.5 px-2 text-center text-slate-500 font-bold border-r border-slate-200">${rowIdx + 1}</td>
                     <td class="py-1.5 px-2 font-mono font-bold text-slate-900 whitespace-nowrap align-top border-r border-slate-200">
                         <span title="${esc(o.poNum || '-')}">${esc(o.poNum || '-')}</span>
                     </td>
-                    <td class="py-1.5 px-2 text-slate-800 font-medium align-top border-r border-slate-200 leading-normal">
+                    <td class="py-1.5 px-2 text-slate-800 font-medium align-top border-r border-slate-200 leading-snug">
                         <div class="line-clamp-2" title="${esc(o.product || '-')}">${esc(o.product || '-')}</div>
                     </td>
-                    <td class="py-1.5 px-2 align-top border-r border-slate-200 text-[11pt] leading-normal">
-                        <div class="text-slate-600">Janji: <span class="font-mono font-semibold text-slate-800">${esc(o.expectedDate || '-')}</span></div>
-                        <div class="text-slate-600 mt-0.5">Terima: <span class="font-mono font-bold ${o.effectiveDate && o.effectiveDate !== 'Belum Diterima' ? 'text-slate-900' : 'text-amber-700'}">${esc(o.effectiveDate || '-')}</span></div>
+                    <td class="py-1.5 px-2 align-top border-r border-slate-200 text-[9pt] leading-tight">
+                        <div class="text-slate-500">Janji: <span class="font-mono font-semibold text-slate-800">${esc(o.expectedDate || '-')}</span></div>
+                        <div class="text-slate-500 mt-0.5">Terima: <span class="font-mono font-bold ${o.effectiveDate && o.effectiveDate !== 'Belum Diterima' ? 'text-slate-900' : 'text-amber-700'}">${esc(o.effectiveDate || '-')}</span></div>
                     </td>
                     <td class="py-1.5 px-2 text-center align-top">
-                        <div class="flex flex-col items-center justify-center gap-1">
+                        <div class="flex flex-col items-center justify-center gap-0.5">
                             <div>${statusBadge}</div>
-                            <div class="text-[11pt] leading-tight font-medium ${dev.color}">${esc(dev.text)}</div>
+                            <div class="text-[8.5pt] leading-tight font-medium ${dev.color}">${esc(dev.text)}</div>
                         </div>
                     </td>
                 </tr>
@@ -2629,51 +3260,41 @@ function openVendorScorecard(vendorName) {
         }
 
         recentOrdersTableHtml = `
-            <div class="mt-2 pt-2 border-t border-slate-200">
-                <div class="flex items-center justify-between mb-1">
-                    <span class="text-[11pt] font-bold text-slate-700 uppercase tracking-wider">
-                        Log Detail Transaksi Pemesanan (Purchase Orders):
-                    </span>
-                    <span class="text-[11pt] text-slate-500 font-medium">
-                        Menampilkan ${visibleOrders.length} dari ${vendorOrders.length} pesanan tercatat
-                    </span>
-                </div>
-                <div class="border border-slate-300 overflow-hidden bg-white">
-                    <table class="w-full text-left border-collapse table-fixed">
-                        <colgroup>
-                            <col class="w-[5%]">
-                            <col class="w-[23%]">
-                            <col class="w-[34%]">
-                            <col class="w-[22%]">
-                            <col class="w-[16%]">
-                        </colgroup>
-                        <thead class="bg-slate-100 text-slate-700 font-bold uppercase text-[11pt]">
-                            <tr>
-                                <th class="py-1.5 px-2 border-b border-r border-slate-300 text-center">No</th>
-                                <th class="py-1.5 px-2 border-b border-r border-slate-300">No. PO</th>
-                                <th class="py-1.5 px-2 border-b border-r border-slate-300">Deskripsi Barang / Jasa</th>
-                                <th class="py-1.5 px-2 border-b border-r border-slate-300">Target &amp; Realisasi</th>
-                                <th class="py-1.5 px-2 border-b border-slate-300 text-center">Status SLA</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-200">
-                            ${rowsHtml}
-                        </tbody>
-                        ${remainingCount > 0 ? `
-                        <tbody id="scorecardExtraPoRows" style="display: none;" class="divide-y divide-slate-200">
-                            ${hiddenRowsHtml}
-                        </tbody>
-                        ` : ''}
-                    </table>
-                </div>
-                ${remainingCount > 0 ? `
-                    <div class="text-center mt-2 no-print">
-                        <button type="button" onclick="toggleScorecardExtraPo()" id="btnToggleExtraPo" class="px-3 py-1 rounded text-[11pt] font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 shadow-2xs transition cursor-pointer">
-                            Tampilkan Seluruh (${vendorOrders.length}) Riwayat Pesanan
-                        </button>
-                    </div>
-                ` : ''}
+            <div class="mt-2 border border-slate-300 overflow-hidden bg-white">
+                <table class="w-full text-left border-collapse table-fixed text-[9.5pt]">
+                    <colgroup>
+                        <col class="w-[5%]">
+                        <col class="w-[22%]">
+                        <col class="w-[37%]">
+                        <col class="w-[22%]">
+                        <col class="w-[14%]">
+                    </colgroup>
+                    <thead class="bg-slate-100 text-slate-700 font-bold uppercase text-[9pt] border-b border-slate-300">
+                        <tr>
+                            <th class="py-1.5 px-2 border-r border-slate-300 text-center">No</th>
+                            <th class="py-1.5 px-2 border-r border-slate-300">No. PO</th>
+                            <th class="py-1.5 px-2 border-r border-slate-300">Deskripsi Barang / Jasa</th>
+                            <th class="py-1.5 px-2 border-r border-slate-300">Target &amp; Realisasi</th>
+                            <th class="py-1.5 px-2 text-center">Status SLA</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200">
+                        ${rowsHtml}
+                    </tbody>
+                    ${remainingCount > 0 ? `
+                    <tbody id="scorecardExtraPoRows" style="display: none;" class="divide-y divide-slate-200">
+                        ${hiddenRowsHtml}
+                    </tbody>
+                    ` : ''}
+                </table>
             </div>
+            ${remainingCount > 0 ? `
+                <div class="text-center mt-2 no-print">
+                    <button type="button" onclick="toggleScorecardExtraPo()" id="btnToggleExtraPo" class="px-3 py-1 rounded text-[9.5pt] font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 shadow-2xs transition cursor-pointer">
+                        Tampilkan Seluruh (${vendorOrders.length}) Riwayat Pesanan
+                    </button>
+                </div>
+            ` : ''}
         `;
     }
 
@@ -2720,31 +3341,31 @@ function openVendorScorecard(vendorName) {
     let criteriaTableHtml = '';
     if (allLines.length > 0) {
         criteriaTableHtml = `
-            <div class="mb-3">
-                <div class="bg-slate-800 text-white px-3 py-1.5 text-[11pt] font-bold uppercase tracking-wider">
+            <div class="mb-3 border border-slate-300 overflow-hidden">
+                <div class="bg-slate-800 text-white px-3 py-1 font-bold text-[10pt] uppercase tracking-wider">
                     III. RINCIAN PARAMETER &amp; ASPEK PENILAIAN MUTU
                 </div>
-                <table class="w-full text-[11pt] border border-slate-300 border-collapse">
-                    <thead class="bg-slate-100 text-slate-800 font-bold uppercase text-[11pt]">
+                <table class="w-full text-[10pt] border-collapse">
+                    <thead class="bg-slate-100 text-slate-800 font-bold uppercase border-b border-slate-300 text-[9.5pt]">
                         <tr>
-                            <th class="p-2 border border-slate-300 text-center w-12">No</th>
-                            <th class="p-2 border border-slate-300 text-left">Parameter / Indikator Evaluasi Mutu</th>
-                            <th class="p-2 border border-slate-300 text-center w-28">Skala</th>
-                            <th class="p-2 border border-slate-300 text-center w-28">Skor Capaian</th>
-                            <th class="p-2 border border-slate-300 text-center w-32">Status Mutu</th>
+                            <th class="py-1.5 px-2 border-r border-slate-300 text-center w-10">No</th>
+                            <th class="py-1.5 px-3 border-r border-slate-300 text-left">Parameter / Indikator Evaluasi Mutu</th>
+                            <th class="py-1.5 px-2 border-r border-slate-300 text-center w-24">Skala</th>
+                            <th class="py-1.5 px-2 border-r border-slate-300 text-center w-24">Skor Capaian</th>
+                            <th class="py-1.5 px-2 text-center w-32">Status Mutu</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody class="divide-y divide-slate-200">
                         ${allLines.map((l, idx) => {
                             const lScore = parseFloat(l.score) || 0;
                             const lPred = getPredikat(lScore);
                             return `
-                            <tr class="border-b border-slate-200">
-                                <td class="p-2 border border-slate-300 text-center text-slate-500 font-bold">${idx + 1}</td>
-                                <td class="p-2 border border-slate-300 font-semibold text-slate-800">${esc(l.name)}</td>
-                                <td class="p-2 border border-slate-300 text-center text-slate-500 font-mono">1.00 - 5.00</td>
-                                <td class="p-2 border border-slate-300 text-center font-bold text-slate-900 font-mono">${lScore.toFixed(2)}</td>
-                                <td class="p-2 border border-slate-300 text-center font-semibold text-slate-700">${esc(lPred)}</td>
+                            <tr class="hover:bg-slate-50/50">
+                                <td class="py-1.5 px-2 border-r border-slate-300 text-center text-slate-500 font-bold">${idx + 1}</td>
+                                <td class="py-1.5 px-3 border-r border-slate-300 font-semibold text-slate-800">${esc(l.name)}</td>
+                                <td class="py-1.5 px-2 border-r border-slate-300 text-center text-slate-500 font-mono">1.00 - 5.00</td>
+                                <td class="py-1.5 px-2 border-r border-slate-300 text-center font-bold text-slate-900 font-mono">${lScore.toFixed(2)}</td>
+                                <td class="py-1.5 px-2 text-center font-semibold text-slate-700">${esc(lPred)}</td>
                             </tr>`;
                         }).join('')}
                     </tbody>
@@ -2754,102 +3375,105 @@ function openVendorScorecard(vendorName) {
     }
 
     printArea.innerHTML = `
-        <!-- KOP SURAT RESMI KORPORAT -->
-        <div class="pb-2.5 mb-2.5">
-            <div class="flex items-center justify-between gap-4">
-                <div class="flex-1 max-w-[460px]">
-                    <img src="assets/header-ethos.png" alt="PT Etos Kreatif Indonesia" class="w-full h-auto max-h-[85px] object-contain object-left">
-                </div>
-                <div class="border border-slate-300 py-2 px-3 text-right text-[11pt] bg-slate-50 leading-normal min-w-[210px]">
-                    <div class="font-bold text-slate-800">NO. DOKUMEN: <span class="font-mono text-slate-900">${docNo}</span></div>
-                    <div class="text-slate-600 mt-0.5">TANGGAL: <strong>${todayStr}</strong></div>
-                    <div class="text-slate-600 mt-0.5">KLASIFIKASI: <strong class="text-slate-900">INTERNAL / RAHASIA</strong></div>
-                </div>
+        <!-- KOP RESMI DOKUMEN -->
+        <div class="mb-3">
+            <!-- Banner Header Gambar Ethos Full Width (Logo Besar di Kiri) -->
+            <div class="w-full overflow-hidden mb-1.5">
+                <img src="assets/header-ethos.png" alt="PT Etos Kreatif Indonesia" class="w-full h-auto object-contain">
             </div>
-            <div class="text-left px-0.5 mt-1.5 mb-1.5">
-                <p class="text-[11pt] text-slate-700 font-bold leading-tight">Divisi Procurement / Vendor Management System</p>
-            </div>
-            <!-- Double Line Rule Klasik Standard Surat Resmi Korporat -->
-            <div class="border-b-2 border-slate-900 mt-1 mb-0.5"></div>
-            <div class="border-b border-slate-300 mb-2"></div>
 
-            <div class="text-center my-2">
+            <!-- Bar Metadata Dokumen Resmi (Terintegrasi & Rapi) -->
+            <div class="flex items-center justify-between border-y border-slate-300 py-1 px-2.5 bg-slate-50 text-[9.5pt] text-slate-700 font-medium">
+                <div>
+                    Divisi: <strong class="text-slate-900">Procurement / Vendor Management System</strong>
+                </div>
+                <div class="flex items-center gap-4 text-right">
+                    <div>No. Dokumen: <strong class="font-mono text-slate-900">${docNo}</strong></div>
+                    <div>Tanggal: <strong class="text-slate-900">${todayStr}</strong></div>
+                    <div>Klasifikasi: <strong class="text-slate-900">Internal / Rahasia</strong></div>
+                </div>
+            </div>
+
+            <!-- Judul Resmi Dokumen -->
+            <div class="text-center my-2.5">
                 <h1 class="text-base sm:text-lg font-black text-slate-900 uppercase tracking-wide leading-tight">
                     LEMBAR HASIL PENILAIAN &amp; RAPOR KINERJA REKANAN
                 </h1>
-                <p class="text-[11pt] font-semibold text-slate-500 uppercase tracking-wider mt-1">
+                <p class="text-[9.5pt] font-semibold text-slate-500 uppercase tracking-wider mt-0.5">
                     OFFICIAL VENDOR PERFORMANCE SCORECARD &amp; SERVICE LEVEL ASSESSMENT
                 </p>
             </div>
         </div>
 
         <!-- I. IDENTITAS REKANAN & INFORMASI PENILAIAN -->
-        <div class="mb-3">
-            <div class="bg-slate-800 text-white px-3 py-1.5 text-[11pt] font-bold uppercase tracking-wider">
+        <div class="mb-3 border border-slate-300 overflow-hidden">
+            <div class="bg-slate-800 text-white px-3 py-1 font-bold text-[10pt] uppercase tracking-wider">
                 I. IDENTITAS REKANAN &amp; INFORMASI PENILAIAN
             </div>
-            <table class="w-full text-[11pt] border border-slate-300 border-collapse">
+            <table class="w-full text-[10pt] border-collapse">
                 <tbody>
                     <tr class="border-b border-slate-200">
-                        <td class="bg-slate-50 py-2 px-2.5 font-semibold text-slate-600 w-[22%] border-r border-slate-200">Nama Rekanan / Vendor</td>
-                        <td class="py-2 px-2.5 font-bold text-slate-900 w-[28%] border-r border-slate-200">${esc(vendorName)}</td>
-                        <td class="bg-slate-50 py-2 px-2.5 font-semibold text-slate-600 w-[22%] border-r border-slate-200">Penilai / Evaluator</td>
-                        <td class="py-2 px-2.5 font-bold text-blue-900 w-[28%]">${esc(displayAssessor)}</td>
+                        <td class="bg-slate-50 py-1.5 px-3 font-semibold text-slate-600 w-[22%] border-r border-slate-200">Nama Rekanan / Vendor</td>
+                        <td class="py-1.5 px-3 font-bold text-slate-900 w-[28%] border-r border-slate-200">${esc(vendorName)}</td>
+                        <td class="bg-slate-50 py-1.5 px-3 font-semibold text-slate-600 w-[22%] border-r border-slate-200">Penilai / Evaluator</td>
+                        <td class="py-1.5 px-3 font-bold text-blue-900 w-[28%]">${esc(displayAssessor)}</td>
                     </tr>
                     <tr class="border-b border-slate-200">
-                        <td class="bg-slate-50 py-2 px-2.5 font-semibold text-slate-600 border-r border-slate-200">Kategori / Klasifikasi Usaha</td>
-                        <td class="py-2 px-2.5 text-slate-800 border-r border-slate-200">${esc(categoryName)}</td>
-                        <td class="bg-slate-50 py-2 px-2.5 font-semibold text-slate-600 border-r border-slate-200">Periode Penilaian</td>
-                        <td class="py-2 px-2.5 font-bold text-slate-800">${esc(periodLabel)}</td>
+                        <td class="bg-slate-50 py-1.5 px-3 font-semibold text-slate-600 border-r border-slate-200">Kategori / Klasifikasi Usaha</td>
+                        <td class="py-1.5 px-3 text-slate-800 border-r border-slate-200">${esc(categoryName)}</td>
+                        <td class="bg-slate-50 py-1.5 px-3 font-semibold text-slate-600 border-r border-slate-200">Periode Penilaian</td>
+                        <td class="py-1.5 px-3 font-bold text-slate-800">${esc(periodLabel)}</td>
                     </tr>
                     <tr class="border-b border-slate-200">
-                        <td class="bg-slate-50 py-2 px-2.5 font-semibold text-slate-600 border-r border-slate-200">Nomor Kontrak / PKS</td>
-                        <td class="py-2 px-2.5 font-mono text-slate-800 border-r border-slate-200">${esc(contractNo)}</td>
-                        <td class="bg-slate-50 py-2 px-2.5 font-semibold text-slate-600 border-r border-slate-200">Tanggal Pelaksanaan Evaluasi</td>
-                        <td class="py-2 px-2.5 text-slate-800">${esc(evalDateStr)}</td>
+                        <td class="bg-slate-50 py-1.5 px-3 font-semibold text-slate-600 border-r border-slate-200">Nomor Kontrak / PKS</td>
+                        <td class="py-1.5 px-3 font-mono text-slate-800 border-r border-slate-200">${esc(contractNo)}</td>
+                        <td class="bg-slate-50 py-1.5 px-3 font-semibold text-slate-600 border-r border-slate-200">Tanggal Pelaksanaan Evaluasi</td>
+                        <td class="py-1.5 px-3 text-slate-800">${esc(evalDateStr)}</td>
                     </tr>
                     <tr>
-                        <td class="bg-slate-50 py-2 px-2.5 font-semibold text-slate-600 border-r border-slate-200">Status Legalitas &amp; Kontrak</td>
-                        <td class="py-2 px-2.5 text-slate-800 border-r border-slate-200">${esc(contractStatus)}</td>
-                        <td class="bg-slate-50 py-2 px-2.5 font-semibold text-slate-600 border-r border-slate-200">Total Akumulasi Transaksi</td>
-                        <td class="py-2 px-2.5 font-mono font-bold text-slate-900">${formatRupiah(totalSpend)}</td>
+                        <td class="bg-slate-50 py-1.5 px-3 font-semibold text-slate-600 border-r border-slate-200">Status Legalitas &amp; Kontrak</td>
+                        <td class="py-1.5 px-3 text-slate-800 border-r border-slate-200">${esc(contractStatus)}</td>
+                        <td class="bg-slate-50 py-1.5 px-3 font-semibold text-slate-600 border-r border-slate-200">Total Akumulasi Transaksi</td>
+                        <td class="py-1.5 px-3 font-mono font-bold text-slate-900">${formatRupiah(totalSpend)}</td>
                     </tr>
                 </tbody>
             </table>
         </div>
 
         <!-- II. RINGKASAN EKSEKUTIF CAPAIAN KINERJA -->
-        <div class="mb-3">
-            <div class="bg-slate-800 text-white px-3 py-1.5 text-[11pt] font-bold uppercase tracking-wider">
+        <div class="mb-3 border border-slate-300 overflow-hidden">
+            <div class="bg-slate-800 text-white px-3 py-1 font-bold text-[10pt] uppercase tracking-wider">
                 II. RINGKASAN EKSEKUTIF CAPAIAN KINERJA
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 my-2">
-                <div class="border border-slate-300 bg-white py-2 px-3 text-center">
-                    <div class="text-[11pt] font-bold text-slate-600 uppercase tracking-wide">Skor Kinerja Rata-Rata</div>
-                    <div class="text-2xl font-black text-slate-900 mt-1">${avgScore > 0 ? avgScore.toFixed(2) : 'Belum Dinilai'}</div>
-                    <div class="text-[11pt] text-slate-500 font-medium mt-0.5">Skala 5.00 (Indeks: ${score100}%)</div>
+            <div class="p-2.5 bg-white space-y-2">
+                <div class="grid grid-cols-3 gap-2 text-center">
+                    <div class="border border-slate-200 bg-slate-50/70 py-2 px-2 rounded">
+                        <div class="text-[9pt] font-bold text-slate-600 uppercase tracking-wide">Skor Kinerja Rata-Rata</div>
+                        <div class="text-2xl font-black text-slate-900 my-0.5 font-mono">${avgScore > 0 ? avgScore.toFixed(2) : 'Belum Dinilai'}</div>
+                        <div class="text-[9pt] text-slate-500 font-semibold">Skala 5.00 (Indeks: ${score100}%)</div>
+                    </div>
+                    <div class="border border-slate-200 bg-slate-50/70 py-2 px-2 rounded">
+                        <div class="text-[9pt] font-bold text-slate-600 uppercase tracking-wide">Ketepatan Pengiriman (SLA)</div>
+                        <div class="text-2xl font-black ${onTimeRatePct >= 80 ? 'text-emerald-700' : 'text-rose-700'} my-0.5 font-mono">${onTimeRatePct}%</div>
+                        <div class="text-[9pt] text-slate-500 font-semibold">${onTimePo} tepat waktu dari ${totalPo} PO</div>
+                    </div>
+                    <div class="border border-slate-200 bg-slate-50/70 py-2 px-2 rounded">
+                        <div class="text-[9pt] font-bold text-slate-600 uppercase tracking-wide">Predikat Mutu Kinerja</div>
+                        <div class="text-xl font-black text-slate-900 my-0.5 uppercase">${esc(predikat)}</div>
+                        <div class="text-[9pt] text-slate-500 font-semibold">${evals.length} sesi evaluasi tercatat</div>
+                    </div>
                 </div>
-                <div class="border border-slate-300 bg-white py-2 px-3 text-center">
-                    <div class="text-[11pt] font-bold text-slate-600 uppercase tracking-wide">Ketepatan Pengiriman (SLA)</div>
-                    <div class="text-2xl font-black ${onTimeRatePct >= 80 ? 'text-emerald-700' : 'text-rose-700'} mt-1 font-mono">${onTimeRatePct}%</div>
-                    <div class="text-[11pt] text-slate-500 font-medium mt-0.5">${onTimePo} tepat waktu dari ${totalPo} PO</div>
-                </div>
-                <div class="border border-slate-300 bg-white py-2 px-3 text-center">
-                    <div class="text-[11pt] font-bold text-slate-600 uppercase tracking-wide">Predikat Mutu Kinerja</div>
-                    <div class="text-xl font-black text-slate-900 mt-1 uppercase">${esc(predikat)}</div>
-                    <div class="text-[11pt] text-slate-500 font-medium mt-0.5">${evals.length} sesi evaluasi</div>
-                </div>
-            </div>
 
-            <!-- Rekomendasi Sourcing Formal -->
-            <div class="border border-slate-300 py-2 px-3 text-[11pt] bg-slate-50">
-                <div class="flex items-center gap-2 flex-wrap">
-                    <span class="font-bold text-slate-700 uppercase tracking-wide">Status Rekomendasi Sourcing:</span>
-                    <span class="inline-block px-2 py-0.5 rounded text-[11pt] font-bold border ${recBadgeClass}">
-                        ${recTitle}
-                    </span>
+                <!-- Rekomendasi Sourcing Formal -->
+                <div class="border border-slate-200 bg-slate-50 p-2.5 rounded text-[10pt]">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="font-bold text-slate-800 uppercase tracking-wide">Status Rekomendasi Sourcing:</span>
+                        <span class="inline-block px-2 py-0.5 rounded text-[9.5pt] font-bold border ${recBadgeClass}">
+                            ${recTitle}
+                        </span>
+                    </div>
+                    <div class="text-slate-700 leading-normal text-[9.5pt] mt-1">${recDesc}</div>
                 </div>
-                <div class="text-slate-600 leading-normal text-[11pt] mt-1">${recDesc}</div>
             </div>
         </div>
 
@@ -2857,31 +3481,28 @@ function openVendorScorecard(vendorName) {
         ${criteriaTableHtml}
 
         <!-- IV. REKAPITULASI PEMENUHAN SLA LOGISTIK & LOG PEMESANAN (PO) -->
-        <div class="mb-3">
-            <div class="bg-slate-800 text-white px-3 py-1.5 text-[11pt] font-bold uppercase tracking-wider flex items-center justify-between">
+        <div class="mb-3 border border-slate-300 overflow-hidden">
+            <div class="bg-slate-800 text-white px-3 py-1 font-bold text-[10pt] uppercase tracking-wider flex items-center justify-between">
                 <span>IV. REKAPITULASI PEMENUHAN SLA LOGISTIK &amp; RIWAYAT PEMESANAN (PO)</span>
-                <span class="text-[11pt] font-mono font-normal">
-                    Target SLA: Min. 80% Tepat Waktu
-                </span>
+                <span class="text-[9pt] font-mono font-normal">Target SLA: Min. 80% Tepat Waktu</span>
             </div>
-
-            <div class="border border-slate-300 p-2.5 bg-white">
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center mb-2">
-                    <div class="border border-slate-200 p-1.5 bg-slate-50">
-                        <span class="text-[11pt] text-slate-600 uppercase font-bold block">Total Pesanan PO</span>
-                        <strong class="text-base font-black text-slate-900 block font-mono mt-0.5">${totalPo} PO</strong>
+            <div class="p-2.5 bg-white">
+                <div class="grid grid-cols-4 gap-2 text-center mb-2">
+                    <div class="border border-slate-200 p-1.5 bg-slate-50 rounded">
+                        <span class="text-[9pt] text-slate-600 uppercase font-bold block">Total Pesanan PO</span>
+                        <strong class="text-sm font-black text-slate-900 block font-mono mt-0.5">${totalPo} PO</strong>
                     </div>
-                    <div class="border border-emerald-200 p-1.5 bg-emerald-50/50">
-                        <span class="text-[11pt] text-emerald-800 uppercase font-bold block">Tepat Waktu</span>
-                        <strong class="text-base font-black text-emerald-700 block font-mono mt-0.5">${onTimePo} PO (${onTimePct}%)</strong>
+                    <div class="border border-emerald-200 p-1.5 bg-emerald-50/50 rounded">
+                        <span class="text-[9pt] text-emerald-800 uppercase font-bold block">Tepat Waktu</span>
+                        <strong class="text-sm font-black text-emerald-700 block font-mono mt-0.5">${onTimePo} PO (${onTimePct}%)</strong>
                     </div>
-                    <div class="border border-rose-200 p-1.5 bg-rose-50/50">
-                        <span class="text-[11pt] text-rose-800 uppercase font-bold block">Terlambat</span>
-                        <strong class="text-base font-black text-rose-700 block font-mono mt-0.5">${latePo} PO (${latePct}%)</strong>
+                    <div class="border border-rose-200 p-1.5 bg-rose-50/50 rounded">
+                        <span class="text-[9pt] text-rose-800 uppercase font-bold block">Terlambat</span>
+                        <strong class="text-sm font-black text-rose-700 block font-mono mt-0.5">${latePo} PO (${latePct}%)</strong>
                     </div>
-                    <div class="border border-slate-200 p-1.5 bg-slate-50">
-                        <span class="text-[11pt] text-slate-600 uppercase font-bold block">Tingkat SLA Capaian</span>
-                        <strong class="text-base font-black ${onTimeRatePct >= 80 ? 'text-emerald-700' : 'text-rose-700'} block font-mono mt-0.5">${onTimeRatePct}%</strong>
+                    <div class="border border-slate-200 p-1.5 bg-slate-50 rounded">
+                        <span class="text-[9pt] text-slate-600 uppercase font-bold block">Tingkat SLA Capaian</span>
+                        <strong class="text-sm font-black ${onTimeRatePct >= 80 ? 'text-emerald-700' : 'text-rose-700'} block font-mono mt-0.5">${onTimeRatePct}%</strong>
                     </div>
                 </div>
 
@@ -2891,64 +3512,69 @@ function openVendorScorecard(vendorName) {
         </div>
 
         <!-- V. CATATAN EVALUASI & TINDAK LANJUT MANAJEMEN -->
-        <div class="mb-3">
-            <div class="bg-slate-800 text-white px-3 py-1.5 text-[11pt] font-bold uppercase tracking-wider">
+        <div class="mb-3 border border-slate-300 overflow-hidden">
+            <div class="bg-slate-800 text-white px-3 py-1 font-bold text-[10pt] uppercase tracking-wider">
                 V. CATATAN EVALUASI &amp; TINDAK LANJUT MANAJEMEN
             </div>
-            <div class="border border-slate-300 p-3 text-[11pt] bg-white min-h-[40px] leading-relaxed">
+            <div class="p-2.5 text-[9.5pt] bg-white min-h-[38px] leading-relaxed">
                 ${catatanList.length > 0 
-                    ? `<ul class="list-disc list-inside space-y-1 text-slate-800 font-medium">${catatanList.map(c => `<li>${esc(c)}</li>`).join('')}</ul>` 
-                    : '<p class="text-slate-500 italic">Tidak ada catatan kendala khusus yang dilaporkan oleh evaluator pada periode ini. Kinerja operasional berjalan sesuai parameter standar.</p>'}
+                    ? `<ul class="list-disc list-inside space-y-0.5 text-slate-800 font-medium">${catatanList.map(c => `<li>${esc(c)}</li>`).join('')}</ul>` 
+                    : '<p class="text-slate-400 italic">Tidak ada catatan kendala khusus yang dilaporkan oleh evaluator pada periode ini. Kinerja operasional berjalan sesuai parameter standar.</p>'}
             </div>
         </div>
 
         <!-- VI. LEMBAR PENGESAHAN TANDA TANGAN RESMI -->
-        <div class="mt-3.5 pt-2 border-t-2 border-slate-800 print-avoid-break">
-            <div class="text-center font-bold text-slate-800 text-[11pt] uppercase tracking-wider mb-2.5">
+        <div class="mt-3.5 border border-slate-300 overflow-hidden print-avoid-break">
+            <div class="bg-slate-800 text-white px-3 py-1 font-bold text-[10pt] uppercase tracking-wider text-center">
                 LEMBAR PENGESAHAN EVALUASI KINERJA REKANAN
             </div>
-            <div class="grid grid-cols-3 gap-3 text-center">
-                <div class="border border-slate-300 p-2.5 bg-white flex flex-col justify-between">
+            <div class="grid grid-cols-3 divide-x divide-slate-300 bg-white text-center">
+                <!-- Kolom 1 -->
+                <div class="p-2.5 flex flex-col justify-between min-h-[145px]">
                     <div>
-                        <div class="text-slate-600 text-[11pt] uppercase font-bold">Dipersiapkan / Dinilai Oleh:</div>
-                        <div class="font-bold text-slate-900 mt-1 text-[11pt]">Evaluator / Penilai Teknis</div>
+                        <div class="text-slate-600 text-[9pt] uppercase font-bold">Dipersiapkan / Dinilai Oleh:</div>
+                        <div class="font-bold text-slate-900 text-[9.5pt] mt-0.5">Evaluator / Penilai Teknis</div>
                     </div>
-                    <div class="h-14 flex items-center justify-center my-1.5">
-                        <span class="text-[11pt] text-slate-300 italic">[ Tanda Tangan ]</span>
+                    <div class="my-2.5">
+                        <span class="text-[8.5pt] text-slate-300 italic">[ Tanda Tangan ]</span>
                     </div>
                     <div>
-                        <div class="border-t border-slate-700 pt-1.5 font-bold text-slate-900 text-[11pt]">Arief Yanuar Rachman</div>
-                        <div class="text-[11pt] text-slate-600 font-medium">Contract &amp; Compliance Officer</div>
+                        <div class="font-bold text-slate-900 text-[10pt] border-t border-slate-700 pt-1">Arief Yanuar Rachman</div>
+                        <div class="text-slate-600 text-[9pt] mt-0.5 font-medium">Contract &amp; Compliance Officer</div>
                     </div>
                 </div>
-                <div class="border border-slate-300 p-2.5 bg-white flex flex-col justify-between">
+
+                <!-- Kolom 2 -->
+                <div class="p-2.5 flex flex-col justify-between min-h-[145px]">
                     <div>
-                        <div class="text-slate-600 text-[11pt] uppercase font-bold">Diperiksa Oleh:</div>
-                        <div class="font-bold text-slate-900 mt-1 text-[11pt]">Vendor Management System</div>
+                        <div class="text-slate-600 text-[9pt] uppercase font-bold">Diperiksa Oleh:</div>
+                        <div class="font-bold text-slate-900 text-[9.5pt] mt-0.5">Vendor Management System</div>
                     </div>
-                    <div class="h-14 flex items-center justify-center my-1.5">
-                        <span class="text-[11pt] text-slate-300 italic">[ Tanda Tangan ]</span>
+                    <div class="my-2.5">
+                        <span class="text-[8.5pt] text-slate-300 italic">[ Tanda Tangan ]</span>
                     </div>
                     <div>
-                        <div class="border-t border-slate-700 pt-1.5 font-bold text-slate-900 text-[11pt]">Murtiyoso</div>
-                        <div class="text-[11pt] text-slate-600 font-medium">Supervisor</div>
+                        <div class="font-bold text-slate-900 text-[10pt] border-t border-slate-700 pt-1">Murtiyoso</div>
+                        <div class="text-slate-600 text-[9pt] mt-0.5 font-medium">Supervisor</div>
                     </div>
                 </div>
-                <div class="border border-slate-300 p-2.5 bg-white flex flex-col justify-between">
+
+                <!-- Kolom 3 -->
+                <div class="p-2.5 flex flex-col justify-between min-h-[145px]">
                     <div>
-                        <div class="text-slate-600 text-[11pt] uppercase font-bold">Disetujui Oleh:</div>
-                        <div class="font-bold text-slate-900 mt-1 text-[11pt]">Manajer Procurement</div>
+                        <div class="text-slate-600 text-[9pt] uppercase font-bold">Disetujui Oleh:</div>
+                        <div class="font-bold text-slate-900 text-[9.5pt] mt-0.5">Manajer Procurement</div>
                     </div>
-                    <div class="h-14 flex items-center justify-center my-1.5">
-                        <span class="text-[11pt] text-slate-300 italic">[ Tanda Tangan &amp; Stempel ]</span>
+                    <div class="my-2.5">
+                        <span class="text-[8.5pt] text-slate-300 italic">[ Tanda Tangan &amp; Stempel ]</span>
                     </div>
                     <div>
-                        <div class="border-t border-slate-700 pt-1.5 font-bold text-slate-900 text-[11pt]">Achmad Yani Aziz</div>
-                        <div class="text-[11pt] text-slate-600 font-medium">Pjs. VP SSD &amp; Procurement</div>
+                        <div class="font-bold text-slate-900 text-[10pt] border-t border-slate-700 pt-1">Achmad Yani Aziz</div>
+                        <div class="text-slate-600 text-[9pt] mt-0.5 font-medium">Pjs. VP SSD &amp; Procurement</div>
                     </div>
                 </div>
             </div>
-            <div class="text-[11pt] text-slate-400 text-right mt-2 italic">
+            <div class="bg-slate-50 border-t border-slate-200 py-1 px-3 text-[8.5pt] text-slate-500 text-right italic">
                 Dokumen ini dicetak secara otomatis dan tersertifikasi melalui Sistem Vendor Management System (VMS) PT Etos Kreatif Indonesia.
             </div>
         </div>

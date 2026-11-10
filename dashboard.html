@@ -322,7 +322,7 @@ tailwind.config = {
     .tremor-card { padding: 1.15rem; }
   }
 
-  /* Gaya Font & Rapor Scorecard (FITUR Rapor Vendor - Arial 11pt) */
+  /* Gaya Font & Rapor Scorecard (FITUR Rapor Vendor - Arial Standar Korporat) */
   #scorecardPrintArea,
   #scorecardPrintArea * {
     font-family: Arial, Helvetica, sans-serif !important;
@@ -333,14 +333,12 @@ tailwind.config = {
     color: #0f172a !important;
   }
   #scorecardPrintArea table {
-    font-size: 11pt !important;
     font-family: Arial, Helvetica, sans-serif !important;
     border-collapse: collapse !important;
   }
   #scorecardPrintArea th,
   #scorecardPrintArea td {
     font-family: Arial, Helvetica, sans-serif !important;
-    font-size: 11pt !important;
   }
 
   /* Print Styles for Scorecard (FITUR 5) */
@@ -364,7 +362,7 @@ tailwind.config = {
     body > *:not(#vendorScorecardModal) {
       display: none !important;
     }
-    header, footer, main, .filter-bar, #dashboardTabs, #adminAuthOverlay, #erpExportModal, .toast-box, .no-print, 
+    header, footer, main, .filter-bar, #dashboardTabs, #adminAuthOverlay, #erpExportModal, #contractDetailModal, #contractGuideModal, .toast-box, .no-print, 
     #bentoDashboard, #sectionContracts, #sectionEvaluations, #sectionKraljic, .kpi-grid, 
     #contractAlertBanner, #expiringContractsBanner, .modal-backdrop {
       display: none !important;
@@ -774,47 +772,150 @@ tailwind.config = {
             </div>
         </div>
 
-        <!-- ========== CONTRACT REPOSITORY TABLE ========== -->
+        <!-- ========== CONTRACT REPOSITORY & COMPLIANCE TABLE ========== -->
         <div class="tremor-card mb-6" id="sectionContracts">
-            <div class="flex items-start justify-between gap-4 mb-3 flex-wrap">
+            <div class="flex items-start justify-between gap-4 mb-4 flex-wrap">
                 <div>
-                    <h3 class="text-base font-bold text-gray-900">Contract Repository &amp; Compliance</h3>
-                    <p class="text-xs text-gray-500 mt-0.5">Monitoring kelengkapan, kepatuhan, dan masa berlaku kontrak vendor dari sheet Kontrak Vendor</p>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xl">📑</span>
+                        <h3 class="text-base font-bold text-gray-900">Contract Repository &amp; Compliance</h3>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-0.5">Monitoring kelengkapan, kepatuhan, siklus pengerjaan legal, selisih hari &amp; masa berlaku kontrak vendor</p>
                 </div>
                 <div class="flex items-center gap-2 flex-wrap">
-                    <input type="text" id="contractSearchInput" placeholder="Cari No. Kontrak / Vendor..." class="text-xs px-3 py-2 rounded-xl border border-gray-200 bg-white text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xs" style="min-width: 220px;">
+                    <input type="text" id="contractSearchInput" placeholder="Cari No. Kontrak, Vendor, Lingkup, Divisi..." class="text-xs px-3 py-2 rounded-xl border border-gray-200 bg-white text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xs" style="min-width: 240px;">
                     <span class="tremor-badge tremor-badge-gray" id="contractBadgeCount">0 Kontrak</span>
-                    <button onclick="exportContractCsv()" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 text-xs font-semibold text-gray-700 transition" title="Export tabel kontrak ke CSV">
+                    <button onclick="openContractGuideModal()" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-xs font-semibold text-blue-700 transition cursor-pointer" title="Panduan Kolom Sheet Kontrak Vendor">
+                        📋 Panduan Kolom
+                    </button>
+                    <button onclick="exportContractCsv()" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 text-xs font-semibold text-gray-700 transition cursor-pointer" title="Export tabel kontrak ke CSV">
                         📥 CSV
                     </button>
                 </div>
             </div>
 
-            <!-- Quick Filter Pill Bar for Contract Expiry Tracker (FITUR 2) -->
-            <div class="flex items-center gap-1.5 mb-4 flex-wrap text-xs" id="contractExpiryFilters">
-                <span class="text-gray-500 font-semibold mr-1">Masa Berlaku:</span>
-                <button onclick="filterContractsByExpiry('all')" id="btnExpAll" class="px-2.5 py-1 rounded-lg bg-blue-600 text-white font-bold transition shadow-2xs">Semua</button>
-                <button onclick="filterContractsByExpiry('expired')" id="btnExpExpired" class="px-2.5 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-rose-50 hover:text-rose-700 border border-gray-200/80 transition font-medium">🔴 Kedaluwarsa (<span id="countExpExpired">0</span>)</button>
-                <button onclick="filterContractsByExpiry('critical')" id="btnExpCritical" class="px-2.5 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-amber-50 hover:text-amber-800 border border-gray-200/80 transition font-medium">🟡 Kritis &le;30 Hari (<span id="countExpCritical">0</span>)</button>
-                <button onclick="filterContractsByExpiry('warning')" id="btnExpWarning" class="px-2.5 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-orange-50 hover:text-orange-700 border border-gray-200/80 transition font-medium">🟠 Perhatian 31-90 Hari (<span id="countExpWarning">0</span>)</button>
-                <button onclick="filterContractsByExpiry('safe')" id="btnExpSafe" class="px-2.5 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 border border-gray-200/80 transition font-medium">🟢 Aktif Aman (<span id="countExpSafe">0</span>)</button>
+            <!-- Pipeline Funnel / Summary Metric Cards -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 mb-4">
+                <div class="bg-slate-50 border border-slate-200/80 rounded-xl p-3 flex flex-col justify-between">
+                    <div class="flex items-center justify-between text-slate-500 mb-1">
+                        <span class="text-[11px] font-semibold">Total Kontrak</span>
+                        <span class="text-xs">📑</span>
+                    </div>
+                    <div class="flex items-baseline gap-1.5">
+                        <span class="text-lg font-black text-slate-900" id="summaryTotalContracts">0</span>
+                        <span class="text-[10px] text-slate-500" id="summaryActiveContractsCount">0 aktif</span>
+                    </div>
+                    <div class="text-[10px] text-slate-400 truncate mt-0.5" id="summaryTotalValue">Rp 0</div>
+                </div>
+
+                <div class="bg-blue-50/70 border border-blue-200/80 rounded-xl p-3 flex flex-col justify-between">
+                    <div class="flex items-center justify-between text-blue-700 mb-1">
+                        <span class="text-[11px] font-semibold">Proses Legal</span>
+                        <span class="text-xs">⚖️</span>
+                    </div>
+                    <div class="flex items-baseline gap-1.5">
+                        <span class="text-lg font-black text-blue-900" id="summaryLegalDraftCount">0</span>
+                        <span class="text-[10px] text-blue-700">kontrak</span>
+                    </div>
+                    <div class="text-[10px] text-blue-600 truncate mt-0.5">Pengajuan &amp; Draft</div>
+                </div>
+
+                <div class="bg-amber-50/70 border border-amber-200/80 rounded-xl p-3 flex flex-col justify-between">
+                    <div class="flex items-center justify-between text-amber-800 mb-1">
+                        <span class="text-[11px] font-semibold">Paraf &amp; Review</span>
+                        <span class="text-xs">✍️</span>
+                    </div>
+                    <div class="flex items-baseline gap-1.5">
+                        <span class="text-lg font-black text-amber-900" id="summaryParafCount">0</span>
+                        <span class="text-[10px] text-amber-800">kontrak</span>
+                    </div>
+                    <div class="text-[10px] text-amber-700 truncate mt-0.5">Paraf Vendor &amp; Ethos</div>
+                </div>
+
+                <div class="bg-rose-50/70 border border-rose-200/80 rounded-xl p-3 flex flex-col justify-between">
+                    <div class="flex items-center justify-between text-rose-800 mb-1">
+                        <span class="text-[11px] font-semibold">Revisi / Renvoi</span>
+                        <span class="text-xs">🔄</span>
+                    </div>
+                    <div class="flex items-baseline gap-1.5">
+                        <span class="text-lg font-black text-rose-900" id="summaryRevisiRenvoiCount">0</span>
+                        <span class="text-[10px] text-rose-800">kontrak</span>
+                    </div>
+                    <div class="text-[10px] text-rose-700 truncate mt-0.5">Perlu Penyesuaian</div>
+                </div>
+
+                <div class="bg-emerald-50/70 border border-emerald-200/80 rounded-xl p-3 flex flex-col justify-between">
+                    <div class="flex items-center justify-between text-emerald-800 mb-1">
+                        <span class="text-[11px] font-semibold">Tanda Tangan &amp; Sah</span>
+                        <span class="text-xs">✅</span>
+                    </div>
+                    <div class="flex items-baseline gap-1.5">
+                        <span class="text-lg font-black text-emerald-900" id="summaryTtdAktifCount">0</span>
+                        <span class="text-[10px] text-emerald-800">kontrak</span>
+                    </div>
+                    <div class="text-[10px] text-emerald-700 truncate mt-0.5">TTD &amp; Aktif Berlaku</div>
+                </div>
+
+                <div class="bg-orange-50/70 border border-orange-200/80 rounded-xl p-3 flex flex-col justify-between">
+                    <div class="flex items-center justify-between text-orange-800 mb-1">
+                        <span class="text-[11px] font-semibold">Perhatian / Alert</span>
+                        <span class="text-xs">⚠️</span>
+                    </div>
+                    <div class="flex items-baseline gap-1.5">
+                        <span class="text-lg font-black text-orange-900" id="summaryExpiringCount">0</span>
+                        <span class="text-[10px] text-orange-800">kontrak</span>
+                    </div>
+                    <div class="text-[10px] text-orange-700 truncate mt-0.5">Sisa &le;30h / Overdue</div>
+                </div>
+            </div>
+
+            <!-- Double Filter Bars -->
+            <div class="space-y-2.5 mb-4 bg-gray-50/80 p-3 rounded-xl border border-gray-100">
+                <!-- Row 1: Masa Berlaku Filter -->
+                <div class="flex items-center gap-1.5 flex-wrap text-xs" id="contractExpiryFilters">
+                    <span class="text-gray-500 font-semibold min-w-[100px] flex items-center gap-1">
+                        <span>⏳</span> Masa Berlaku:
+                    </span>
+                    <button onclick="filterContractsByExpiry('all')" id="btnExpAll" class="px-2.5 py-1 rounded-lg bg-blue-600 text-white font-bold transition shadow-2xs">Semua</button>
+                    <button onclick="filterContractsByExpiry('expired')" id="btnExpExpired" class="px-2.5 py-1 rounded-lg bg-white text-gray-700 hover:bg-rose-50 hover:text-rose-700 border border-gray-200/80 transition font-medium">🔴 Kedaluwarsa (<span id="countExpExpired">0</span>)</button>
+                    <button onclick="filterContractsByExpiry('critical')" id="btnExpCritical" class="px-2.5 py-1 rounded-lg bg-white text-gray-700 hover:bg-amber-50 hover:text-amber-800 border border-gray-200/80 transition font-medium">🟡 Kritis &le;30 Hari (<span id="countExpCritical">0</span>)</button>
+                    <button onclick="filterContractsByExpiry('warning')" id="btnExpWarning" class="px-2.5 py-1 rounded-lg bg-white text-gray-700 hover:bg-orange-50 hover:text-orange-700 border border-gray-200/80 transition font-medium">🟠 Perhatian 31-90 Hari (<span id="countExpWarning">0</span>)</button>
+                    <button onclick="filterContractsByExpiry('safe')" id="btnExpSafe" class="px-2.5 py-1 rounded-lg bg-white text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 border border-gray-200/80 transition font-medium">🟢 Aktif Aman (<span id="countExpSafe">0</span>)</button>
+                </div>
+
+                <!-- Row 2: Workflow Stage Filter -->
+                <div class="flex items-center gap-1.5 flex-wrap text-xs" id="contractStageFilters">
+                    <span class="text-gray-500 font-semibold min-w-[100px] flex items-center gap-1">
+                        <span>🔄</span> Tahap Progress:
+                    </span>
+                    <button onclick="filterContractsByStage('all')" id="btnStageAll" class="px-2.5 py-1 rounded-lg bg-indigo-600 text-white font-bold transition shadow-2xs">Semua Tahap</button>
+                    <button onclick="filterContractsByStage('pengajuan')" id="btnStagePengajuan" class="px-2.5 py-1 rounded-lg bg-white text-gray-700 hover:bg-blue-50 hover:text-blue-700 border border-gray-200/80 transition font-medium">1. Pengajuan ke Legal (<span id="countStagePengajuan">0</span>)</button>
+                    <button onclick="filterContractsByStage('draft')" id="btnStageDraft" class="px-2.5 py-1 rounded-lg bg-white text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 border border-gray-200/80 transition font-medium">2. Draft Keluar (<span id="countStageDraft">0</span>)</button>
+                    <button onclick="filterContractsByStage('paraf_vendor')" id="btnStageParafVendor" class="px-2.5 py-1 rounded-lg bg-white text-gray-700 hover:bg-amber-50 hover:text-amber-800 border border-gray-200/80 transition font-medium">3. Paraf Vendor (<span id="countStageParafVendor">0</span>)</button>
+                    <button onclick="filterContractsByStage('paraf_ethos')" id="btnStageParafEthos" class="px-2.5 py-1 rounded-lg bg-white text-gray-700 hover:bg-purple-50 hover:text-purple-700 border border-gray-200/80 transition font-medium">4. Paraf Ethos (<span id="countStageParafEthos">0</span>)</button>
+                    <button onclick="filterContractsByStage('revisi')" id="btnStageRevisi" class="px-2.5 py-1 rounded-lg bg-white text-gray-700 hover:bg-rose-50 hover:text-rose-700 border border-gray-200/80 transition font-medium">5. Revisi (<span id="countStageRevisi">0</span>)</button>
+                    <button onclick="filterContractsByStage('renvoi')" id="btnStageRenvoi" class="px-2.5 py-1 rounded-lg bg-white text-gray-700 hover:bg-orange-50 hover:text-orange-700 border border-gray-200/80 transition font-medium">6. Renvoi (<span id="countStageRenvoi">0</span>)</button>
+                    <button onclick="filterContractsByStage('ttd')" id="btnStageTtd" class="px-2.5 py-1 rounded-lg bg-white text-gray-700 hover:bg-teal-50 hover:text-teal-700 border border-gray-200/80 transition font-medium">7. Tanda Tangan (<span id="countStageTtd">0</span>)</button>
+                    <button onclick="filterContractsByStage('aktif')" id="btnStageAktif" class="px-2.5 py-1 rounded-lg bg-white text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 border border-gray-200/80 transition font-medium">8. Aktif / Selesai (<span id="countStageAktif">0</span>)</button>
+                </div>
             </div>
 
             <div class="table-scroll-container">
                 <table class="tremor-table">
                     <thead>
                         <tr>
-                            <th>No Kontrak</th>
-                            <th>Vendor</th>
-                            <th>Ruang Lingkup</th>
-                            <th>Masa Berlaku &amp; Status</th>
-                            <th>Dokumen</th>
+                            <th>No Kontrak &amp; Divisi</th>
+                            <th>Vendor &amp; Ruang Lingkup</th>
+                            <th>Tahap Progress Pengerjaan</th>
+                            <th>Masa Berlaku &amp; Selisih Hari</th>
+                            <th>Kelengkapan Dokumen</th>
                             <th class="text-right">Nilai Kontrak</th>
                             <th class="text-center">Kepatuhan</th>
+                            <th class="text-center">Aksi</th>
                         </tr>
                     </thead>
                     <tbody id="contractTableBody">
-                        <tr><td colspan="7" class="text-center text-gray-400 py-8">Memuat data kontrak vendor...</td></tr>
+                        <tr><td colspan="8" class="text-center text-gray-400 py-8">Memuat data kontrak vendor...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -1079,6 +1180,102 @@ tailwind.config = {
         </div>
     </div>
 
+    <!-- Modal Detail Kontrak & Lifecycle Timeline -->
+    <div id="contractDetailModal" onclick="if(event.target === this) closeContractDetailModal()" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/75 backdrop-blur-sm p-3 sm:p-4 overflow-hidden" style="display: none;">
+        <div class="w-full max-w-2xl bg-white rounded-2xl border border-gray-200 shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+            <div class="flex items-center justify-between px-5 py-3.5 bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white border-b border-slate-800">
+                <div class="flex items-center gap-2.5">
+                    <span class="text-xl">📑</span>
+                    <div>
+                        <h3 class="text-sm font-bold text-white tracking-wide" id="cdmNoKontrak">Detail Kontrak Vendor</h3>
+                        <p class="text-[11px] text-blue-200" id="cdmVendorSubtitle">Monitoring siklus pengerjaan &amp; kepatuhan</p>
+                    </div>
+                </div>
+                <button onclick="closeContractDetailModal()" class="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition cursor-pointer">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            
+            <div class="p-5 space-y-4 overflow-y-auto" id="contractDetailContent">
+                <!-- Populated dynamically by openContractDetailModal() -->
+            </div>
+
+            <div class="px-5 py-3 bg-gray-50 border-t border-gray-200 flex items-center justify-between gap-2.5">
+                <span class="text-[11px] text-gray-500" id="cdmFooterNote">Status disinkronisasi langsung dari Sheet Kontrak Vendor</span>
+                <button onclick="closeContractDetailModal()" class="px-4 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-100 text-xs font-semibold text-gray-700 transition cursor-pointer">
+                    Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Panduan Struktur Sheet Kontrak Vendor -->
+    <div id="contractGuideModal" onclick="if(event.target === this) closeContractGuideModal()" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/75 backdrop-blur-sm p-3 sm:p-4 overflow-hidden" style="display: none;">
+        <div class="w-full max-w-3xl bg-white rounded-2xl border border-gray-200 shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+            <div class="flex items-center justify-between px-5 py-3.5 bg-gradient-to-r from-blue-900 to-indigo-900 text-white border-b border-blue-800">
+                <div class="flex items-center gap-2.5">
+                    <span class="text-xl">📋</span>
+                    <div>
+                        <h3 class="text-sm font-bold text-white tracking-wide">Panduan Kolom Sheet 'Kontrak Vendor'</h3>
+                        <p class="text-[11px] text-blue-200">16 Kolom Standar Sistem Contract Repository &amp; Compliance</p>
+                    </div>
+                </div>
+                <button onclick="closeContractGuideModal()" class="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition cursor-pointer">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            
+            <div class="p-5 space-y-4 overflow-y-auto text-xs text-gray-700">
+                <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 text-blue-900 text-xs flex items-start justify-between gap-3">
+                    <div>
+                        <p class="font-bold">💡 Tips Penerapan di Google Spreadsheet:</p>
+                        <p class="mt-0.5 text-blue-800 text-[11px]">Anda dapat langsung menjalankan menu <strong>⚡ Evaluasi Vendor &gt; Setup / Perbarui Kolom Sheet Kontrak Vendor</strong> di Spreadsheet untuk auto-generate atau melengkapi kolom tanpa merusak data lama.</p>
+                    </div>
+                    <button onclick="copyContractHeadersToClipboard()" class="flex-shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition cursor-pointer">
+                        📋 Salin Semua Header Baris 1
+                    </button>
+                </div>
+
+                <div class="border border-gray-200 rounded-xl overflow-hidden shadow-2xs">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead class="bg-gray-100 text-gray-800 font-bold border-b border-gray-200">
+                            <tr>
+                                <th class="p-2.5 w-12 text-center">No</th>
+                                <th class="p-2.5">Nama Kolom Resmi</th>
+                                <th class="p-2.5">Contoh Nilai</th>
+                                <th class="p-2.5">Keterangan / Fungsi</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 text-[11px]">
+                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">1</td><td class="p-2.5 font-semibold text-blue-600">No Kontrak</td><td class="p-2.5">KTR/ETHOS/2026/001</td><td class="p-2.5 text-gray-500">Nomor unik perjanjian / kontrak</td></tr>
+                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">2</td><td class="p-2.5 font-semibold text-gray-900">Nama Vendor</td><td class="p-2.5">PT BIZNET GIO NUSANTARA</td><td class="p-2.5 text-gray-500">Nama lengkap mitra rekanan</td></tr>
+                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">3</td><td class="p-2.5 font-semibold text-gray-900">Ruang Lingkup / Jenis Pekerjaan</td><td class="p-2.5">Cloud Server Infrastructure</td><td class="p-2.5 text-gray-500">Deskripsi pekerjaan/pengadaan</td></tr>
+                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">4</td><td class="p-2.5 font-semibold text-gray-900">PIC / Divisi</td><td class="p-2.5">IT &amp; Software / Procurement</td><td class="p-2.5 text-gray-500">Divisi pemohon/penanggung jawab</td></tr>
+                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">5</td><td class="p-2.5 font-semibold text-blue-700">Tanggal Pengajuan ke Legal</td><td class="p-2.5">2026-04-10</td><td class="p-2.5 text-gray-500">Titik awal pengerjaan legal (hitung aging/durasi)</td></tr>
+                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">6</td><td class="p-2.5 font-semibold text-gray-900">Tanggal Mulai Kontrak</td><td class="p-2.5">2026-05-01</td><td class="p-2.5 text-gray-500">Awal masa berlaku kontrak</td></tr>
+                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">7</td><td class="p-2.5 font-semibold text-rose-700">Tanggal Selesai Kontrak</td><td class="p-2.5">2027-04-30</td><td class="p-2.5 text-gray-500">Batas akhir kontrak (hitung selisih hari/alert)</td></tr>
+                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">8</td><td class="p-2.5 font-semibold text-indigo-700">Tahap Progress Pengerjaan</td><td class="p-2.5 font-mono">1. Pengajuan ke Legal / 2. Draft Keluar / 3. Paraf Vendor / 4. Paraf Ethos / 5. Revisi / 6. Renvoi / 7. Tanda Tangan / 8. Aktif / Selesai</td><td class="p-2.5 text-gray-500">Status progress workflow yang sedang berjalan</td></tr>
+                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">9</td><td class="p-2.5 font-semibold text-amber-700">Target Selesai SLA</td><td class="p-2.5">2026-04-20</td><td class="p-2.5 text-gray-500">Target batas waktu SLA legalitas (deteksi keterlambatan)</td></tr>
+                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">10</td><td class="p-2.5 font-semibold text-gray-900">Tanggal Realisasi TTD</td><td class="p-2.5">2026-04-18</td><td class="p-2.5 text-gray-500">Tanggal kontrak selesai ditandatangani</td></tr>
+                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">11</td><td class="p-2.5 font-semibold text-rose-600">Status Revisi / Renvoi</td><td class="p-2.5">Renvoi Pasal 7 Hak Cipta</td><td class="p-2.5 text-gray-500">Catatan revisi klausul atau renvoi naskah</td></tr>
+                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">12</td><td class="p-2.5 font-semibold text-gray-900">Kelengkapan Dokumen</td><td class="p-2.5">Lengkap (KTP, NPWP, Akta)</td><td class="p-2.5 text-gray-500">Status kelengkapan syarat legalitas</td></tr>
+                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">13</td><td class="p-2.5 font-semibold text-gray-900">Nilai Kontrak (Rp)</td><td class="p-2.5">125000000</td><td class="p-2.5 text-gray-500">Nominal nilai kontrak angka murni</td></tr>
+                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">14</td><td class="p-2.5 font-semibold text-emerald-700">Status Kepatuhan</td><td class="p-2.5">Comply / Not Comply</td><td class="p-2.5 text-gray-500">Status kepatuhan regulasi</td></tr>
+                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">15</td><td class="p-2.5 font-semibold text-blue-600">Link Dokumen Kontrak</td><td class="p-2.5">https://drive.google.com/...</td><td class="p-2.5 text-gray-500">Link file draft / scan kontrak di Google Drive</td></tr>
+                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">16</td><td class="p-2.5 font-semibold text-gray-900">Keterangan</td><td class="p-2.5">Catatan tambahan tim Legal/VMS</td><td class="p-2.5 text-gray-500">Catatan bebas</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="px-5 py-3 bg-gray-50 border-t border-gray-200 flex items-center justify-end">
+                <button onclick="closeContractGuideModal()" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition cursor-pointer">
+                    Mengerti &amp; Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal Ekspor CSV Template ERP / Odoo -->
     <div id="erpExportModal" onclick="if(event.target === this) closeErpExportModal()" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/75 backdrop-blur-sm p-3 sm:p-4 overflow-hidden" style="display: none;">
         <div class="w-full max-w-xl bg-white rounded-2xl border border-gray-200 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
@@ -1150,6 +1347,102 @@ tailwind.config = {
                 </button>
                 <button onclick="executeErpCsvDownload()" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm transition">
                     <span>📥 Unduh CSV Siap Upload ERP</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Detail Kontrak & Lifecycle Timeline -->
+    <div id="contractDetailModal" onclick="if(event.target === this) closeContractDetailModal()" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/75 backdrop-blur-sm p-3 sm:p-4 overflow-hidden" style="display: none;">
+        <div class="w-full max-w-2xl bg-white rounded-2xl border border-gray-200 shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+            <div class="flex items-center justify-between px-5 py-3.5 bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white border-b border-slate-800">
+                <div class="flex items-center gap-2.5">
+                    <span class="text-xl">📑</span>
+                    <div>
+                        <h3 class="text-sm font-bold text-white tracking-wide" id="cdmNoKontrak">Detail Kontrak Vendor</h3>
+                        <p class="text-[11px] text-blue-200" id="cdmVendorSubtitle">Monitoring siklus pengerjaan &amp; kepatuhan</p>
+                    </div>
+                </div>
+                <button onclick="closeContractDetailModal()" class="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition cursor-pointer">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            
+            <div class="p-5 space-y-4 overflow-y-auto" id="contractDetailContent">
+                <!-- Populated dynamically by openContractDetailModal() -->
+            </div>
+
+            <div class="px-5 py-3 bg-gray-50 border-t border-gray-200 flex items-center justify-between gap-2.5">
+                <span class="text-[11px] text-gray-500" id="cdmFooterNote">Status disinkronisasi langsung dari Sheet Kontrak Vendor</span>
+                <button onclick="closeContractDetailModal()" class="px-4 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-100 text-xs font-semibold text-gray-700 transition cursor-pointer">
+                    Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Panduan Struktur Sheet Kontrak Vendor -->
+    <div id="contractGuideModal" onclick="if(event.target === this) closeContractGuideModal()" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/75 backdrop-blur-sm p-3 sm:p-4 overflow-hidden" style="display: none;">
+        <div class="w-full max-w-3xl bg-white rounded-2xl border border-gray-200 shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+            <div class="flex items-center justify-between px-5 py-3.5 bg-gradient-to-r from-blue-900 to-indigo-900 text-white border-b border-blue-800">
+                <div class="flex items-center gap-2.5">
+                    <span class="text-xl">📋</span>
+                    <div>
+                        <h3 class="text-sm font-bold text-white tracking-wide">Panduan Kolom Sheet 'Kontrak Vendor'</h3>
+                        <p class="text-[11px] text-blue-200">16 Kolom Standar Sistem Contract Repository &amp; Compliance</p>
+                    </div>
+                </div>
+                <button onclick="closeContractGuideModal()" class="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition cursor-pointer">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            
+            <div class="p-5 space-y-4 overflow-y-auto text-xs text-gray-700">
+                <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 text-blue-900 text-xs flex items-start justify-between gap-3">
+                    <div>
+                        <p class="font-bold">💡 Tips Penerapan di Google Spreadsheet:</p>
+                        <p class="mt-0.5 text-blue-800 text-[11px]">Anda dapat langsung menjalankan menu <strong>⚡ Evaluasi Vendor &gt; Setup / Perbarui Kolom Sheet Kontrak Vendor</strong> di Spreadsheet untuk auto-generate atau melengkapi kolom tanpa merusak data lama.</p>
+                    </div>
+                    <button onclick="copyContractHeadersToClipboard()" class="flex-shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition cursor-pointer">
+                        📋 Salin Semua Header Baris 1
+                    </button>
+                </div>
+
+                <div class="border border-gray-200 rounded-xl overflow-hidden shadow-2xs">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead class="bg-gray-100 text-gray-800 font-bold border-b border-gray-200">
+                            <tr>
+                                <th class="p-2.5 w-12 text-center">No</th>
+                                <th class="p-2.5">Nama Kolom Resmi</th>
+                                <th class="p-2.5">Contoh Nilai</th>
+                                <th class="p-2.5">Keterangan / Fungsi</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 text-[11px]">
+                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">1</td><td class="p-2.5 font-semibold text-blue-600">No Kontrak</td><td class="p-2.5">KTR/ETHOS/2026/001</td><td class="p-2.5 text-gray-500">Nomor unik perjanjian / kontrak</td></tr>
+                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">2</td><td class="p-2.5 font-semibold text-gray-900">Nama Vendor</td><td class="p-2.5">PT BIZNET GIO NUSANTARA</td><td class="p-2.5 text-gray-500">Nama lengkap mitra rekanan</td></tr>
+                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">3</td><td class="p-2.5 font-semibold text-gray-900">Ruang Lingkup / Jenis Pekerjaan</td><td class="p-2.5">Cloud Server Infrastructure</td><td class="p-2.5 text-gray-500">Deskripsi pekerjaan/pengadaan</td></tr>
+                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">4</td><td class="p-2.5 font-semibold text-gray-900">PIC / Divisi</td><td class="p-2.5">IT &amp; Software / Procurement</td><td class="p-2.5 text-gray-500">Divisi pemohon/penanggung jawab</td></tr>
+                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">5</td><td class="p-2.5 font-semibold text-blue-700">Tanggal Pengajuan ke Legal</td><td class="p-2.5">2026-04-10</td><td class="p-2.5 text-gray-500">Titik awal pengerjaan legal (hitung aging/durasi)</td></tr>
+                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">6</td><td class="p-2.5 font-semibold text-gray-900">Tanggal Mulai Kontrak</td><td class="p-2.5">2026-05-01</td><td class="p-2.5 text-gray-500">Awal masa berlaku kontrak</td></tr>
+                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">7</td><td class="p-2.5 font-semibold text-rose-700">Tanggal Selesai Kontrak</td><td class="p-2.5">2027-04-30</td><td class="p-2.5 text-gray-500">Batas akhir kontrak (hitung selisih hari/alert)</td></tr>
+                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">8</td><td class="p-2.5 font-semibold text-indigo-700">Tahap Progress Pengerjaan</td><td class="p-2.5 font-mono">1. Pengajuan ke Legal / 2. Draft Keluar / 3. Paraf Vendor / 4. Paraf Ethos / 5. Revisi / 6. Renvoi / 7. Tanda Tangan / 8. Aktif / Selesai</td><td class="p-2.5 text-gray-500">Status progress workflow yang sedang berjalan</td></tr>
+                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">9</td><td class="p-2.5 font-semibold text-amber-700">Target Selesai SLA</td><td class="p-2.5">2026-04-20</td><td class="p-2.5 text-gray-500">Target batas waktu SLA legalitas (deteksi keterlambatan)</td></tr>
+                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">10</td><td class="p-2.5 font-semibold text-gray-900">Tanggal Realisasi TTD</td><td class="p-2.5">2026-04-18</td><td class="p-2.5 text-gray-500">Tanggal kontrak selesai ditandatangani</td></tr>
+                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">11</td><td class="p-2.5 font-semibold text-rose-600">Status Revisi / Renvoi</td><td class="p-2.5">Renvoi Pasal 7 Hak Cipta</td><td class="p-2.5 text-gray-500">Catatan revisi klausul atau renvoi naskah</td></tr>
+                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">12</td><td class="p-2.5 font-semibold text-gray-900">Kelengkapan Dokumen</td><td class="p-2.5">Lengkap (KTP, NPWP, Akta)</td><td class="p-2.5 text-gray-500">Status kelengkapan syarat legalitas</td></tr>
+                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">13</td><td class="p-2.5 font-semibold text-gray-900">Nilai Kontrak (Rp)</td><td class="p-2.5">125000000</td><td class="p-2.5 text-gray-500">Nominal nilai kontrak angka murni</td></tr>
+                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">14</td><td class="p-2.5 font-semibold text-emerald-700">Status Kepatuhan</td><td class="p-2.5">Comply / Not Comply</td><td class="p-2.5 text-gray-500">Status kepatuhan regulasi</td></tr>
+                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">15</td><td class="p-2.5 font-semibold text-blue-600">Link Dokumen Kontrak</td><td class="p-2.5">https://drive.google.com/...</td><td class="p-2.5 text-gray-500">Link file draft / scan kontrak di Google Drive</td></tr>
+                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">16</td><td class="p-2.5 font-semibold text-gray-900">Keterangan</td><td class="p-2.5">Catatan tambahan tim Legal/VMS</td><td class="p-2.5 text-gray-500">Catatan bebas</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="px-5 py-3 bg-gray-50 border-t border-gray-200 flex items-center justify-end">
+                <button onclick="closeContractGuideModal()" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition cursor-pointer">
+                    Mengerti &amp; Tutup
                 </button>
             </div>
         </div>
