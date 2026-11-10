@@ -699,6 +699,11 @@ function updateRoleBasedView(pin) {
         dashLink.style.display = isAdmin ? 'inline-flex' : 'none';
     }
 
+    const kontrakLink = document.getElementById('kontrakNavLink');
+    if (kontrakLink) {
+        kontrakLink.style.display = isAdmin ? 'inline-flex' : 'none';
+    }
+
     const katalogLink = document.getElementById('katalogNavLink');
     if (katalogLink) {
         katalogLink.style.display = isAdmin ? 'inline-flex' : 'none';
