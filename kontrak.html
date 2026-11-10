@@ -42,6 +42,12 @@ tailwind.config = {
   ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
   ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
+  /* Hide scrollbar on pill filter bars */
+  #contractExpiryFilters > div::-webkit-scrollbar,
+  #contractStageFilters > div::-webkit-scrollbar { display: none; }
+  #contractExpiryFilters > div,
+  #contractStageFilters > div { -ms-overflow-style: none; scrollbar-width: none; }
+
   /* Tremor Card */
   .tremor-card {
     background: #ffffff;
@@ -183,21 +189,21 @@ tailwind.config = {
                         <div class="text-xs font-medium text-gray-500">PT Etos Kreatif Indonesia · Admin Workspace</div>
                     </div>
                 </a>
-                <div class="flex items-center gap-2.5 flex-wrap">
-                    <a href="dashboard.html" class="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 shadow-xs hover:bg-blue-100 transition">
+                <div class="flex items-center gap-2">
+                    <a href="dashboard.html" class="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-semibold text-blue-700 shadow-xs hover:bg-blue-100 transition">
                         <span>📊</span>
-                        <span>Dashboard Utama</span>
+                        <span>Dashboard</span>
                     </a>
-                    <a href="katalog.html" class="hidden sm:inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-xs hover:bg-gray-50 transition">
+                    <a href="katalog.html" class="hidden sm:inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 shadow-xs hover:bg-gray-50 transition">
                         <span>📦</span>
-                        <span>Katalog Produk</span>
+                        <span>Katalog</span>
                     </a>
-                    <a href="index.html" class="hidden md:inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-xs hover:bg-gray-50 transition">
+                    <a href="index.html" class="hidden md:inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 shadow-xs hover:bg-gray-50 transition">
                         <span>📝</span>
-                        <span>Form Penilaian</span>
+                        <span>Penilaian</span>
                     </a>
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-100 border border-gray-200 text-xs font-semibold text-gray-700" id="headerUser">👤 Guest</span>
-                    <button onclick="adminLogout()" class="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100 transition shadow-xs" title="Keluar">
+                    <span class="inline-flex items-center gap-1 whitespace-nowrap px-2.5 py-1.5 rounded-lg bg-gray-100 border border-gray-200 text-xs font-semibold text-gray-700" id="headerUser">👤 Guest</span>
+                    <button onclick="adminLogout()" class="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-red-200 bg-red-50 px-2 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100 transition shadow-xs" title="Keluar">
                         <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                         Keluar
                     </button>
@@ -427,59 +433,61 @@ tailwind.config = {
 
         <!-- ========== FILTER SLICERS & QUICK FILTER BAR ========== -->
         <div class="tremor-card mb-4" id="sectionFilterControls">
-            <!-- Slicer Top Controls -->
-            <div class="flex items-center justify-between gap-3 mb-3 flex-wrap">
-                <div class="flex items-center gap-2 flex-wrap">
-                    <select id="slicerCategorySelect" class="tremor-select" title="Filter Bidang Vendor">
-                        <option value="all">Semua Bidang</option>
-                    </select>
+            <!-- Slicer Top Controls: unified row -->
+            <div class="flex flex-wrap items-center gap-2 mb-3">
+                <select id="slicerCategorySelect" class="tremor-select text-xs" title="Filter Bidang Vendor">
+                    <option value="all">Semua Bidang</option>
+                </select>
 
-                    <select id="slicerComplianceSelect" class="tremor-select" title="Filter Status Regulasi">
-                        <option value="all">Semua Kepatuhan</option>
-                        <option value="comply">Comply</option>
-                        <option value="not-comply">Not Comply</option>
-                    </select>
+                <select id="slicerComplianceSelect" class="tremor-select text-xs" title="Filter Status Regulasi">
+                    <option value="all">Semua Kepatuhan</option>
+                    <option value="comply">Comply</option>
+                    <option value="not-comply">Not Comply</option>
+                </select>
 
-                    <button id="slicerResetBtn" onclick="resetAllContractFilters()" class="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-600 shadow-2xs hover:bg-gray-50 transition cursor-pointer">
-                        <svg class="w-3 h-3 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
-                        Reset Filter
-                    </button>
-                </div>
+                <button id="slicerResetBtn" onclick="resetAllContractFilters()" class="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-600 shadow-2xs hover:bg-gray-50 transition cursor-pointer whitespace-nowrap">
+                    <svg class="w-3 h-3 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+                    Reset Filter
+                </button>
 
-                <div class="flex items-center gap-2 flex-wrap">
-                    <input type="text" id="contractSearchInput" placeholder="Cari No. Kontrak, Vendor, Lingkup, Divisi, Catatan..." class="text-xs px-3.5 py-2 rounded-xl border border-gray-200 bg-white text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs" style="min-width: 280px;">
-                    <span class="tremor-badge tremor-badge-gray" id="contractBadgeCount">0 Kontrak</span>
-                </div>
+                <div class="flex-1"></div>
+
+                <input type="text" id="contractSearchInput" placeholder="Cari No. Kontrak, Vendor, Lingkup, Divisi, Catatan..." class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs w-full sm:w-auto sm:min-w-[260px]">
+                <span class="tremor-badge tremor-badge-gray whitespace-nowrap" id="contractBadgeCount">0 Kontrak</span>
             </div>
 
             <!-- Double Quick Filter Pill Bars -->
-            <div class="space-y-2 bg-gray-50/80 p-3 rounded-xl border border-gray-100">
+            <div class="space-y-2.5 bg-gray-50/80 p-3 rounded-xl border border-gray-100">
                 <!-- Row 1: Masa Berlaku Filter -->
-                <div class="flex items-center gap-1.5 flex-wrap text-xs" id="contractExpiryFilters">
-                    <span class="text-gray-500 font-semibold min-w-[100px] flex items-center gap-1">
+                <div class="flex items-center gap-2" id="contractExpiryFilters">
+                    <span class="text-gray-500 font-semibold text-[11px] flex items-center gap-1 whitespace-nowrap shrink-0">
                         <span>⏳</span> Masa Berlaku:
                     </span>
-                    <button onclick="filterContractsByExpiry('all')" id="btnExpAll" class="px-2.5 py-1 rounded-lg bg-blue-600 text-white font-bold transition shadow-2xs cursor-pointer">Semua</button>
-                    <button onclick="filterContractsByExpiry('expired')" id="btnExpExpired" class="px-2.5 py-1 rounded-lg bg-white text-gray-700 hover:bg-rose-50 hover:text-rose-700 border border-gray-200/80 transition font-medium cursor-pointer">🔴 Kedaluwarsa (<span id="countExpExpired">0</span>)</button>
-                    <button onclick="filterContractsByExpiry('critical')" id="btnExpCritical" class="px-2.5 py-1 rounded-lg bg-white text-gray-700 hover:bg-amber-50 hover:text-amber-800 border border-gray-200/80 transition font-medium cursor-pointer">🟡 Kritis &le;30 Hari (<span id="countExpCritical">0</span>)</button>
-                    <button onclick="filterContractsByExpiry('warning')" id="btnExpWarning" class="px-2.5 py-1 rounded-lg bg-white text-gray-700 hover:bg-orange-50 hover:text-orange-700 border border-gray-200/80 transition font-medium cursor-pointer">🟠 Perhatian 31-90 Hari (<span id="countExpWarning">0</span>)</button>
-                    <button onclick="filterContractsByExpiry('safe')" id="btnExpSafe" class="px-2.5 py-1 rounded-lg bg-white text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 border border-gray-200/80 transition font-medium cursor-pointer">🟢 Aktif Aman (<span id="countExpSafe">0</span>)</button>
+                    <div class="flex items-center gap-1.5 overflow-x-auto pb-0.5" style="-webkit-overflow-scrolling: touch; scrollbar-width: none;">
+                        <button onclick="filterContractsByExpiry('all')" id="btnExpAll" class="px-2.5 py-1 rounded-lg bg-blue-600 text-white text-[11px] font-bold transition shadow-2xs cursor-pointer whitespace-nowrap">Semua</button>
+                        <button onclick="filterContractsByExpiry('expired')" id="btnExpExpired" class="px-2.5 py-1 rounded-lg bg-white text-gray-700 hover:bg-rose-50 hover:text-rose-700 border border-gray-200/80 transition text-[11px] font-medium cursor-pointer whitespace-nowrap">🔴 Kedaluwarsa (<span id="countExpExpired">0</span>)</button>
+                        <button onclick="filterContractsByExpiry('critical')" id="btnExpCritical" class="px-2.5 py-1 rounded-lg bg-white text-gray-700 hover:bg-amber-50 hover:text-amber-800 border border-gray-200/80 transition text-[11px] font-medium cursor-pointer whitespace-nowrap">🟡 Kritis ≤30h (<span id="countExpCritical">0</span>)</button>
+                        <button onclick="filterContractsByExpiry('warning')" id="btnExpWarning" class="px-2.5 py-1 rounded-lg bg-white text-gray-700 hover:bg-orange-50 hover:text-orange-700 border border-gray-200/80 transition text-[11px] font-medium cursor-pointer whitespace-nowrap">🟠 Perhatian 31-90h (<span id="countExpWarning">0</span>)</button>
+                        <button onclick="filterContractsByExpiry('safe')" id="btnExpSafe" class="px-2.5 py-1 rounded-lg bg-white text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 border border-gray-200/80 transition text-[11px] font-medium cursor-pointer whitespace-nowrap">🟢 Aktif Aman (<span id="countExpSafe">0</span>)</button>
+                    </div>
                 </div>
 
                 <!-- Row 2: Workflow Stage Filter -->
-                <div class="flex items-center gap-1.5 flex-wrap text-xs" id="contractStageFilters">
-                    <span class="text-gray-500 font-semibold min-w-[100px] flex items-center gap-1">
+                <div class="flex items-center gap-2" id="contractStageFilters">
+                    <span class="text-gray-500 font-semibold text-[11px] flex items-center gap-1 whitespace-nowrap shrink-0">
                         <span>🔄</span> Tahap Progress:
                     </span>
-                    <button onclick="filterContractsByStage('all')" id="btnStageAll" class="px-2.5 py-1 rounded-lg bg-indigo-600 text-white font-bold transition shadow-2xs cursor-pointer">Semua Tahap</button>
-                    <button onclick="filterContractsByStage('pengajuan')" id="btnStagePengajuan" class="px-2.5 py-1 rounded-lg bg-white text-gray-700 hover:bg-blue-50 hover:text-blue-700 border border-gray-200/80 transition font-medium cursor-pointer">1. Pengajuan ke Legal (<span id="countStagePengajuan">0</span>)</button>
-                    <button onclick="filterContractsByStage('draft')" id="btnStageDraft" class="px-2.5 py-1 rounded-lg bg-white text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 border border-gray-200/80 transition font-medium cursor-pointer">2. Draft Keluar (<span id="countStageDraft">0</span>)</button>
-                    <button onclick="filterContractsByStage('paraf_vendor')" id="btnStageParafVendor" class="px-2.5 py-1 rounded-lg bg-white text-gray-700 hover:bg-amber-50 hover:text-amber-800 border border-gray-200/80 transition font-medium cursor-pointer">3. Paraf Vendor (<span id="countStageParafVendor">0</span>)</button>
-                    <button onclick="filterContractsByStage('paraf_ethos')" id="btnStageParafEthos" class="px-2.5 py-1 rounded-lg bg-white text-gray-700 hover:bg-purple-50 hover:text-purple-700 border border-gray-200/80 transition font-medium cursor-pointer">4. Paraf Ethos (<span id="countStageParafEthos">0</span>)</button>
-                    <button onclick="filterContractsByStage('revisi')" id="btnStageRevisi" class="px-2.5 py-1 rounded-lg bg-white text-gray-700 hover:bg-rose-50 hover:text-rose-700 border border-gray-200/80 transition font-medium cursor-pointer">5. Revisi (<span id="countStageRevisi">0</span>)</button>
-                    <button onclick="filterContractsByStage('renvoi')" id="btnStageRenvoi" class="px-2.5 py-1 rounded-lg bg-white text-gray-700 hover:bg-orange-50 hover:text-orange-700 border border-gray-200/80 transition font-medium cursor-pointer">6. Renvoi (<span id="countStageRenvoi">0</span>)</button>
-                    <button onclick="filterContractsByStage('ttd')" id="btnStageTtd" class="px-2.5 py-1 rounded-lg bg-white text-gray-700 hover:bg-teal-50 hover:text-teal-700 border border-gray-200/80 transition font-medium cursor-pointer">7. Tanda Tangan (<span id="countStageTtd">0</span>)</button>
-                    <button onclick="filterContractsByStage('aktif')" id="btnStageAktif" class="px-2.5 py-1 rounded-lg bg-white text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 border border-gray-200/80 transition font-medium cursor-pointer">8. Aktif / Selesai (<span id="countStageAktif">0</span>)</button>
+                    <div class="flex items-center gap-1.5 overflow-x-auto pb-0.5" style="-webkit-overflow-scrolling: touch; scrollbar-width: none;">
+                        <button onclick="filterContractsByStage('all')" id="btnStageAll" class="px-2.5 py-1 rounded-lg bg-indigo-600 text-white text-[11px] font-bold transition shadow-2xs cursor-pointer whitespace-nowrap">Semua Tahap</button>
+                        <button onclick="filterContractsByStage('pengajuan')" id="btnStagePengajuan" class="px-2 py-1 rounded-lg bg-white text-gray-700 hover:bg-blue-50 hover:text-blue-700 border border-gray-200/80 transition text-[11px] font-medium cursor-pointer whitespace-nowrap">1. Pengajuan (<span id="countStagePengajuan">0</span>)</button>
+                        <button onclick="filterContractsByStage('draft')" id="btnStageDraft" class="px-2 py-1 rounded-lg bg-white text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 border border-gray-200/80 transition text-[11px] font-medium cursor-pointer whitespace-nowrap">2. Draft (<span id="countStageDraft">0</span>)</button>
+                        <button onclick="filterContractsByStage('paraf_vendor')" id="btnStageParafVendor" class="px-2 py-1 rounded-lg bg-white text-gray-700 hover:bg-amber-50 hover:text-amber-800 border border-gray-200/80 transition text-[11px] font-medium cursor-pointer whitespace-nowrap">3. Paraf Vendor (<span id="countStageParafVendor">0</span>)</button>
+                        <button onclick="filterContractsByStage('paraf_ethos')" id="btnStageParafEthos" class="px-2 py-1 rounded-lg bg-white text-gray-700 hover:bg-purple-50 hover:text-purple-700 border border-gray-200/80 transition text-[11px] font-medium cursor-pointer whitespace-nowrap">4. Paraf Ethos (<span id="countStageParafEthos">0</span>)</button>
+                        <button onclick="filterContractsByStage('revisi')" id="btnStageRevisi" class="px-2 py-1 rounded-lg bg-white text-gray-700 hover:bg-rose-50 hover:text-rose-700 border border-gray-200/80 transition text-[11px] font-medium cursor-pointer whitespace-nowrap">5. Revisi (<span id="countStageRevisi">0</span>)</button>
+                        <button onclick="filterContractsByStage('renvoi')" id="btnStageRenvoi" class="px-2 py-1 rounded-lg bg-white text-gray-700 hover:bg-orange-50 hover:text-orange-700 border border-gray-200/80 transition text-[11px] font-medium cursor-pointer whitespace-nowrap">6. Renvoi (<span id="countStageRenvoi">0</span>)</button>
+                        <button onclick="filterContractsByStage('ttd')" id="btnStageTtd" class="px-2 py-1 rounded-lg bg-white text-gray-700 hover:bg-teal-50 hover:text-teal-700 border border-gray-200/80 transition text-[11px] font-medium cursor-pointer whitespace-nowrap">7. TTD (<span id="countStageTtd">0</span>)</button>
+                        <button onclick="filterContractsByStage('aktif')" id="btnStageAktif" class="px-2 py-1 rounded-lg bg-white text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 border border-gray-200/80 transition text-[11px] font-medium cursor-pointer whitespace-nowrap">8. Aktif (<span id="countStageAktif">0</span>)</button>
+                    </div>
                 </div>
             </div>
         </div>
