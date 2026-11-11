@@ -198,23 +198,82 @@ function populateCategorySlicer(kategoriList) {
 // =====================================================
 // DATA NORMALIZATION & COMPUTATION
 // =====================================================
+function isDateString(val) {
+    if (!val || val === '-' || val === '---') return false;
+    const s = String(val).trim();
+    if (s.includes('GMT') || s.includes('Waktu Indonesia')) return true;
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return true;
+    if (/^\d{1,2}[\s\-\/\.]+[a-zA-Z]+[\s\-\/\.]+\d{4}/.test(s)) return true;
+    if (/^\d{1,2}[\s\-\/\.]+\d{1,2}[\s\-\/\.]+\d{4}/.test(s)) return true;
+    const d = new Date(s);
+    return !isNaN(d.getTime()) && d.getFullYear() > 2000 && d.getFullYear() < 2100;
+}
+
+function parseAnyDate(val) {
+    if (!val || val === '-' || val === '---') return null;
+    if (val instanceof Date && !isNaN(val.getTime())) return val;
+    const s = String(val).trim();
+    if (!s || s === '-') return null;
+
+    const idMonths = {
+        'jan': 0, 'januari': 0,
+        'feb': 1, 'februari': 1,
+        'mar': 2, 'maret': 2,
+        'apr': 3, 'april': 3,
+        'mei': 4, 'may': 4,
+        'jun': 5, 'juni': 5,
+        'jul': 6, 'juli': 6,
+        'agu': 7, 'agustus': 7, 'agt': 7, 'aug': 7,
+        'sep': 8, 'september': 8,
+        'okt': 9, 'oktober': 9, 'oct': 9,
+        'nov': 10, 'november': 10,
+        'des': 11, 'desember': 11, 'dec': 11
+    };
+
+    const m1 = s.match(/^(\d{1,2})[\s\-\/\.]+(\w+)[\s\-\/\.]+(\d{4})/);
+    if (m1) {
+        const day = parseInt(m1[1], 10);
+        const mStr = m1[2].toLowerCase();
+        const yr = parseInt(m1[3], 10);
+        if (idMonths[mStr] !== undefined) {
+            return new Date(yr, idMonths[mStr], day);
+        }
+        const mNum = parseInt(mStr, 10);
+        if (!isNaN(mNum) && mNum >= 1 && mNum <= 12) {
+            return new Date(yr, mNum - 1, day);
+        }
+    }
+
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) return d;
+    return null;
+}
+
+function formatPrettyDate(val) {
+    const d = parseAnyDate(val);
+    if (!d) return (typeof val === 'string' && val.length < 25 && val !== '-') ? val : '-';
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+}
+
 function getContractDaysRemaining(dateStr) {
     if (!dateStr || dateStr === '-' || dateStr.toLowerCase().includes('belum')) return null;
-    const target = new Date(dateStr);
-    if (isNaN(target.getTime())) return null;
+    const target = parseAnyDate(dateStr);
+    if (!target) return null;
     const now = new Date();
     now.setHours(0, 0, 0, 0);
+    target.setHours(0, 0, 0, 0);
     return Math.ceil((target - now) / (1000 * 60 * 60 * 24));
 }
 
 function getContractProcessDays(tglPengajuan, tglRealisasi) {
     if (!tglPengajuan || tglPengajuan === '-' || tglPengajuan.toLowerCase().includes('belum')) return null;
-    const submit = new Date(tglPengajuan);
-    if (isNaN(submit.getTime())) return null;
+    const submit = parseAnyDate(tglPengajuan);
+    if (!submit) return null;
     let end = new Date();
     if (tglRealisasi && tglRealisasi !== '-' && !tglRealisasi.toLowerCase().includes('belum')) {
-        const r = new Date(tglRealisasi);
-        if (!isNaN(r.getTime())) end = r;
+        const r = parseAnyDate(tglRealisasi);
+        if (r) end = r;
     }
     submit.setHours(0, 0, 0, 0);
     end.setHours(0, 0, 0, 0);
@@ -272,10 +331,35 @@ function applyAndRender() {
 
     const rawList = contractDashboardData.contractCompliance.list || [];
     
-    // Annotate list items
+    // Annotate list items & detect shifted date columns from Sheet
     rawList.forEach(c => {
-        c._stageObj = normalizeContractStageFrontend(c.tahapProgress, c.status, c.tglSelesai);
-        c._daysRemaining = getContractDaysRemaining(c.tglSelesai);
+        let startCandidate = c.tglMulai;
+        let endCandidate = c.tglSelesai;
+        let cleanLingkup = c.jenisPekerjaan || '-';
+        let cleanDiv = c.picDivisi || '-';
+
+        // Jika jenisPekerjaan berisi string tanggal (misal akibat pergeseran kolom sheet), jadikan tglMulai
+        if (isDateString(c.jenisPekerjaan)) {
+            if (!startCandidate || startCandidate === '-') {
+                startCandidate = c.jenisPekerjaan;
+            }
+            cleanLingkup = '-';
+        }
+        // Jika picDivisi berisi string tanggal, jadikan tglSelesai
+        if (isDateString(c.picDivisi)) {
+            if (!endCandidate || endCandidate === '-') {
+                endCandidate = c.picDivisi;
+            }
+            cleanDiv = '-';
+        }
+
+        c._cleanMulai = formatPrettyDate(startCandidate);
+        c._cleanSelesai = formatPrettyDate(endCandidate);
+        c._cleanLingkup = cleanLingkup;
+        c._cleanDiv = cleanDiv;
+
+        c._stageObj = normalizeContractStageFrontend(c.tahapProgress, c.status, c._cleanSelesai);
+        c._daysRemaining = getContractDaysRemaining(c._cleanSelesai);
         c._processDays = getContractProcessDays(c.tglPengajuan, c.tglRealisasi);
     });
 
@@ -606,7 +690,7 @@ function renderContractWorkflowChart(stages) {
 }
 
 // =====================================================
-// TABLE RENDERING & PAGINATION
+// TABLE RENDERING & PAGINATION (COMPACT & DENSE)
 // =====================================================
 function renderTableRows(list) {
     const tableBody = document.getElementById('contractTableBody');
@@ -617,13 +701,8 @@ function renderTableRows(list) {
     if (badgeCount) badgeCount.textContent = `${totalItems} Kontrak`;
 
     if (totalItems === 0) {
-        tableBody.innerHTML = `<tr><td colspan="8" class="text-center text-slate-400 py-12">
-            <div class="flex flex-col items-center justify-center">
-                <span class="text-3xl mb-2">🔍</span>
-                <span class="font-bold text-slate-700 text-sm">Tidak ada kontrak ditemukan</span>
-                <span class="text-xs text-slate-400 mt-1">Coba sesuaikan kata kunci pencarian atau ubah filter di atas.</span>
-                <button onclick="resetAllContractFilters()" class="mt-3 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-2xs transition">Reset Filter</button>
-            </div>
+        tableBody.innerHTML = `<tr><td colspan="8" class="text-center text-slate-400 py-8">
+            <span class="text-xs">Tidak ada data kontrak pada filter yang dipilih.</span>
         </td></tr>`;
         renderContractPaginationUI(0, 1, 0, 0);
         return;
@@ -639,143 +718,95 @@ function renderTableRows(list) {
 
     tableBody.innerHTML = pagedList.map(c => {
         const isComply = c.status && c.status.toLowerCase() === 'comply';
-        const isDocComplete = c.kelengkapan && c.kelengkapan.toLowerCase().includes('lengkap');
-
-        const stage = c._stageObj || normalizeContractStageFrontend(c.tahapProgress, c.status, c.tglSelesai);
-        const days = c._daysRemaining !== undefined ? c._daysRemaining : getContractDaysRemaining(c.tglSelesai);
-        const processDays = c._processDays !== undefined ? c._processDays : getContractProcessDays(c.tglPengajuan, c.tglRealisasi);
-
         const cleanVendor = (c.vendor || '').replace(/\r?\n|\r/g, ' ').trim();
-        const cleanJenis = (c.jenisPekerjaan || '-').replace(/\r?\n|\r/g, ' ').trim();
-        const cleanDivisi = (c.picDivisi || '-').replace(/\r?\n|\r/g, ' ').trim();
 
-        // Initials avatar
-        const words = cleanVendor.replace(/[^\w\s]/gi, '').split(/\s+/).filter(w => !['pt', 'cv', 'ud', 'tbk', 'indonesia'].includes(w.toLowerCase()));
-        let initials = 'VN';
-        if (words.length >= 2) {
-            initials = (words[0][0] + words[1][0]).toUpperCase();
-        } else if (words.length === 1 && words[0].length >= 2) {
-            initials = words[0].slice(0, 2).toUpperCase();
+        // Periode Masa Berlaku yang sudah dibersihkan
+        let displayMasa = '-';
+        if (c._cleanMulai && c._cleanMulai !== '-' && c._cleanSelesai && c._cleanSelesai !== '-') {
+            displayMasa = `${c._cleanMulai} – ${c._cleanSelesai}`;
+        } else if (c._cleanSelesai && c._cleanSelesai !== '-') {
+            displayMasa = `s/d ${c._cleanSelesai}`;
+        } else if (c._cleanMulai && c._cleanMulai !== '-') {
+            displayMasa = `Mulai ${c._cleanMulai}`;
         }
 
-        let expiryBadgeHtml = '';
+        const days = c._daysRemaining;
+        let expiryBadge = '';
         if (days !== null) {
             if (days < 0) {
-                expiryBadgeHtml = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
-                    <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Lewat ${Math.abs(days)}h (Expired)
-                </span>`;
+                expiryBadge = `<span class="inline-block px-1.5 py-0.2 rounded text-[9.5px] font-bold bg-rose-50 text-rose-700 border border-rose-200">Expired ${Math.abs(days)}h</span>`;
             } else if (days <= 30) {
-                expiryBadgeHtml = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> Sisa ${days}h (Kritis)
-                </span>`;
+                expiryBadge = `<span class="inline-block px-1.5 py-0.2 rounded text-[9.5px] font-bold bg-amber-50 text-amber-800 border border-amber-200">Kritis ${days}h</span>`;
             } else if (days <= 90) {
-                expiryBadgeHtml = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-orange-50 text-orange-800 border border-orange-200">
-                    <span class="w-1.5 h-1.5 rounded-full bg-orange-400"></span> Sisa ${days}h (Perhatian)
-                </span>`;
+                expiryBadge = `<span class="inline-block px-1.5 py-0.2 rounded text-[9.5px] font-semibold bg-orange-50 text-orange-800 border border-orange-200">Perhatian ${days}h</span>`;
             } else {
-                expiryBadgeHtml = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Sisa ${days}h (Aman)
-                </span>`;
+                expiryBadge = `<span class="inline-block px-1.5 py-0.2 rounded text-[9.5px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">Aman ${days}h</span>`;
             }
-        } else {
-            expiryBadgeHtml = `<span class="text-[10.5px] text-slate-400">Tidak terbatas</span>`;
         }
 
-        let revisionBadgeHtml = '';
-        if (stage.isRevision || stage.isRenvoi || (c.statusRevisi && c.statusRevisi.trim() !== '' && c.statusRevisi !== '-')) {
-            const revText = c.statusRevisi || (stage.isRenvoi ? 'Proses Renvoi' : 'Proses Revisi');
-            revisionBadgeHtml = `<div class="inline-flex items-center gap-1 text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md mt-1 truncate max-w-[160px]" title="${esc(revText)}">
-                <span>⚠️</span> <span class="truncate">${esc(revText)}</span>
-            </div>`;
+        const stage = c._stageObj || normalizeContractStageFrontend(c.tahapProgress, c.status, c._cleanSelesai);
+
+        let docLink = '<span class="text-slate-300">-</span>';
+        if (c.linkDokumen && c.linkDokumen !== '-' && c.linkDokumen.startsWith('http')) {
+            docLink = `<a href="${esc(c.linkDokumen)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-0.5 text-sky-600 hover:text-sky-800 hover:underline font-bold text-[11px]" title="Buka File Drive"><span>🔗</span><span>Drive</span></a>`;
         }
 
-        let linkDocHtml = '';
-        if (c.linkDokumen && c.linkDokumen.trim() !== '' && c.linkDokumen !== '-') {
-            linkDocHtml = `<a href="${esc(c.linkDokumen)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-[10px] text-ethos-700 hover:text-ethos-900 font-bold hover:underline mt-1 transition cursor-pointer" title="Buka Dokumen Google Drive">
-                <svg class="w-3 h-3 text-ethos-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                <span>Draft Drive</span>
-            </a>`;
+        // Subtitle jika ada lingkup asli yang bukan tanggal
+        let subText = '';
+        if (c._cleanLingkup && c._cleanLingkup !== '-' && !isDateString(c._cleanLingkup)) {
+            subText = `<div class="text-[10.5px] text-slate-400 truncate max-w-[240px]">${esc(c._cleanLingkup)}</div>`;
+        } else if (c._cleanDiv && c._cleanDiv !== '-' && !isDateString(c._cleanDiv)) {
+            subText = `<div class="text-[10.5px] text-slate-400 truncate max-w-[240px]">${esc(c._cleanDiv)}</div>`;
         }
 
         return `
-        <tr class="hover:bg-slate-50/80 transition-colors">
-            <!-- 1. No Kontrak & Divisi -->
-            <td>
-                <button onclick="openContractDetailModal('${esc(c.noKontrak)}')" class="font-mono font-bold text-ethos-700 hover:text-ethos-900 bg-sky-50/80 hover:bg-sky-100 border border-sky-200/90 px-2 py-0.5 rounded text-[11px] inline-block transition text-left cursor-pointer shadow-2xs">
-                    #${esc(c.noKontrak)}
-                </button>
-                <div class="text-[11px] text-slate-500 font-medium flex items-center gap-1.5 mt-1.5">
-                    <span class="w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0"></span>
-                    <span class="truncate max-w-[140px]" title="${esc(cleanDivisi)}">${esc(cleanDivisi)}</span>
-                </div>
-                ${c.tglPengajuan && c.tglPengajuan !== '-' ? `<div class="text-[10px] text-slate-400 mt-0.5">Ajuan: ${esc(c.tglPengajuan)}</div>` : ''}
+        <tr class="hover:bg-slate-50 transition-colors">
+            <!-- 1. # (No Kontrak) -->
+            <td class="text-center font-mono font-bold text-slate-700 text-xs whitespace-nowrap">
+                <span class="bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded text-[11px]">#${esc(c.noKontrak)}</span>
             </td>
 
-            <!-- 2. Vendor & Ruang Lingkup -->
+            <!-- 2. Vendor -->
             <td>
-                <div class="flex items-center gap-2.5">
-                    <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 border border-slate-200 text-slate-700 flex items-center justify-center font-bold text-[11px] shrink-0 shadow-2xs">
-                        ${esc(initials)}
-                    </div>
-                    <div class="min-w-0">
-                        <div class="font-bold text-slate-900 text-xs truncate max-w-[210px]" title="${esc(cleanVendor)}">${esc(cleanVendor)}</div>
-                        <div class="text-[11px] text-slate-500 truncate max-w-[190px] mt-0.5" title="${esc(cleanJenis)}">${esc(cleanJenis)}</div>
-                    </div>
-                </div>
+                <div class="font-bold text-slate-900 text-xs truncate max-w-[260px]" title="${esc(cleanVendor)}">${esc(cleanVendor)}</div>
+                ${subText}
             </td>
 
-            <!-- 3. Tahap Progress Pengerjaan -->
-            <td>
-                <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md font-bold text-[10.5px]" style="background:${stage.badgeBg}; color:${stage.badgeColor}; border:1px solid ${stage.badgeColor}35;">
+            <!-- 3. Tahap Progress (Single line compact badge) -->
+            <td class="whitespace-nowrap">
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-bold" style="background:${stage.badgeBg}; color:${stage.badgeColor}; border:1px solid ${stage.badgeColor}35;">
                     <span class="w-1.5 h-1.5 rounded-full" style="background:${stage.badgeColor};"></span>
                     <span>${esc(stage.label)}</span>
-                </div>
-                <div class="w-full bg-slate-100 rounded-full h-1.5 mt-1.5 overflow-hidden" style="max-width:130px;">
-                    <div class="h-1.5 rounded-full transition-all duration-300" style="width:${stage.percent}%; background:${stage.badgeColor};"></div>
-                </div>
-                <div class="flex items-center justify-between text-[10px] text-slate-400 mt-1" style="max-width:130px;">
-                    <span>${stage.percent}% Selesai</span>
-                    ${c.slaStatus && c.slaStatus !== '-' ? `<span class="${c.isOverdueSla ? 'text-rose-600 font-bold' : 'text-slate-500'}">${esc(c.slaStatus)}</span>` : ''}
-                </div>
-                ${revisionBadgeHtml}
-            </td>
-
-            <!-- 4. Masa Berlaku & Durasi -->
-            <td>
-                <div class="text-[11px] text-slate-800 font-semibold whitespace-nowrap mb-1">
-                    ${esc(c.tglMulai || '-')} &ndash; ${esc(c.tglSelesai || '-')}
-                </div>
-                <div>${expiryBadgeHtml}</div>
-                <div class="text-[10px] text-slate-500 mt-1 flex items-center gap-1 font-medium">
-                    <span>⏱️</span> <span>${processDays !== null ? processDays + ' hari proses' : '-'}</span>
-                </div>
-            </td>
-
-            <!-- 5. Kelengkapan Berkas -->
-            <td>
-                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10.5px] font-semibold ${isDocComplete ? 'bg-sky-50 text-sky-700 border border-sky-200' : 'bg-amber-50 text-amber-800 border border-amber-200'}">
-                    ${esc(c.kelengkapan || 'Lengkap')}
                 </span>
-                <div>${linkDocHtml}</div>
+            </td>
+
+            <!-- 4. Masa Berlaku & Sisa Hari -->
+            <td class="whitespace-nowrap">
+                <div class="text-slate-800 font-medium text-[11px] leading-tight">${esc(displayMasa)}</div>
+                <div class="mt-0.5 leading-none">${expiryBadge}</div>
+            </td>
+
+            <!-- 5. Dokumen -->
+            <td class="text-center whitespace-nowrap">
+                ${docLink}
             </td>
 
             <!-- 6. Nilai Kontrak -->
-            <td class="text-right font-bold text-slate-900 text-xs font-mono whitespace-nowrap">
-                ${c.nilai ? formatRupiah(c.nilai) : '-'}
+            <td class="text-right font-mono font-bold text-slate-900 text-xs whitespace-nowrap">
+                ${c.nilai ? formatRupiah(c.nilai) : '<span class="text-slate-400 font-normal">-</span>'}
             </td>
 
             <!-- 7. Kepatuhan -->
-            <td class="text-center">
-                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold ${isComply ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}">
+            <td class="text-center whitespace-nowrap">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${isComply ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}">
                     ${isComply ? '✓ Comply' : '✗ Not Comply'}
                 </span>
             </td>
 
             <!-- 8. Aksi Detail -->
-            <td class="text-center">
-                <button onclick="openContractDetailModal('${esc(c.noKontrak)}')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 hover:text-ethos-700 font-bold text-xs transition border border-slate-200 shadow-2xs hover:border-slate-300 cursor-pointer" title="Lihat Detail & Stepper">
-                    <span>Detail</span>
-                    <svg class="w-3 h-3 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+            <td class="text-center whitespace-nowrap">
+                <button onclick="openContractDetailModal('${esc(c.noKontrak)}')" class="px-2.5 py-1 rounded-md bg-white hover:bg-slate-50 text-slate-700 hover:text-sky-700 font-bold text-[11px] border border-slate-200 shadow-2xs hover:border-slate-300 transition cursor-pointer">
+                    Detail
                 </button>
             </td>
         </tr>`;
@@ -950,129 +981,105 @@ function openContractDetailModal(noKontrak) {
     const subEl = document.getElementById('cdmVendorSubtitle');
     const contentEl = document.getElementById('contractDetailContent');
 
+    const cleanVendor = (c.vendor || '').replace(/\r?\n|\r/g, ' ').trim();
     if (titleEl) titleEl.textContent = `Kontrak #${c.noKontrak}`;
-    if (subEl) subEl.textContent = `${c.vendor} · ${c.jenisPekerjaan || 'Ruang Lingkup'}`;
+    if (subEl) subEl.textContent = cleanVendor;
 
-    const stage = c._stageObj || normalizeContractStageFrontend(c.tahapProgress, c.status, c.tglSelesai);
-    const days = c._daysRemaining !== undefined ? c._daysRemaining : getContractDaysRemaining(c.tglSelesai);
-    const processDays = c._processDays !== undefined ? c._processDays : getContractProcessDays(c.tglPengajuan, c.tglRealisasi);
+    const stage = c._stageObj || normalizeContractStageFrontend(c.tahapProgress, c.status, c._cleanSelesai || c.tglSelesai);
+    const days = c._daysRemaining !== undefined ? c._daysRemaining : getContractDaysRemaining(c._cleanSelesai || c.tglSelesai);
     const isComply = c.status && c.status.toLowerCase() === 'comply';
 
+    // Periode Masa Berlaku yang bersih
+    let displayMasa = '-';
+    if (c._cleanMulai && c._cleanMulai !== '-' && c._cleanSelesai && c._cleanSelesai !== '-') {
+        displayMasa = `${c._cleanMulai} – ${c._cleanSelesai}`;
+    } else if (c._cleanSelesai && c._cleanSelesai !== '-') {
+        displayMasa = `s/d ${c._cleanSelesai}`;
+    } else if (c._cleanMulai && c._cleanMulai !== '-') {
+        displayMasa = `Mulai ${c._cleanMulai}`;
+    }
+
+    let daysBadge = '<span class="text-slate-400 font-normal">-</span>';
+    if (days !== null) {
+        if (days < 0) {
+            daysBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">Expired (${Math.abs(days)}h lalu)</span>`;
+        } else if (days <= 30) {
+            daysBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">Kritis (Sisa ${days}h)</span>`;
+        } else if (days <= 90) {
+            daysBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-50 text-orange-700 border border-orange-200">Perhatian (Sisa ${days}h)</span>`;
+        } else {
+            daysBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Aman (Sisa ${days}h)</span>`;
+        }
+    }
+
     const workflowSteps = [
-        { num: 1, key: 'pengajuan', title: 'Pengajuan ke Legal', desc: 'ToR & Penawaran' },
-        { num: 2, key: 'draft', title: 'Draft Keluar', desc: 'Drafting Legalitas' },
-        { num: 3, key: 'paraf_vendor', title: 'Paraf Vendor', desc: 'Review Rekanan' },
-        { num: 4, key: 'paraf_ethos', title: 'Paraf Ethos', desc: 'Review Internal' },
-        { num: 5, key: 'revisi', title: 'Revisi / Renvoi', desc: 'Klausul & Pasal' },
-        { num: 6, key: 'ttd', title: 'Tanda Tangan', desc: 'Direksi & Rekanan' },
-        { num: 7, key: 'aktif', title: 'Aktif & Sah', desc: 'Berlaku Efektif' }
+        { num: 1, key: 'pengajuan', title: '1. Pengajuan' },
+        { num: 2, key: 'draft', title: '2. Draft' },
+        { num: 3, key: 'paraf_vendor', title: '3. Paraf Rekanan' },
+        { num: 4, key: 'paraf_ethos', title: '4. Paraf Ethos' },
+        { num: 5, key: 'revisi', title: '5. Revisi' },
+        { num: 6, key: 'ttd', title: '6. Tanda Tangan' },
+        { num: 7, key: 'aktif', title: '7. Aktif & Sah' }
     ];
 
     const currentStepNum = stage.step;
     const hasRevision = stage.isRevision || stage.isRenvoi || (c.statusRevisi && c.statusRevisi.trim() !== '' && c.statusRevisi !== '-');
 
+    // 1. Sleek Compact Stepper
     let stepperHtml = `
-    <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-2xs">
-        <div class="flex items-center justify-between mb-3.5 flex-wrap gap-2">
+    <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 shadow-2xs">
+        <div class="flex items-center justify-between mb-2 flex-wrap gap-1.5">
             <div class="flex items-center gap-2">
-                <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Siklus Pengerjaan Kontrak</span>
-                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-black" style="background:${stage.badgeBg}; color:${stage.badgeColor}; border:1px solid ${stage.badgeColor}40;">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Tahap Kontrak:</span>
+                <span class="px-2 py-0.5 rounded-full text-[10.5px] font-black" style="background:${stage.badgeBg}; color:${stage.badgeColor}; border:1px solid ${stage.badgeColor}40;">
                     ${esc(stage.label)}
                 </span>
             </div>
-            <span class="text-xs font-bold text-slate-700 bg-white border border-slate-200 px-2 py-0.5 rounded-lg shadow-2xs">${stage.percent}% Selesai</span>
+            <span class="text-[10.5px] font-bold text-slate-700 bg-white border border-slate-200 px-2 py-0.5 rounded shadow-2xs">${stage.percent}% Selesai</span>
         </div>
 
-        <div class="w-full bg-slate-200/80 rounded-full h-2 mb-4 overflow-hidden">
-            <div class="h-2 rounded-full transition-all duration-500" style="width:${stage.percent}%; background:${stage.badgeColor};"></div>
+        <div class="w-full bg-slate-200 rounded-full h-1.5 mb-2.5 overflow-hidden">
+            <div class="h-1.5 rounded-full transition-all duration-500" style="width:${stage.percent}%; background:${stage.badgeColor};"></div>
         </div>
 
-        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 text-center text-xs">
+        <div class="flex items-center justify-between text-[10px] gap-1 overflow-x-auto no-scrollbar pt-0.5">
     `;
 
     workflowSteps.forEach(st => {
-        let iconHtml = '';
-        let stepBorder = 'border-slate-200';
-        let stepBg = 'bg-white';
-        let textColor = 'text-slate-600';
+        let isDone = false;
+        let isCurrent = false;
 
         if (st.num < 5) {
-            if (currentStepNum > st.num || currentStepNum >= 7) {
-                stepBorder = 'border-emerald-300';
-                stepBg = 'bg-emerald-50/70';
-                textColor = 'text-emerald-800 font-bold';
-                iconHtml = '✓';
-            } else if (currentStepNum === st.num) {
-                stepBorder = 'border-sky-500 shadow-xs ring-2 ring-sky-100';
-                stepBg = 'bg-sky-50';
-                textColor = 'text-sky-900 font-black';
-                iconHtml = '▶';
-            } else {
-                iconHtml = st.num;
-                textColor = 'text-slate-400';
-            }
+            if (currentStepNum > st.num || currentStepNum >= 7) isDone = true;
+            else if (currentStepNum === st.num) isCurrent = true;
         } else if (st.num === 5) {
             if (hasRevision) {
-                if (currentStepNum === 5 || currentStepNum === 6) {
-                    stepBorder = 'border-rose-400 shadow-xs ring-2 ring-rose-100';
-                    stepBg = 'bg-rose-50';
-                    textColor = 'text-rose-900 font-black';
-                    iconHtml = '⚠️';
-                } else if (currentStepNum > 6) {
-                    stepBorder = 'border-amber-300';
-                    stepBg = 'bg-amber-50';
-                    textColor = 'text-amber-800 font-bold';
-                    iconHtml = '✓';
-                } else {
-                    iconHtml = '5';
-                    textColor = 'text-slate-400';
-                }
-            } else {
-                if (currentStepNum >= 7) {
-                    stepBorder = 'border-slate-200';
-                    stepBg = 'bg-slate-100/60';
-                    textColor = 'text-slate-400';
-                    iconHtml = '—';
-                } else {
-                    iconHtml = '5';
-                    textColor = 'text-slate-400';
-                }
+                if (currentStepNum > 6) isDone = true;
+                else if (currentStepNum === 5 || currentStepNum === 6) isCurrent = true;
+            } else if (currentStepNum >= 7) {
+                isDone = true;
             }
         } else if (st.num === 6) {
-            if (currentStepNum > 7) {
-                stepBorder = 'border-emerald-300';
-                stepBg = 'bg-emerald-50/70';
-                textColor = 'text-emerald-800 font-bold';
-                iconHtml = '✓';
-            } else if (currentStepNum === 7) {
-                stepBorder = 'border-teal-500 shadow-xs ring-2 ring-teal-100';
-                stepBg = 'bg-teal-50';
-                textColor = 'text-teal-900 font-black';
-                iconHtml = '▶';
-            } else {
-                iconHtml = '6';
-                textColor = 'text-slate-400';
-            }
+            if (currentStepNum > 7) isDone = true;
+            else if (currentStepNum === 7) isCurrent = true;
         } else if (st.num === 7) {
-            if (currentStepNum >= 8) {
-                stepBorder = 'border-emerald-500 shadow-xs';
-                stepBg = 'bg-emerald-100/80';
-                textColor = 'text-emerald-900 font-black';
-                iconHtml = '🎉';
-            } else {
-                iconHtml = '7';
-                textColor = 'text-slate-400';
-            }
+            if (currentStepNum >= 8) isDone = true;
+        }
+
+        let badgeClass = 'text-slate-400 bg-white border-slate-200';
+        let iconPrefix = '';
+        if (isDone) {
+            badgeClass = 'text-emerald-700 bg-emerald-50 border-emerald-300 font-bold';
+            iconPrefix = '✓ ';
+        } else if (isCurrent) {
+            badgeClass = 'text-sky-800 bg-sky-100 border-sky-400 font-black shadow-2xs ring-1 ring-sky-200';
+            iconPrefix = '▶ ';
         }
 
         stepperHtml += `
-            <div class="border ${stepBorder} ${stepBg} rounded-xl p-2.5 flex flex-col items-center justify-between transition-all shadow-2xs">
-                <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10.5px] font-bold ${textColor} mb-1 bg-white/90 shadow-2xs">
-                    ${iconHtml}
-                </div>
-                <div class="text-[10px] font-bold ${textColor} leading-tight">${st.title}</div>
-                <div class="text-[9px] text-slate-400 mt-0.5">${st.desc}</div>
-            </div>
+            <span class="inline-flex items-center px-1.5 py-0.5 rounded border text-[9.5px] whitespace-nowrap ${badgeClass}">
+                ${iconPrefix}${st.title}
+            </span>
         `;
     });
 
@@ -1081,99 +1088,67 @@ function openContractDetailModal(noKontrak) {
     </div>
     `;
 
+    // 2. Compact 2-Column Info Grid
     let infoHtml = `
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
-        <div class="bg-slate-50/80 border border-slate-200/90 rounded-2xl p-4 space-y-2.5 shadow-2xs">
-            <h4 class="font-bold text-slate-900 text-[11px] uppercase tracking-wider flex items-center gap-1.5 border-b border-slate-200/80 pb-2">
-                <span>⚖️</span> Informasi Legalitas &amp; SLA
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+        <div class="bg-white border border-slate-200 rounded-xl p-3 space-y-2 shadow-2xs">
+            <h4 class="font-bold text-slate-800 text-[10.5px] uppercase tracking-wider flex items-center gap-1 border-b border-slate-100 pb-1.5">
+                <span>⚖️</span> Data Kontrak &amp; Legal
             </h4>
             
-            <div class="flex justify-between items-center">
+            <div class="flex justify-between items-center text-[11px]">
                 <span class="text-slate-500">Nomor Kontrak:</span>
-                <strong class="text-ethos-700 font-mono font-bold">#${esc(c.noKontrak)}</strong>
+                <strong class="text-slate-900 font-mono font-bold">#${esc(c.noKontrak)}</strong>
             </div>
 
-            <div class="flex justify-between items-center">
-                <span class="text-slate-500">PIC / Divisi Pengaju:</span>
-                <strong class="text-slate-800">${esc(c.picDivisi || '-')}</strong>
+            <div class="flex justify-between items-center text-[11px]">
+                <span class="text-slate-500">Divisi PIC:</span>
+                <strong class="text-slate-800">${c._cleanDiv && c._cleanDiv !== '-' ? esc(c._cleanDiv) : '-'}</strong>
             </div>
 
-            <div class="flex justify-between items-center">
-                <span class="text-slate-500">Tanggal Pengajuan:</span>
-                <strong class="text-slate-800">${esc(c.tglPengajuan || '-')}</strong>
+            <div class="flex justify-between items-center text-[11px]">
+                <span class="text-slate-500">Ruang Lingkup:</span>
+                <strong class="text-slate-800 truncate max-w-[150px]" title="${esc(c._cleanLingkup || '-')}">${c._cleanLingkup && c._cleanLingkup !== '-' ? esc(c._cleanLingkup) : '-'}</strong>
             </div>
 
-            <div class="flex justify-between items-center">
-                <span class="text-slate-500">Durasi Pengerjaan:</span>
-                <strong class="text-slate-800">${processDays !== null ? `${processDays} Hari Kalender` : '-'}</strong>
-            </div>
-
-            <div class="flex justify-between items-center">
-                <span class="text-slate-500">Target Selesai SLA:</span>
-                <strong class="text-slate-800">${esc(c.targetSelesai || '-')}</strong>
-            </div>
-
-            <div class="flex justify-between items-center">
-                <span class="text-slate-500">Status SLA:</span>
-                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${c.isOverdueSla ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'}">
-                    ${esc(c.slaStatus || (stage.isFinal ? 'Selesai' : 'On Track'))}
+            <div class="flex justify-between items-center text-[11px]">
+                <span class="text-slate-500">Kepatuhan Regulasi:</span>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${isComply ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}">
+                    ${isComply ? '✓ Comply' : '✗ Not Comply'}
                 </span>
-            </div>
-
-            <div class="flex justify-between items-center">
-                <span class="text-slate-500">Tanggal Realisasi TTD:</span>
-                <strong class="text-slate-800">${esc(c.tglRealisasi || (stage.isFinal ? 'Selesai' : 'Dalam Proses'))}</strong>
             </div>
         </div>
 
-        <div class="bg-slate-50/80 border border-slate-200/90 rounded-2xl p-4 space-y-2.5 shadow-2xs">
-            <h4 class="font-bold text-slate-900 text-[11px] uppercase tracking-wider flex items-center gap-1.5 border-b border-slate-200/80 pb-2">
+        <div class="bg-white border border-slate-200 rounded-xl p-3 space-y-2 shadow-2xs">
+            <h4 class="font-bold text-slate-800 text-[10.5px] uppercase tracking-wider flex items-center gap-1 border-b border-slate-100 pb-1.5">
                 <span>💼</span> Komersial &amp; Masa Berlaku
             </h4>
 
-            <div class="flex justify-between items-center">
-                <span class="text-slate-500">Mitra Rekanan:</span>
-                <strong class="text-slate-900 truncate max-w-[170px]" title="${esc(c.vendor)}">${esc(c.vendor)}</strong>
-            </div>
-
-            <div class="flex justify-between items-center">
+            <div class="flex justify-between items-center text-[11px]">
                 <span class="text-slate-500">Nilai Kontrak:</span>
                 <strong class="text-slate-900 font-bold font-mono">${c.nilai ? formatRupiah(c.nilai) : '-'}</strong>
             </div>
 
-            <div class="flex justify-between items-center">
-                <span class="text-slate-500">Periode Kontrak:</span>
-                <strong class="text-slate-800">${esc(c.tglMulai || '-')} &ndash; ${esc(c.tglSelesai || '-')}</strong>
+            <div class="flex justify-between items-center text-[11px]">
+                <span class="text-slate-500">Periode:</span>
+                <strong class="text-slate-800">${displayMasa}</strong>
             </div>
 
-            <div class="flex justify-between items-center">
-                <span class="text-slate-500">Sisa Masa Berlaku:</span>
-                ${days !== null ? (
-                    days < 0 ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800">Lewat ${Math.abs(days)} Hari (Expired)</span>` :
-                    days <= 30 ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900">Kritis Sisa ${days} Hari</span>` :
-                    `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">Sisa ${days} Hari (Aman)</span>`
-                ) : '<span class="text-slate-400">-</span>'}
+            <div class="flex justify-between items-center text-[11px]">
+                <span class="text-slate-500">Sisa Waktu:</span>
+                ${daysBadge}
             </div>
 
-            <div class="flex justify-between items-center">
-                <span class="text-slate-500">Kelengkapan Dokumen:</span>
-                <strong class="text-slate-800">${esc(c.kelengkapan || 'Lengkap')}</strong>
-            </div>
-
-            <div class="flex justify-between items-center">
-                <span class="text-slate-500">Kepatuhan Regulasi:</span>
-                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${isComply ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
-                    ${isComply ? '✓ Comply' : '✗ Not Comply'}
-                </span>
-            </div>
-
-            <div class="flex justify-between items-center">
-                <span class="text-slate-500">File Draft / Naskah:</span>
-                ${c.linkDokumen && c.linkDokumen.trim() !== '' && c.linkDokumen !== '-' ? `
-                    <a href="${esc(c.linkDokumen)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-ethos-600 hover:bg-ethos-700 text-white font-bold text-[10.5px] transition cursor-pointer shadow-2xs">
-                        <span>🔗 Buka File Drive</span>
-                    </a>
-                ` : '<span class="text-slate-400">Belum ada link</span>'}
+            <div class="flex justify-between items-center text-[11px]">
+                <span class="text-slate-500">Dokumen:</span>
+                <div class="flex items-center gap-1.5">
+                    <span class="text-slate-700">${esc(c.kelengkapan || 'Lengkap')}</span>
+                    ${c.linkDokumen && c.linkDokumen.trim() !== '' && c.linkDokumen !== '-' ? `
+                        <a href="${esc(c.linkDokumen)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-sky-600 hover:bg-sky-700 text-white font-bold text-[10px] transition cursor-pointer shadow-2xs" title="Buka File Google Drive">
+                            <span>🔗 Drive</span>
+                        </a>
+                    ` : ''}
+                </div>
             </div>
         </div>
     </div>
@@ -1182,12 +1157,12 @@ function openContractDetailModal(noKontrak) {
     let revisionDetailHtml = '';
     if (hasRevision) {
         revisionDetailHtml = `
-        <div class="bg-rose-50 border border-rose-200 rounded-xl p-3.5 text-xs text-rose-900">
-            <div class="flex items-center gap-2 font-bold mb-1">
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-2.5 text-xs text-amber-900">
+            <div class="flex items-center gap-1.5 font-bold mb-0.5 text-[11px]">
                 <span>🔄</span>
-                <span>Catatan Revisi / Renvoi Kontrak:</span>
+                <span>Catatan Revisi / Renvoi:</span>
             </div>
-            <p class="text-rose-800 text-[11.5px] leading-relaxed">
+            <p class="text-amber-800 text-[11px] leading-relaxed">
                 ${esc(c.statusRevisi || 'Terdapat penyesuaian klausul kontrak yang sedang diproses oleh tim Legal.')}
             </p>
         </div>
@@ -1197,9 +1172,9 @@ function openContractDetailModal(noKontrak) {
     let remarksHtml = '';
     if (c.keterangan && c.keterangan.trim() !== '' && c.keterangan !== '-') {
         remarksHtml = `
-        <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-700">
-            <strong class="text-slate-900 block mb-0.5">📝 Catatan Tambahan:</strong>
-            <p class="text-slate-600 leading-relaxed">${esc(c.keterangan)}</p>
+        <div class="bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs text-slate-700">
+            <strong class="text-slate-800 block text-[10.5px] mb-0.5">📝 Catatan:</strong>
+            <p class="text-slate-600 text-[11px] leading-relaxed">${esc(c.keterangan)}</p>
         </div>
         `;
     }
