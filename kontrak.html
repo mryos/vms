@@ -3,30 +3,39 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Contract Repository & Compliance Dashboard - PT Etos Kreatif Indonesia">
-<title>Contract Repository & Compliance · PT Etos Kreatif Indonesia</title>
+<meta name="description" content="Contract Repository & Legal Compliance Dashboard - PT Etos Kreatif Indonesia">
+<title>Contract Repository &amp; Legal Compliance · PT Etos Kreatif Indonesia</title>
 <link rel="icon" type="image/png" href="assets/logo-ethos.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
 tailwind.config = {
   theme: {
     extend: {
-      fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+      fontFamily: {
+        sans: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'monospace']
+      },
       colors: {
-        tremor: {
-          brand:   { faint: '#eff6ff', muted: '#bfdbfe', DEFAULT: '#3b82f6', emphasis: '#1d4ed8', inverted: '#ffffff' },
-          bg:      { muted: '#f9fafb', subtle: '#f3f4f6', DEFAULT: '#ffffff', emphasis: '#374151' },
-          border:  { DEFAULT: '#e5e7eb' },
-          ring:    { DEFAULT: '#e5e7eb' },
-          content: { subtle: '#9ca3af', DEFAULT: '#6b7280', emphasis: '#374151', strong: '#111827', inverted: '#ffffff' }
+        ethos: {
+          50: '#f0f9ff',
+          100: '#e0f2fe',
+          200: '#bae6fd',
+          300: '#7dd3fc',
+          400: '#38bdf8',
+          500: '#0ea5e9',
+          600: '#0284c7',
+          700: '#0369a1',
+          800: '#075985',
+          900: '#0c4a6e'
         }
       },
       boxShadow: {
-        'tremor-card':   '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
-        'tremor-dropdown': '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)'
+        'card': '0 1px 3px 0 rgba(15, 23, 42, 0.05), 0 1px 2px -1px rgba(15, 23, 42, 0.03)',
+        'card-hover': '0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04)',
+        'dropdown': '0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.03)'
       }
     }
   }
@@ -34,176 +43,219 @@ tailwind.config = {
 </script>
 <style>
   * { box-sizing: border-box; }
-  body { font-family: 'Inter', system-ui, sans-serif; background: #f8fafc; color: #0f172a; margin: 0; }
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    background-color: #f8fafc;
+    color: #0f172a;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 
-  /* Modern scrollbar */
+  /* Custom sleek scrollbar */
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
   ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
   /* Hide scrollbar on pill filter bars */
-  #contractExpiryFilters > div::-webkit-scrollbar,
-  #contractStageFilters > div::-webkit-scrollbar { display: none; }
-  #contractExpiryFilters > div,
-  #contractStageFilters > div { -ms-overflow-style: none; scrollbar-width: none; }
+  #contractExpiryFilters::-webkit-scrollbar,
+  #contractStageFilters::-webkit-scrollbar,
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  #contractExpiryFilters,
+  #contractStageFilters,
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-  /* Tremor Card */
-  .tremor-card {
+  /* Executive Card */
+  .card-executive {
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 0.875rem;
-    padding: 1.15rem 1.35rem;
-    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.05);
+    border-radius: 1rem;
+    box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 1px 2px -1px rgba(15, 23, 42, 0.02);
     transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   }
-  .tremor-card:hover {
-    box-shadow: 0 4px 12px 0 rgb(0 0 0 / 0.06), 0 2px 4px -1px rgb(0 0 0 / 0.04);
+  .card-executive:hover {
+    box-shadow: 0 8px 20px -4px rgba(15, 23, 42, 0.06), 0 4px 6px -2px rgba(15, 23, 42, 0.03);
+    border-color: #cbd5e1;
   }
 
-  /* Executive KPI Cards */
+  /* KPI Card Modern */
   .kpi-card {
     position: relative;
-    overflow: hidden;
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 0.875rem;
-    padding: 0.95rem 1.1rem;
-    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.03);
+    border-radius: 1rem;
+    padding: 1.15rem 1.25rem;
+    box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04);
     transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    overflow: hidden;
   }
   .kpi-card:hover {
     transform: translateY(-2px);
+    box-shadow: 0 10px 24px -6px rgba(15, 23, 42, 0.08);
     border-color: #cbd5e1;
-    box-shadow: 0 8px 18px -4px rgb(0 0 0 / 0.06);
   }
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: transparent;
+  }
+  .kpi-card-blue::before   { background: linear-gradient(90deg, #0284c7, #38bdf8); }
+  .kpi-card-green::before  { background: linear-gradient(90deg, #10b981, #34d399); }
+  .kpi-card-indigo::before { background: linear-gradient(90deg, #6366f1, #818cf8); }
+  .kpi-card-amber::before  { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+  .kpi-card-rose::before   { background: linear-gradient(90deg, #f43f5e, #fb7185); }
 
-  /* Tremor Table */
-  .tremor-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.8125rem; }
-  .tremor-table thead th {
-    text-align: left; padding: 0.55rem 0.8rem; font-weight: 700; color: #475569;
-    font-size: 0.7rem; text-transform: uppercase;
-    letter-spacing: 0.05em; white-space: nowrap; background: #f8fafc;
-    position: sticky; top: 0; z-index: 5;
-    box-shadow: inset 0 -1px 0 #e2e8f0;
+  /* Modern Enterprise Table */
+  .enterprise-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.8125rem; }
+  .enterprise-table thead th {
+    text-align: left;
+    padding: 0.75rem 1rem;
+    font-weight: 700;
+    color: #475569;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+    background: #f8fafc;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    border-bottom: 1px solid #e2e8f0;
   }
-  .tremor-table tbody td {
-    padding: 0.48rem 0.8rem; border-bottom: 1px solid #f1f5f9; color: #334155;
-    vertical-align: middle; line-height: 1.35;
+  .enterprise-table tbody td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #f1f5f9;
+    color: #334155;
+    vertical-align: middle;
+    line-height: 1.4;
   }
-  .tremor-table tbody tr:last-child td { border-bottom: none; }
-  .tremor-table tbody tr:hover { background: #f8fafc; }
+  .enterprise-table tbody tr:last-child td { border-bottom: none; }
+  .enterprise-table tbody tr { transition: background-color 0.15s ease; }
+  .enterprise-table tbody tr:hover { background-color: #f8fafc; }
 
   .table-scroll-container {
     overflow-x: auto;
-    border-radius: 0.75rem;
+    border-radius: 0.875rem;
     border: 1px solid #e2e8f0;
     background: #ffffff;
-    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+    box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.03);
   }
 
-  .tremor-badge {
-    display: inline-flex; align-items: center; gap: 0.25rem;
-    padding: 0.15rem 0.5rem; border-radius: 9999px;
-    font-size: 0.75rem; font-weight: 600; line-height: 1rem;
-    white-space: nowrap;
-  }
-  .tremor-badge-gray  { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
-  .tremor-badge-blue  { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
-  .tremor-badge-emerald { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
-  .tremor-badge-amber { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
-  .tremor-badge-rose  { background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; }
-
-  .tremor-select {
-    font-size: 0.78rem; font-weight: 500; color: #1e293b;
-    background: #ffffff; border: 1px solid #cbd5e1;
-    border-radius: 0.65rem; padding: 0.4rem 2rem 0.4rem 0.65rem;
-    outline: none; cursor: pointer; transition: all 0.15s ease;
+  /* Form controls */
+  .select-modern {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #334155;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.625rem;
+    padding: 0.45rem 2rem 0.45rem 0.75rem;
+    outline: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
-    background-repeat: no-repeat; background-position: right 0.5rem center; background-size: 0.85rem;
-    appearance: none; -webkit-appearance: none;
+    background-repeat: no-repeat;
+    background-position: right 0.6rem center;
+    background-size: 0.8rem;
+    appearance: none;
+    -webkit-appearance: none;
   }
-  .tremor-select:hover { border-color: #94a3b8; background-color: #f8fafc; }
-  .tremor-select:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15); }
+  .select-modern:hover { border-color: #cbd5e1; background-color: #f8fafc; }
+  .select-modern:focus { border-color: #0284c7; box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12); }
 
+  /* Pagination button */
   .page-btn {
-    padding: 0.3rem 0.65rem; border-radius: 0.5rem; border: 1px solid #e2e8f0;
-    background: #ffffff; font-size: 0.75rem; font-weight: 600; color: #475569;
-    cursor: pointer; transition: all 0.15s ease;
+    padding: 0.35rem 0.75rem;
+    border-radius: 0.5rem;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.15s ease;
   }
   .page-btn:hover:not(:disabled) { background: #f8fafc; border-color: #cbd5e1; color: #0f172a; }
-  .page-btn.active { background: #2563eb; border-color: #2563eb; color: #ffffff; }
+  .page-btn.active { background: #0284c7; border-color: #0284c7; color: #ffffff; box-shadow: 0 1px 2px 0 rgba(2, 132, 199, 0.3); }
   .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
+  /* Toast Notification */
   .toast-box {
     position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 100;
     display: flex; flex-direction: column; gap: 0.5rem; pointer-events: none;
   }
   .toast {
     padding: 0.75rem 1.25rem; border-radius: 0.75rem; font-size: 0.8125rem; font-weight: 600;
-    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); pointer-events: auto;
-    transition: all 0.3s ease; transform: translateY(1rem); opacity: 0;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15); pointer-events: auto;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); transform: translateY(1rem); opacity: 0;
   }
   .toast.show { transform: translateY(0); opacity: 1; }
   .toast-success { background: #065f46; color: #ecfdf5; border: 1px solid #059669; }
   .toast-error { background: #991b1b; color: #fef2f2; border: 1px solid #dc2626; }
-  .toast-info { background: #1e293b; color: #f8fafc; border: 1px solid #334155; }
+  .toast-info { background: #0f172a; color: #f8fafc; border: 1px solid #334155; }
 </style>
 </head>
 <body class="min-h-screen flex flex-col antialiased">
 
     <!-- ========== ADMIN AUTH LOCK OVERLAY ========== -->
-    <div id="adminAuthOverlay" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/80 backdrop-blur-md p-4" style="display: none;">
-        <div class="w-full max-w-md bg-white rounded-2xl border border-gray-200 shadow-2xl p-6 sm:p-8 text-center">
-            <div class="mx-auto w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-2xl mb-4 shadow-xs">
-                🔒
+    <div id="adminAuthOverlay" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4" style="display: none;">
+        <div class="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-2xl p-6 sm:p-8 text-center animate-in fade-in zoom-in duration-200">
+            <div class="mx-auto w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-2xl mb-4 shadow-xs text-indigo-600">
+                <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
             </div>
-            <h2 class="text-xl font-black text-gray-900 tracking-tight">Contract Repository Workspace</h2>
-            <p class="text-xs text-gray-500 mt-1 mb-5">Halaman ini adalah area privat manajemen kontrak &amp; kepatuhan. Masukkan PIN Admin Anda.</p>
+            <h2 class="text-xl font-extrabold text-slate-900 tracking-tight">Contract Repository Workspace</h2>
+            <p class="text-xs text-slate-500 mt-1 mb-6">Halaman ini adalah area privat manajemen kontrak &amp; kepatuhan regulasi PT Etos Kreatif Indonesia.</p>
             
             <div class="space-y-3 text-left">
                 <div>
-                    <label class="block text-xs font-bold text-gray-700 mb-1">PIN Administrator (4 Digit)</label>
-                    <input type="password" id="adminPinInput" maxlength="6" placeholder="Masukkan PIN Admin (9999)..." class="w-full text-center text-lg tracking-widest font-black py-2.5 px-4 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition shadow-xs">
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">PIN Administrator (4 Digit)</label>
+                    <input type="password" id="adminPinInput" maxlength="6" placeholder="Masukkan PIN Admin (9999)..." class="w-full text-center text-lg tracking-widest font-black py-2.5 px-4 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition shadow-xs font-mono">
                 </div>
-                <div id="adminPinError" class="text-xs text-red-600 font-semibold text-center" style="display: none;"></div>
-                <button id="adminSubmitBtn" class="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs tracking-wide shadow-sm transition">
-                    Verifikasi &amp; Buka Dashboard Kontrak
+                <div id="adminPinError" class="text-xs text-rose-600 font-semibold text-center" style="display: none;"></div>
+                <button id="adminSubmitBtn" class="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs tracking-wide shadow-sm transition cursor-pointer">
+                    Verifikasi &amp; Masuk Dashboard Kontrak
                 </button>
             </div>
-            <div class="mt-5 pt-4 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-400">
+            <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
                 <span>PT Etos Kreatif Indonesia</span>
-                <a href="index.html" class="text-blue-600 hover:underline">Form Penilai &rarr;</a>
+                <a href="index.html" class="text-ethos-600 font-semibold hover:underline">Form Penilai &rarr;</a>
             </div>
         </div>
     </div>
 
     <!-- ========== TOP NAVBAR ========== -->
-    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-2xs">
+    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
         <div class="mx-auto max-w-7xl px-4 lg:px-8 py-2.5">
             <div class="flex items-center justify-between gap-4">
-                <a href="dashboard.html" class="flex items-center gap-3">
-                    <img src="assets/logo-ethos.png" alt="Ethos Logo" class="h-8 w-auto object-contain">
-                    <div class="border-l border-gray-200 pl-3">
-                        <div class="text-sm font-extrabold text-gray-900 leading-tight">Contract Repository &amp; Compliance</div>
-                        <div class="text-xs font-medium text-gray-500">PT Etos Kreatif Indonesia · Admin Workspace</div>
+                <a href="kontrak.html" class="flex items-center gap-3 no-underline group">
+                    <img src="assets/logo-ethos.png" alt="Ethos Logo" class="h-8 w-auto object-contain transition-transform group-hover:scale-105">
+                    <div class="border-l border-slate-200 pl-3">
+                        <div class="text-sm font-extrabold text-slate-900 leading-tight tracking-tight">Contract Repository &amp; Compliance</div>
+                        <div class="text-[11px] font-medium text-slate-500">PT Etos Kreatif Indonesia · Executive Legal Portal</div>
                     </div>
                 </a>
                 <div class="flex items-center gap-2">
-                    <a href="dashboard.html" class="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-semibold text-blue-700 shadow-xs hover:bg-blue-100 transition">
+                    <a href="dashboard.html" class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition">
                         <span>📊</span>
                         <span>Dashboard</span>
                     </a>
-                    <a href="katalog.html" class="hidden sm:inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 shadow-xs hover:bg-gray-50 transition">
+                    <a href="katalog.html" class="hidden sm:inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition">
                         <span>📦</span>
                         <span>Katalog</span>
                     </a>
-                    <a href="index.html" class="hidden md:inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 shadow-xs hover:bg-gray-50 transition">
+                    <a href="index.html" class="hidden md:inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition">
                         <span>📝</span>
                         <span>Penilaian</span>
                     </a>
-                    <span class="inline-flex items-center gap-1 whitespace-nowrap px-2.5 py-1.5 rounded-lg bg-gray-100 border border-gray-200 text-xs font-semibold text-gray-700" id="headerUser">👤 Guest</span>
-                    <button onclick="adminLogout()" class="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-red-200 bg-red-50 px-2 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100 transition shadow-xs" title="Keluar">
+                    <span class="inline-flex items-center gap-1.5 whitespace-nowrap px-2.5 py-1.5 rounded-lg bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700" id="headerUser">
+                        👤 Administrator
+                    </span>
+                    <button onclick="adminLogout()" class="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-100 transition shadow-xs cursor-pointer" title="Keluar">
                         <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                         Keluar
                     </button>
@@ -213,314 +265,373 @@ tailwind.config = {
     </header>
 
     <!-- ========== MAIN CONTENT ========== -->
-    <main class="mx-auto max-w-7xl px-4 lg:px-8 py-4 flex-1">
+    <main class="mx-auto max-w-7xl px-4 lg:px-8 py-5 flex-1">
 
-        <!-- ========== HERO EXECUTIVE BANNER ========== -->
-        <div class="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-4 sm:p-5 rounded-2xl border border-slate-800 shadow-md">
-            <div>
-                <div class="flex items-center gap-2 mb-1.5 flex-wrap">
-                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                        <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
-                        Dedicated Contract Lifecycle Intelligence
-                    </span>
-                    <span class="text-[11px] text-slate-400" id="liveSyncStatus">Tersinkronisasi Realtime</span>
+        <!-- ========== EXECUTIVE HERO BANNER ========== -->
+        <div class="relative overflow-hidden mb-5 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white p-5 sm:p-6 rounded-2xl border border-slate-800 shadow-lg">
+            <!-- Subtle Ambient Background Light -->
+            <div class="absolute -right-20 -top-20 w-80 h-80 rounded-full bg-blue-500/10 blur-3xl pointer-events-none"></div>
+            <div class="absolute -left-20 -bottom-20 w-80 h-80 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none"></div>
+
+            <div class="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div>
+                    <div class="flex items-center gap-2 mb-2 flex-wrap">
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                            <span id="liveSyncStatus">Tersinkronisasi Realtime</span>
+                        </span>
+                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                            <span>🛡️</span> Compliance &amp; SLA Radar
+                        </span>
+                    </div>
+                    <h1 class="text-xl sm:text-2xl font-black text-white tracking-tight">Contract Repository &amp; Legal Compliance Dashboard</h1>
+                    <p class="text-xs sm:text-sm text-slate-300 mt-1.5 max-w-3xl leading-relaxed">
+                        Monitoring terpusat atas siklus hidup legalitas kontrak rekanan (Pengajuan &rarr; Draft &rarr; Paraf &rarr; Revisi &rarr; TTD &rarr; Sah), kepatuhan regulasi, durasi pengerjaan SLA, dan masa berlaku perjanjian secara komprehensif.
+                    </p>
                 </div>
-                <h1 class="text-lg sm:text-xl font-black text-white tracking-tight">Contract Repository &amp; Legal Compliance Dashboard</h1>
-                <p class="text-xs text-slate-300 mt-1 max-w-3xl leading-relaxed">
-                    Monitoring komprehensif kelengkapan berkas, kepatuhan regulasi, siklus tahapan legalitas (Pengajuan &rarr; Draft &rarr; Paraf &rarr; Revisi/Renvoi &rarr; TTD &rarr; Sah), durasi pengerjaan SLA, dan masa berlaku kontrak vendor.
-                </p>
-            </div>
-            <div class="flex items-center gap-2 flex-wrap">
-                <button onclick="loadContractDashboardData()" class="inline-flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-white px-3 py-2 text-xs font-semibold transition shadow-sm cursor-pointer" title="Muat ulang data live">
-                    <svg class="w-3.5 h-3.5 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                    Sinkron Data
-                </button>
-                <button onclick="openContractGuideModal()" class="inline-flex items-center gap-1.5 rounded-xl border border-blue-500/40 bg-blue-600/30 hover:bg-blue-600/50 text-blue-200 px-3 py-2 text-xs font-semibold transition shadow-sm cursor-pointer" title="Dokumentasi 16 Kolom Sheet">
-                    📋 Panduan Kolom
-                </button>
-                <button onclick="exportContractCsv()" class="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 text-xs font-bold transition shadow-sm cursor-pointer" title="Unduh CSV">
-                    📥 Unduh CSV
-                </button>
+
+                <div class="flex items-center gap-2 flex-wrap">
+                    <button onclick="loadContractDashboardData()" class="inline-flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800/90 hover:bg-slate-700 text-white px-3.5 py-2 text-xs font-semibold transition shadow-sm cursor-pointer" title="Sinkronkan data dari Spreadsheet">
+                        <svg class="w-3.5 h-3.5 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        Sinkron Data
+                    </button>
+                    <button onclick="openContractGuideModal()" class="inline-flex items-center gap-1.5 rounded-xl border border-indigo-500/40 bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 px-3.5 py-2 text-xs font-semibold transition shadow-sm cursor-pointer" title="Dokumentasi 16 Kolom Standar">
+                        <svg class="w-3.5 h-3.5 text-indigo-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                        Panduan 16 Kolom
+                    </button>
+                    <button onclick="exportContractCsv()" class="inline-flex items-center gap-1.5 rounded-xl bg-ethos-600 hover:bg-ethos-500 text-white px-3.5 py-2 text-xs font-bold transition shadow-sm cursor-pointer" title="Ekspor ke CSV">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Unduh CSV
+                    </button>
+                </div>
             </div>
         </div>
 
-        <!-- ========== EXECUTIVE KPI CARDS (TOP 5) ========== -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
-            <!-- 1. Total Nilai Kontrak -->
-            <div class="kpi-card">
-                <div class="flex items-center justify-between text-slate-500 mb-1">
-                    <span class="text-[11px] font-bold uppercase tracking-wider">Portofolio Kontrak</span>
-                    <span class="text-sm">💼</span>
+        <!-- ========== TOP 5 EXECUTIVE KPI CARDS ========== -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 mb-5">
+            <!-- 1. Total Portofolio Kontrak -->
+            <div class="kpi-card kpi-card-blue flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between text-slate-500 mb-1.5">
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Portofolio Kontrak</span>
+                        <div class="w-7 h-7 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center text-sm font-bold">💼</div>
+                    </div>
+                    <div class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight" id="kpiTotalValue">Rp 0</div>
                 </div>
-                <div class="text-lg sm:text-xl font-black text-slate-900" id="kpiTotalValue">Rp 0</div>
-                <div class="text-[11px] text-slate-500 mt-1 flex items-center justify-between">
-                    <span id="kpiTotalContractsCount">0 kontrak terdaftar</span>
-                    <span class="font-bold text-blue-600" id="kpiActiveContractsCount">0 aktif</span>
+                <div class="text-[11px] text-slate-500 mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between">
+                    <span id="kpiTotalContractsCount" class="font-medium">0 kontrak</span>
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-50 text-sky-700" id="kpiActiveContractsCount">0 aktif</span>
                 </div>
             </div>
 
-            <!-- 2. Kepatuhan Kontrak -->
-            <div class="kpi-card">
-                <div class="flex items-center justify-between text-slate-500 mb-1">
-                    <span class="text-[11px] font-bold uppercase tracking-wider">Kepatuhan Kontrak</span>
-                    <span class="text-sm">🛡️</span>
+            <!-- 2. Kepatuhan Regulasi -->
+            <div class="kpi-card kpi-card-green flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between text-slate-500 mb-1.5">
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Kepatuhan Regulasi</span>
+                        <div class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm font-bold">🛡️</div>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <div class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight" id="kpiComplianceRate">0%</div>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800" id="kpiComplianceBadge">Optimal</span>
+                    </div>
                 </div>
-                <div class="flex items-baseline gap-2">
-                    <div class="text-lg sm:text-xl font-black text-slate-900" id="kpiComplianceRate">0%</div>
-                    <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800" id="kpiComplianceBadge">Comply</span>
-                </div>
-                <div class="w-full bg-slate-200 h-1.5 rounded-full mt-2 overflow-hidden">
+                <div class="w-full bg-slate-100 h-1.5 rounded-full mt-2.5 overflow-hidden">
                     <div id="kpiComplianceProgress" class="bg-emerald-500 h-1.5 rounded-full transition-all duration-500" style="width: 0%;"></div>
                 </div>
             </div>
 
-            <!-- 3. Dalam Proses Legal -->
-            <div class="kpi-card">
-                <div class="flex items-center justify-between text-blue-700 mb-1">
-                    <span class="text-[11px] font-bold uppercase tracking-wider">Dalam Proses Legal</span>
-                    <span class="text-sm">⚖️</span>
+            <!-- 3. Dalam Proses Legalitas -->
+            <div class="kpi-card kpi-card-indigo flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between text-indigo-700 mb-1.5">
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-indigo-600">Proses Legalitas</span>
+                        <div class="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm font-bold">⚖️</div>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <div class="text-xl sm:text-2xl font-black text-indigo-950 tracking-tight" id="kpiInProgressCount">0</div>
+                        <span class="text-xs font-semibold text-indigo-600">berkas</span>
+                    </div>
                 </div>
-                <div class="text-lg sm:text-xl font-black text-blue-900" id="kpiInProgressCount">0</div>
-                <p class="text-[11px] text-blue-700 mt-1" id="kpiInProgressDesc">Tahap 1 s/d 7 (Drafting &amp; Paraf)</p>
+                <p class="text-[11px] text-indigo-700 mt-2.5 pt-2 border-t border-slate-100 truncate" id="kpiInProgressDesc">
+                    Tahap 1 s/d 7 (Draft &amp; Paraf)
+                </p>
             </div>
 
             <!-- 4. Peringatan Masa Berlaku -->
-            <div class="kpi-card">
-                <div class="flex items-center justify-between text-amber-700 mb-1">
-                    <span class="text-[11px] font-bold uppercase tracking-wider">Perhatian Masa Berlaku</span>
-                    <span class="text-sm">⏳</span>
+            <div class="kpi-card kpi-card-amber flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between text-amber-700 mb-1.5">
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-amber-600">Perhatian Masa Berlaku</span>
+                        <div class="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center text-sm font-bold">⏳</div>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <div class="text-xl sm:text-2xl font-black text-amber-950 tracking-tight" id="kpiExpiringCount">0</div>
+                        <span class="text-xs font-semibold text-amber-700">kontrak</span>
+                    </div>
                 </div>
-                <div class="flex items-baseline gap-2">
-                    <div class="text-lg sm:text-xl font-black text-amber-900" id="kpiExpiringCount">0</div>
-                    <span class="text-[10px] text-amber-700 font-medium">kontrak</span>
-                </div>
-                <p class="text-[11px] text-amber-800 mt-1" id="kpiExpiringDesc">Sisa &le;30 hari atau Expired</p>
+                <p class="text-[11px] text-amber-800 mt-2.5 pt-2 border-t border-slate-100 truncate" id="kpiExpiringDesc">
+                    Sisa &le;30 hari atau kedaluwarsa
+                </p>
             </div>
 
             <!-- 5. Keterlambatan SLA -->
-            <div class="kpi-card col-span-2 sm:col-span-1">
-                <div class="flex items-center justify-between text-rose-700 mb-1">
-                    <span class="text-[11px] font-bold uppercase tracking-wider">Overdue SLA Pengerjaan</span>
-                    <span class="text-sm">⚠️</span>
+            <div class="kpi-card kpi-card-rose flex flex-col justify-between sm:col-span-2 lg:col-span-1">
+                <div>
+                    <div class="flex items-center justify-between text-rose-700 mb-1.5">
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-rose-600">Overdue SLA Target</span>
+                        <div class="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center text-sm font-bold">⚠️</div>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <div class="text-xl sm:text-2xl font-black text-rose-950 tracking-tight" id="kpiOverdueSlaCount">0</div>
+                        <span class="text-xs font-semibold text-rose-700">kontrak</span>
+                    </div>
                 </div>
-                <div class="flex items-baseline gap-2">
-                    <div class="text-lg sm:text-xl font-black text-rose-900" id="kpiOverdueSlaCount">0</div>
-                    <span class="text-[10px] text-rose-700 font-medium">kontrak</span>
-                </div>
-                <p class="text-[11px] text-rose-800 mt-1">Melebihi target batas waktu legal</p>
+                <p class="text-[11px] text-rose-700 mt-2.5 pt-2 border-t border-slate-100 truncate">
+                    Melebihi target batas waktu legal
+                </p>
             </div>
         </div>
 
-        <!-- ========== VISUAL ANALYTICS: CHARTS ROW ========== -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-3.5 mb-4">
-            <!-- Donut Chart: Komposisi Kepatuhan (4/12 cols) -->
-            <div class="tremor-card lg:col-span-4 flex flex-col justify-between">
-                <div class="flex items-center justify-between border-b border-gray-100 pb-2.5 mb-2">
+        <!-- ========== VISUAL ANALYTICS: CHARTS & WORKFLOW LIFECYCLE ========== -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-5">
+            <!-- Left: Donut Chart Komposisi Kepatuhan (4/12) -->
+            <div class="card-executive p-5 lg:col-span-4 flex flex-col justify-between">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-2">
                     <div>
-                        <h3 class="text-xs font-bold text-gray-900 uppercase tracking-wider">Rasio Kepatuhan Regulasi</h3>
-                        <p class="text-[11px] text-gray-400">Distribusi status Comply vs Not Comply</p>
+                        <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Rasio Kepatuhan Regulasi</h3>
+                        <p class="text-[11px] text-slate-400">Distribusi status Comply vs Not Comply</p>
                     </div>
-                    <span class="tremor-badge tremor-badge-emerald" id="chartComplianceBadge">100% Comply</span>
+                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200" id="chartComplianceBadge">
+                        100% Comply
+                    </span>
                 </div>
-                <div class="flex items-center justify-center py-2" style="min-height: 180px;">
-                    <canvas id="contractComplianceChart" style="max-width: 170px; max-height: 170px;"></canvas>
+
+                <div class="relative flex items-center justify-center py-2" style="min-height: 180px;">
+                    <canvas id="contractComplianceChart" style="max-width: 175px; max-height: 175px;"></canvas>
                 </div>
-                <div class="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100 text-center text-xs">
-                    <div class="p-1.5 rounded-lg bg-emerald-50 text-emerald-900">
-                        <span class="block text-[10px] font-medium text-emerald-700">Comply</span>
-                        <strong class="text-sm font-black" id="donutComplyCount">0</strong>
+
+                <div class="grid grid-cols-2 gap-2.5 pt-3 border-t border-slate-100 text-center">
+                    <div class="p-2 rounded-xl bg-emerald-50/70 border border-emerald-100 text-emerald-900">
+                        <span class="block text-[10.5px] font-semibold text-emerald-700">✓ Comply</span>
+                        <strong class="text-base font-black" id="donutComplyCount">0</strong>
                     </div>
-                    <div class="p-1.5 rounded-lg bg-rose-50 text-rose-900">
-                        <span class="block text-[10px] font-medium text-rose-700">Not Comply</span>
-                        <strong class="text-sm font-black" id="donutNotComplyCount">0</strong>
+                    <div class="p-2 rounded-xl bg-rose-50/70 border border-rose-100 text-rose-900">
+                        <span class="block text-[10.5px] font-semibold text-rose-700">✗ Not Comply</span>
+                        <strong class="text-base font-black" id="donutNotComplyCount">0</strong>
                     </div>
                 </div>
             </div>
 
-            <!-- Bar Chart: Workflow Lifecycle Funnel (8/12 cols) -->
-            <div class="tremor-card lg:col-span-8 flex flex-col justify-between">
-                <div class="flex items-center justify-between border-b border-gray-100 pb-2.5 mb-2">
+            <!-- Right: Horizontal Funnel Tracker (8/12) -->
+            <div class="card-executive p-5 lg:col-span-8 flex flex-col justify-between">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-2">
                     <div>
-                        <h3 class="text-xs font-bold text-gray-900 uppercase tracking-wider">Distribusi Siklus Pengerjaan Kontrak</h3>
-                        <p class="text-[11px] text-gray-400">Jumlah berkas di tiap tahapan workflow (Pengajuan s/d Aktif)</p>
+                        <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Distribusi Siklus Pengerjaan Kontrak</h3>
+                        <p class="text-[11px] text-slate-400">Jumlah berkas di tiap tahapan workflow (Pengajuan s/d Aktif)</p>
                     </div>
-                    <span class="tremor-badge tremor-badge-blue" id="chartWorkflowBadge">Workflow Tracker</span>
+                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200" id="chartWorkflowBadge">
+                        Workflow Tracker
+                    </span>
                 </div>
-                <div class="w-full py-2" style="min-height: 180px;">
+
+                <div class="w-full py-2" style="min-height: 190px;">
                     <canvas id="contractWorkflowChart" style="max-height: 200px; width: 100%;"></canvas>
                 </div>
-                <div class="text-[10.5px] text-slate-500 pt-2 border-t border-gray-100 flex items-center justify-between">
-                    <span>💡 Tahap revisi &amp; renvoi memerlukan penyesuaian klausul sebelum penandatanganan.</span>
-                    <span class="font-bold text-slate-700" id="pipelineActiveRatio">0/0 Aktif</span>
+
+                <div class="text-[11px] text-slate-500 pt-2.5 border-t border-slate-100 flex items-center justify-between flex-wrap gap-2">
+                    <span class="flex items-center gap-1">
+                        <span>💡</span>
+                        <span>Tahap revisi &amp; renvoi memerlukan penyesuaian klausul sebelum penandatanganan.</span>
+                    </span>
+                    <span class="font-bold text-slate-800" id="pipelineActiveRatio">0/0 Aktif</span>
                 </div>
             </div>
         </div>
 
-        <!-- ========== PIPELINE METRIC FUNNEL ROW ========== -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 mb-4">
-            <div class="bg-slate-50 border border-slate-200/90 rounded-xl p-3 flex flex-col justify-between">
-                <div class="flex items-center justify-between text-slate-500 mb-1">
-                    <span class="text-[11px] font-semibold">Total Kontrak</span>
+        <!-- ========== PIPELINE MILESTONE STRIP (STREAMLINED) ========== -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 mb-5">
+            <div class="bg-white border border-slate-200 rounded-xl p-3 shadow-2xs flex flex-col justify-between">
+                <div class="flex items-center justify-between text-slate-400 mb-1">
+                    <span class="text-[10.5px] font-bold uppercase tracking-wider">Total Terdaftar</span>
                     <span class="text-xs">📑</span>
                 </div>
                 <div class="flex items-baseline gap-1.5">
                     <span class="text-lg font-black text-slate-900" id="summaryTotalContracts">0</span>
-                    <span class="text-[10px] text-slate-500" id="summaryActiveContractsCount">0 aktif</span>
+                    <span class="text-[10px] font-semibold text-slate-500" id="summaryActiveContractsCount">0 aktif</span>
                 </div>
-                <div class="text-[10px] text-slate-400 truncate mt-0.5" id="summaryTotalValue">Rp 0</div>
+                <div class="text-[10px] text-slate-400 truncate mt-0.5 font-medium" id="summaryTotalValue">Rp 0</div>
             </div>
 
-            <div class="bg-blue-50/80 border border-blue-200 rounded-xl p-3 flex flex-col justify-between">
-                <div class="flex items-center justify-between text-blue-700 mb-1">
-                    <span class="text-[11px] font-semibold">Proses Legal</span>
+            <div class="bg-white border border-blue-200/80 rounded-xl p-3 shadow-2xs flex flex-col justify-between">
+                <div class="flex items-center justify-between text-blue-500 mb-1">
+                    <span class="text-[10.5px] font-bold uppercase tracking-wider">1-2. Drafting</span>
                     <span class="text-xs">⚖️</span>
                 </div>
                 <div class="flex items-baseline gap-1.5">
                     <span class="text-lg font-black text-blue-900" id="summaryLegalDraftCount">0</span>
-                    <span class="text-[10px] text-blue-700">kontrak</span>
+                    <span class="text-[10px] text-blue-600 font-semibold">kontrak</span>
                 </div>
-                <div class="text-[10px] text-blue-600 truncate mt-0.5">Pengajuan &amp; Draft</div>
+                <div class="text-[10px] text-blue-500 truncate mt-0.5">Pengajuan &amp; Draft</div>
             </div>
 
-            <div class="bg-amber-50/80 border border-amber-200 rounded-xl p-3 flex flex-col justify-between">
-                <div class="flex items-center justify-between text-amber-800 mb-1">
-                    <span class="text-[11px] font-semibold">Paraf &amp; Review</span>
+            <div class="bg-white border border-amber-200/80 rounded-xl p-3 shadow-2xs flex flex-col justify-between">
+                <div class="flex items-center justify-between text-amber-500 mb-1">
+                    <span class="text-[10.5px] font-bold uppercase tracking-wider">3-4. Paraf Review</span>
                     <span class="text-xs">✍️</span>
                 </div>
                 <div class="flex items-baseline gap-1.5">
                     <span class="text-lg font-black text-amber-900" id="summaryParafCount">0</span>
-                    <span class="text-[10px] text-amber-800">kontrak</span>
+                    <span class="text-[10px] text-amber-600 font-semibold">kontrak</span>
                 </div>
-                <div class="text-[10px] text-amber-700 truncate mt-0.5">Paraf Vendor &amp; Ethos</div>
+                <div class="text-[10px] text-amber-600 truncate mt-0.5">Paraf Vendor &amp; Ethos</div>
             </div>
 
-            <div class="bg-rose-50/80 border border-rose-200 rounded-xl p-3 flex flex-col justify-between">
-                <div class="flex items-center justify-between text-rose-800 mb-1">
-                    <span class="text-[11px] font-semibold">Revisi / Renvoi</span>
+            <div class="bg-white border border-rose-200/80 rounded-xl p-3 shadow-2xs flex flex-col justify-between">
+                <div class="flex items-center justify-between text-rose-500 mb-1">
+                    <span class="text-[10.5px] font-bold uppercase tracking-wider">5-6. Revisi / Renvoi</span>
                     <span class="text-xs">🔄</span>
                 </div>
                 <div class="flex items-baseline gap-1.5">
                     <span class="text-lg font-black text-rose-900" id="summaryRevisiRenvoiCount">0</span>
-                    <span class="text-[10px] text-rose-800">kontrak</span>
+                    <span class="text-[10px] text-rose-600 font-semibold">kontrak</span>
                 </div>
-                <div class="text-[10px] text-rose-700 truncate mt-0.5">Perlu Penyesuaian</div>
+                <div class="text-[10px] text-rose-600 truncate mt-0.5">Penyesuaian Klausul</div>
             </div>
 
-            <div class="bg-emerald-50/80 border border-emerald-200 rounded-xl p-3 flex flex-col justify-between">
-                <div class="flex items-center justify-between text-emerald-800 mb-1">
-                    <span class="text-[11px] font-semibold">Tanda Tangan &amp; Sah</span>
+            <div class="bg-white border border-emerald-200/80 rounded-xl p-3 shadow-2xs flex flex-col justify-between">
+                <div class="flex items-center justify-between text-emerald-500 mb-1">
+                    <span class="text-[10.5px] font-bold uppercase tracking-wider">7-8. TTD &amp; Sah</span>
                     <span class="text-xs">✅</span>
                 </div>
                 <div class="flex items-baseline gap-1.5">
                     <span class="text-lg font-black text-emerald-900" id="summaryTtdAktifCount">0</span>
-                    <span class="text-[10px] text-emerald-800">kontrak</span>
+                    <span class="text-[10px] text-emerald-600 font-semibold">kontrak</span>
                 </div>
-                <div class="text-[10px] text-emerald-700 truncate mt-0.5">TTD &amp; Aktif Berlaku</div>
+                <div class="text-[10px] text-emerald-600 truncate mt-0.5">TTD &amp; Aktif Berlaku</div>
             </div>
 
-            <div class="bg-orange-50/80 border border-orange-200 rounded-xl p-3 flex flex-col justify-between">
-                <div class="flex items-center justify-between text-orange-800 mb-1">
-                    <span class="text-[11px] font-semibold">Perhatian / Alert</span>
+            <div class="bg-white border border-orange-200/80 rounded-xl p-3 shadow-2xs flex flex-col justify-between">
+                <div class="flex items-center justify-between text-orange-500 mb-1">
+                    <span class="text-[10.5px] font-bold uppercase tracking-wider">Alert Masa Berlaku</span>
                     <span class="text-xs">⚠️</span>
                 </div>
                 <div class="flex items-baseline gap-1.5">
                     <span class="text-lg font-black text-orange-900" id="summaryExpiringCount">0</span>
-                    <span class="text-[10px] text-orange-800">kontrak</span>
+                    <span class="text-[10px] text-orange-600 font-semibold">kontrak</span>
                 </div>
-                <div class="text-[10px] text-orange-700 truncate mt-0.5">Sisa &le;30h / Expired</div>
+                <div class="text-[10px] text-orange-600 truncate mt-0.5">Sisa &le;30h / Expired</div>
             </div>
         </div>
 
-        <!-- ========== FILTER SLICERS & QUICK FILTER BAR ========== -->
-        <div class="tremor-card mb-4" id="sectionFilterControls">
-            <!-- Slicer Top Controls: unified row -->
-            <div class="flex flex-wrap items-center gap-2 mb-3">
-                <select id="slicerCategorySelect" class="tremor-select text-xs" title="Filter Bidang Vendor">
-                    <option value="all">Semua Bidang</option>
-                </select>
+        <!-- ========== FILTER TOOLBAR & QUICK SLICERS ========== -->
+        <div class="card-executive p-4 mb-5" id="sectionFilterControls">
+            <!-- Row 1: Dropdown Filters & Search Bar -->
+            <div class="flex flex-wrap items-center gap-2.5 mb-3.5">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <select id="slicerCategorySelect" class="select-modern" title="Filter Berdasarkan Bidang Vendor">
+                        <option value="all">Semua Bidang</option>
+                    </select>
 
-                <select id="slicerComplianceSelect" class="tremor-select text-xs" title="Filter Status Regulasi">
-                    <option value="all">Semua Kepatuhan</option>
-                    <option value="comply">Comply</option>
-                    <option value="not-comply">Not Comply</option>
-                </select>
+                    <select id="slicerComplianceSelect" class="select-modern" title="Filter Status Regulasi">
+                        <option value="all">Semua Kepatuhan</option>
+                        <option value="comply">Comply</option>
+                        <option value="not-comply">Not Comply</option>
+                    </select>
 
-                <button id="slicerResetBtn" onclick="resetAllContractFilters()" class="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-600 shadow-2xs hover:bg-gray-50 transition cursor-pointer whitespace-nowrap">
-                    <svg class="w-3 h-3 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
-                    Reset Filter
-                </button>
+                    <button id="slicerResetBtn" onclick="resetAllContractFilters()" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 shadow-2xs hover:bg-slate-50 transition cursor-pointer whitespace-nowrap" title="Reset semua filter">
+                        <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+                        <span>Reset</span>
+                    </button>
+                </div>
 
                 <div class="flex-1"></div>
 
-                <input type="text" id="contractSearchInput" placeholder="Cari No. Kontrak, Vendor, Lingkup, Divisi, Catatan..." class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs w-full sm:w-auto sm:min-w-[260px]">
-                <span class="tremor-badge tremor-badge-gray whitespace-nowrap" id="contractBadgeCount">0 Kontrak</span>
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                    <div class="relative flex-1 sm:w-72">
+                        <svg class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        <input type="text" id="contractSearchInput" placeholder="Cari No. Kontrak, Vendor, Divisi, Lingkup..." class="w-full text-xs pl-9 pr-3.5 py-2 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 shadow-2xs transition">
+                    </div>
+                    <span class="inline-flex items-center px-2.5 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 whitespace-nowrap" id="contractBadgeCount">
+                        0 Kontrak
+                    </span>
+                </div>
             </div>
 
-            <!-- Double Quick Filter Pill Bars -->
-            <div class="space-y-2.5 bg-gray-50/80 p-3 rounded-xl border border-gray-100">
-                <!-- Row 1: Masa Berlaku Filter -->
+            <!-- Row 2: Filter Segmented Pill Bars -->
+            <div class="space-y-2.5 bg-slate-50/70 p-3 rounded-xl border border-slate-100">
+                <!-- Sub-row A: Masa Berlaku -->
                 <div class="flex items-center gap-2" id="contractExpiryFilters">
-                    <span class="text-gray-500 font-semibold text-[11px] flex items-center gap-1 whitespace-nowrap shrink-0">
+                    <span class="text-slate-500 font-bold text-[11px] flex items-center gap-1.5 whitespace-nowrap shrink-0 min-w-[110px]">
                         <span>⏳</span> Masa Berlaku:
                     </span>
-                    <div class="flex items-center gap-1.5 overflow-x-auto pb-0.5" style="-webkit-overflow-scrolling: touch; scrollbar-width: none;">
-                        <button onclick="filterContractsByExpiry('all')" id="btnExpAll" class="px-2.5 py-1 rounded-lg bg-blue-600 text-white text-[11px] font-bold transition shadow-2xs cursor-pointer whitespace-nowrap">Semua</button>
-                        <button onclick="filterContractsByExpiry('expired')" id="btnExpExpired" class="px-2.5 py-1 rounded-lg bg-white text-gray-700 hover:bg-rose-50 hover:text-rose-700 border border-gray-200/80 transition text-[11px] font-medium cursor-pointer whitespace-nowrap">🔴 Kedaluwarsa (<span id="countExpExpired">0</span>)</button>
-                        <button onclick="filterContractsByExpiry('critical')" id="btnExpCritical" class="px-2.5 py-1 rounded-lg bg-white text-gray-700 hover:bg-amber-50 hover:text-amber-800 border border-gray-200/80 transition text-[11px] font-medium cursor-pointer whitespace-nowrap">🟡 Kritis ≤30h (<span id="countExpCritical">0</span>)</button>
-                        <button onclick="filterContractsByExpiry('warning')" id="btnExpWarning" class="px-2.5 py-1 rounded-lg bg-white text-gray-700 hover:bg-orange-50 hover:text-orange-700 border border-gray-200/80 transition text-[11px] font-medium cursor-pointer whitespace-nowrap">🟠 Perhatian 31-90h (<span id="countExpWarning">0</span>)</button>
-                        <button onclick="filterContractsByExpiry('safe')" id="btnExpSafe" class="px-2.5 py-1 rounded-lg bg-white text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 border border-gray-200/80 transition text-[11px] font-medium cursor-pointer whitespace-nowrap">🟢 Aktif Aman (<span id="countExpSafe">0</span>)</button>
+                    <div class="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
+                        <button onclick="filterContractsByExpiry('all')" id="btnExpAll" class="px-2.5 py-1 rounded-lg bg-ethos-600 text-white text-[11px] font-bold transition shadow-2xs cursor-pointer whitespace-nowrap">Semua</button>
+                        <button onclick="filterContractsByExpiry('expired')" id="btnExpExpired" class="px-2.5 py-1 rounded-lg bg-white text-slate-700 hover:bg-rose-50 hover:text-rose-700 border border-slate-200 transition text-[11px] font-semibold cursor-pointer whitespace-nowrap">🔴 Kedaluwarsa (<span id="countExpExpired">0</span>)</button>
+                        <button onclick="filterContractsByExpiry('critical')" id="btnExpCritical" class="px-2.5 py-1 rounded-lg bg-white text-slate-700 hover:bg-amber-50 hover:text-amber-800 border border-slate-200 transition text-[11px] font-semibold cursor-pointer whitespace-nowrap">🟡 Kritis ≤30h (<span id="countExpCritical">0</span>)</button>
+                        <button onclick="filterContractsByExpiry('warning')" id="btnExpWarning" class="px-2.5 py-1 rounded-lg bg-white text-slate-700 hover:bg-orange-50 hover:text-orange-700 border border-slate-200 transition text-[11px] font-semibold cursor-pointer whitespace-nowrap">🟠 Perhatian 31-90h (<span id="countExpWarning">0</span>)</button>
+                        <button onclick="filterContractsByExpiry('safe')" id="btnExpSafe" class="px-2.5 py-1 rounded-lg bg-white text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 border border-slate-200 transition text-[11px] font-semibold cursor-pointer whitespace-nowrap">🟢 Aktif Aman (<span id="countExpSafe">0</span>)</button>
                     </div>
                 </div>
 
-                <!-- Row 2: Workflow Stage Filter -->
+                <!-- Sub-row B: Tahap Progress Workflow -->
                 <div class="flex items-center gap-2" id="contractStageFilters">
-                    <span class="text-gray-500 font-semibold text-[11px] flex items-center gap-1 whitespace-nowrap shrink-0">
+                    <span class="text-slate-500 font-bold text-[11px] flex items-center gap-1.5 whitespace-nowrap shrink-0 min-w-[110px]">
                         <span>🔄</span> Tahap Progress:
                     </span>
-                    <div class="flex items-center gap-1.5 overflow-x-auto pb-0.5" style="-webkit-overflow-scrolling: touch; scrollbar-width: none;">
+                    <div class="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
                         <button onclick="filterContractsByStage('all')" id="btnStageAll" class="px-2.5 py-1 rounded-lg bg-indigo-600 text-white text-[11px] font-bold transition shadow-2xs cursor-pointer whitespace-nowrap">Semua Tahap</button>
-                        <button onclick="filterContractsByStage('pengajuan')" id="btnStagePengajuan" class="px-2 py-1 rounded-lg bg-white text-gray-700 hover:bg-blue-50 hover:text-blue-700 border border-gray-200/80 transition text-[11px] font-medium cursor-pointer whitespace-nowrap">1. Pengajuan (<span id="countStagePengajuan">0</span>)</button>
-                        <button onclick="filterContractsByStage('draft')" id="btnStageDraft" class="px-2 py-1 rounded-lg bg-white text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 border border-gray-200/80 transition text-[11px] font-medium cursor-pointer whitespace-nowrap">2. Draft (<span id="countStageDraft">0</span>)</button>
-                        <button onclick="filterContractsByStage('paraf_vendor')" id="btnStageParafVendor" class="px-2 py-1 rounded-lg bg-white text-gray-700 hover:bg-amber-50 hover:text-amber-800 border border-gray-200/80 transition text-[11px] font-medium cursor-pointer whitespace-nowrap">3. Paraf Vendor (<span id="countStageParafVendor">0</span>)</button>
-                        <button onclick="filterContractsByStage('paraf_ethos')" id="btnStageParafEthos" class="px-2 py-1 rounded-lg bg-white text-gray-700 hover:bg-purple-50 hover:text-purple-700 border border-gray-200/80 transition text-[11px] font-medium cursor-pointer whitespace-nowrap">4. Paraf Ethos (<span id="countStageParafEthos">0</span>)</button>
-                        <button onclick="filterContractsByStage('revisi')" id="btnStageRevisi" class="px-2 py-1 rounded-lg bg-white text-gray-700 hover:bg-rose-50 hover:text-rose-700 border border-gray-200/80 transition text-[11px] font-medium cursor-pointer whitespace-nowrap">5. Revisi (<span id="countStageRevisi">0</span>)</button>
-                        <button onclick="filterContractsByStage('renvoi')" id="btnStageRenvoi" class="px-2 py-1 rounded-lg bg-white text-gray-700 hover:bg-orange-50 hover:text-orange-700 border border-gray-200/80 transition text-[11px] font-medium cursor-pointer whitespace-nowrap">6. Renvoi (<span id="countStageRenvoi">0</span>)</button>
-                        <button onclick="filterContractsByStage('ttd')" id="btnStageTtd" class="px-2 py-1 rounded-lg bg-white text-gray-700 hover:bg-teal-50 hover:text-teal-700 border border-gray-200/80 transition text-[11px] font-medium cursor-pointer whitespace-nowrap">7. TTD (<span id="countStageTtd">0</span>)</button>
-                        <button onclick="filterContractsByStage('aktif')" id="btnStageAktif" class="px-2 py-1 rounded-lg bg-white text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 border border-gray-200/80 transition text-[11px] font-medium cursor-pointer whitespace-nowrap">8. Aktif (<span id="countStageAktif">0</span>)</button>
+                        <button onclick="filterContractsByStage('pengajuan')" id="btnStagePengajuan" class="px-2.5 py-1 rounded-lg bg-white text-slate-700 hover:bg-blue-50 hover:text-blue-700 border border-slate-200 transition text-[11px] font-semibold cursor-pointer whitespace-nowrap">1. Pengajuan (<span id="countStagePengajuan">0</span>)</button>
+                        <button onclick="filterContractsByStage('draft')" id="btnStageDraft" class="px-2.5 py-1 rounded-lg bg-white text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 border border-slate-200 transition text-[11px] font-semibold cursor-pointer whitespace-nowrap">2. Draft (<span id="countStageDraft">0</span>)</button>
+                        <button onclick="filterContractsByStage('paraf_vendor')" id="btnStageParafVendor" class="px-2.5 py-1 rounded-lg bg-white text-slate-700 hover:bg-amber-50 hover:text-amber-800 border border-slate-200 transition text-[11px] font-semibold cursor-pointer whitespace-nowrap">3. Paraf Vendor (<span id="countStageParafVendor">0</span>)</button>
+                        <button onclick="filterContractsByStage('paraf_ethos')" id="btnStageParafEthos" class="px-2.5 py-1 rounded-lg bg-white text-slate-700 hover:bg-purple-50 hover:text-purple-700 border border-slate-200 transition text-[11px] font-semibold cursor-pointer whitespace-nowrap">4. Paraf Ethos (<span id="countStageParafEthos">0</span>)</button>
+                        <button onclick="filterContractsByStage('revisi')" id="btnStageRevisi" class="px-2.5 py-1 rounded-lg bg-white text-slate-700 hover:bg-rose-50 hover:text-rose-700 border border-slate-200 transition text-[11px] font-semibold cursor-pointer whitespace-nowrap">5. Revisi (<span id="countStageRevisi">0</span>)</button>
+                        <button onclick="filterContractsByStage('renvoi')" id="btnStageRenvoi" class="px-2.5 py-1 rounded-lg bg-white text-slate-700 hover:bg-orange-50 hover:text-orange-700 border border-slate-200 transition text-[11px] font-semibold cursor-pointer whitespace-nowrap">6. Renvoi (<span id="countStageRenvoi">0</span>)</button>
+                        <button onclick="filterContractsByStage('ttd')" id="btnStageTtd" class="px-2.5 py-1 rounded-lg bg-white text-slate-700 hover:bg-teal-50 hover:text-teal-700 border border-slate-200 transition text-[11px] font-semibold cursor-pointer whitespace-nowrap">7. TTD (<span id="countStageTtd">0</span>)</button>
+                        <button onclick="filterContractsByStage('aktif')" id="btnStageAktif" class="px-2.5 py-1 rounded-lg bg-white text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 border border-slate-200 transition text-[11px] font-semibold cursor-pointer whitespace-nowrap">8. Aktif (<span id="countStageAktif">0</span>)</button>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- ========== CONTRACT REPOSITORY TABLE ========== -->
-        <div class="tremor-card mb-6" id="sectionContractsTableCard">
-            <div class="table-scroll-container">
-                <table class="tremor-table">
+        <div class="card-executive mb-6 overflow-hidden" id="sectionContractsTableCard">
+            <div class="table-scroll-container border-0 rounded-none shadow-none">
+                <table class="enterprise-table">
                     <thead>
                         <tr>
                             <th>No Kontrak &amp; Divisi</th>
                             <th>Vendor &amp; Ruang Lingkup</th>
                             <th>Tahap Progress Pengerjaan</th>
-                            <th>Masa Berlaku &amp; Selisih Hari</th>
-                            <th>Kelengkapan Dokumen</th>
+                            <th>Masa Berlaku &amp; Durasi</th>
+                            <th>Kelengkapan Berkas</th>
                             <th class="text-right">Nilai Kontrak</th>
                             <th class="text-center">Kepatuhan</th>
                             <th class="text-center">Aksi</th>
                         </tr>
                     </thead>
                     <tbody id="contractTableBody">
-                        <tr><td colspan="8" class="text-center text-gray-400 py-10">Memuat data contract repository...</td></tr>
+                        <tr>
+                            <td colspan="8" class="text-center text-slate-400 py-12">
+                                <div class="inline-flex items-center gap-2">
+                                    <span class="w-4 h-4 rounded-full border-2 border-ethos-600 border-t-transparent animate-spin"></span>
+                                    <span>Memuat data contract repository &amp; compliance...</span>
+                                </div>
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
 
-            <!-- Pagination Bar -->
-            <div id="contractPagination" class="flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 border-t border-gray-100 bg-gray-50/60 rounded-b-xl mt-2">
+            <!-- Pagination Bar Modern -->
+            <div id="contractPagination" class="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t border-slate-200 bg-slate-50/70">
                 <div class="flex items-center gap-3 flex-wrap">
-                    <span class="text-xs text-gray-500 font-medium" id="contractPaginationInfo">Menampilkan 0 - 0 dari 0 kontrak</span>
-                    <div class="flex items-center gap-1.5 text-xs text-gray-500">
+                    <span class="text-xs text-slate-600 font-medium" id="contractPaginationInfo">
+                        Menampilkan 0 - 0 dari 0 kontrak
+                    </span>
+                    <div class="flex items-center gap-1.5 text-xs text-slate-500">
                         <span>Tampilkan:</span>
-                        <select id="contractPageSizeSelect" onchange="changeContractPageSize(this.value)" class="tremor-select text-xs py-1 pl-2.5 pr-6 rounded-md border border-gray-200 bg-white shadow-2xs">
+                        <select id="contractPageSizeSelect" onchange="changeContractPageSize(this.value)" class="select-modern text-xs py-1 pl-2.5 pr-6 rounded-md">
                             <option value="5">5</option>
                             <option value="10" selected>10</option>
                             <option value="25">25</option>
@@ -539,44 +650,46 @@ tailwind.config = {
     </main>
 
     <!-- ========== FOOTER ========== -->
-    <footer class="bg-white border-t border-gray-200 py-4 mt-auto">
-        <div class="mx-auto max-w-7xl px-4 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-500">
+    <footer class="bg-white border-t border-slate-200 py-4 mt-auto">
+        <div class="mx-auto max-w-7xl px-4 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
             <div>
-                &copy; 2026 <strong>PT Etos Kreatif Indonesia</strong>. Vendor Management System.
+                &copy; 2026 <strong>PT Etos Kreatif Indonesia</strong>. Vendor Management &amp; Contract Compliance System.
             </div>
             <div class="flex items-center gap-4">
-                <a href="dashboard.html" class="hover:text-blue-600 transition">Dashboard Utama</a>
+                <a href="dashboard.html" class="hover:text-ethos-600 font-medium transition">Dashboard Utama</a>
                 <span>&bull;</span>
-                <a href="katalog.html" class="hover:text-blue-600 transition">Katalog Produk</a>
+                <a href="katalog.html" class="hover:text-ethos-600 font-medium transition">Katalog Produk</a>
                 <span>&bull;</span>
-                <a href="index.html" class="hover:text-blue-600 transition">Form Penilaian</a>
+                <a href="index.html" class="hover:text-ethos-600 font-medium transition">Form Penilaian</a>
             </div>
         </div>
     </footer>
 
     <!-- ========== MODAL DETAIL KONTRAK & WORKFLOW TIMELINE ========== -->
-    <div id="contractDetailModal" onclick="if(event.target === this) closeContractDetailModal()" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/75 backdrop-blur-sm p-3 sm:p-4 overflow-hidden" style="display: none;">
-        <div class="w-full max-w-2xl bg-white rounded-2xl border border-gray-200 shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+    <div id="contractDetailModal" onclick="if(event.target === this) closeContractDetailModal()" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/75 backdrop-blur-sm p-3 sm:p-4 overflow-hidden" style="display: none;">
+        <div class="w-full max-w-2xl bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in duration-150">
             <div class="flex items-center justify-between px-5 py-3.5 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white border-b border-slate-800">
-                <div class="flex items-center gap-2.5">
-                    <span class="text-xl">📑</span>
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-lg">
+                        📑
+                    </div>
                     <div>
                         <h3 class="text-sm font-bold text-white tracking-wide" id="cdmNoKontrak">Detail Kontrak Vendor</h3>
-                        <p class="text-[11px] text-blue-200" id="cdmVendorSubtitle">Monitoring siklus pengerjaan &amp; kepatuhan</p>
+                        <p class="text-[11px] text-indigo-200 truncate max-w-md" id="cdmVendorSubtitle">Monitoring siklus pengerjaan &amp; kepatuhan</p>
                     </div>
                 </div>
-                <button onclick="closeContractDetailModal()" class="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition cursor-pointer">
+                <button onclick="closeContractDetailModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition cursor-pointer" title="Tutup">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
             
             <div class="p-5 space-y-4 overflow-y-auto" id="contractDetailContent">
-                <!-- Populated dynamically -->
+                <!-- Populated dynamically via JS -->
             </div>
 
-            <div class="px-5 py-3 bg-gray-50 border-t border-gray-200 flex items-center justify-between gap-2.5">
-                <span class="text-[11px] text-gray-500" id="cdmFooterNote">Status disinkronisasi langsung dari Sheet Kontrak Vendor</span>
-                <button onclick="closeContractDetailModal()" class="px-4 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-100 text-xs font-semibold text-gray-700 transition cursor-pointer">
+            <div class="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2.5">
+                <span class="text-[11px] text-slate-500" id="cdmFooterNote">Status disinkronisasi langsung dari Sheet Kontrak Vendor</span>
+                <button onclick="closeContractDetailModal()" class="px-4 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-xs font-semibold text-slate-700 transition cursor-pointer">
                     Tutup
                 </button>
             </div>
@@ -584,35 +697,41 @@ tailwind.config = {
     </div>
 
     <!-- ========== MODAL PANDUAN 16 KOLOM SHEET KONTRAK VENDOR ========== -->
-    <div id="contractGuideModal" onclick="if(event.target === this) closeContractGuideModal()" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/75 backdrop-blur-sm p-3 sm:p-4 overflow-hidden" style="display: none;">
-        <div class="w-full max-w-3xl bg-white rounded-2xl border border-gray-200 shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
-            <div class="flex items-center justify-between px-5 py-3.5 bg-gradient-to-r from-blue-900 to-indigo-900 text-white border-b border-blue-800">
+    <div id="contractGuideModal" onclick="if(event.target === this) closeContractGuideModal()" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/75 backdrop-blur-sm p-3 sm:p-4 overflow-hidden" style="display: none;">
+        <div class="w-full max-w-3xl bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in duration-150">
+            <div class="flex items-center justify-between px-5 py-3.5 bg-gradient-to-r from-slate-900 to-indigo-950 text-white border-b border-slate-800">
                 <div class="flex items-center gap-2.5">
-                    <span class="text-xl">📋</span>
+                    <div class="w-8 h-8 rounded-lg bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-sm">
+                        📋
+                    </div>
                     <div>
-                        <h3 class="text-sm font-bold text-white tracking-wide">Panduan Kolom Sheet 'Kontrak Vendor'</h3>
-                        <p class="text-[11px] text-blue-200">16 Kolom Standar Sistem Contract Repository &amp; Compliance</p>
+                        <h3 class="text-sm font-bold text-white tracking-wide">Panduan 16 Kolom Sheet 'Kontrak Vendor'</h3>
+                        <p class="text-[11px] text-indigo-200">Standarisasi Tata Kelola Sistem Contract Repository &amp; Compliance</p>
                     </div>
                 </div>
-                <button onclick="closeContractGuideModal()" class="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition cursor-pointer">
+                <button onclick="closeContractGuideModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition cursor-pointer">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
             
-            <div class="p-5 space-y-4 overflow-y-auto text-xs text-gray-700">
-                <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 text-blue-900 text-xs flex items-start justify-between gap-3">
+            <div class="p-5 space-y-4 overflow-y-auto text-xs text-slate-700">
+                <div class="bg-indigo-50/70 border border-indigo-200 rounded-xl p-3.5 text-indigo-950 text-xs flex items-start justify-between gap-3">
                     <div>
-                        <p class="font-bold">💡 Tips Penerapan di Google Spreadsheet:</p>
-                        <p class="mt-0.5 text-blue-800 text-[11px]">Anda dapat langsung menjalankan menu <strong>⚡ Evaluasi Vendor &gt; Setup / Perbarui Kolom Sheet Kontrak Vendor</strong> di Spreadsheet untuk auto-generate atau melengkapi kolom tanpa merusak data lama.</p>
+                        <p class="font-bold flex items-center gap-1.5">
+                            <span>💡</span> Tips Penerapan di Google Spreadsheet:
+                        </p>
+                        <p class="mt-1 text-indigo-900 text-[11.5px] leading-relaxed">
+                            Jalankan menu <strong>⚡ Evaluasi Vendor &gt; Setup / Perbarui Kolom Sheet Kontrak Vendor</strong> di Spreadsheet Anda untuk auto-generate atau melengkapi kolom tanpa menghapus data sebelumnya.
+                        </p>
                     </div>
-                    <button onclick="copyContractHeadersToClipboard()" class="flex-shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition cursor-pointer">
-                        📋 Salin Semua Header Baris 1
+                    <button onclick="copyContractHeadersToClipboard()" class="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-xs transition cursor-pointer">
+                        📋 Salin Header
                     </button>
                 </div>
 
-                <div class="border border-gray-200 rounded-xl overflow-hidden shadow-2xs">
+                <div class="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
                     <table class="w-full text-left border-collapse text-xs">
-                        <thead class="bg-gray-100 text-gray-800 font-bold border-b border-gray-200">
+                        <thead class="bg-slate-100/80 text-slate-800 font-bold border-b border-slate-200">
                             <tr>
                                 <th class="p-2.5 w-12 text-center">No</th>
                                 <th class="p-2.5">Nama Kolom Resmi</th>
@@ -620,30 +739,30 @@ tailwind.config = {
                                 <th class="p-2.5">Keterangan / Fungsi</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-100 text-[11px]">
-                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">1</td><td class="p-2.5 font-semibold text-blue-600">No Kontrak</td><td class="p-2.5">KTR/ETHOS/2026/001</td><td class="p-2.5 text-gray-500">Nomor unik perjanjian / kontrak</td></tr>
-                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">2</td><td class="p-2.5 font-semibold text-gray-900">Nama Vendor</td><td class="p-2.5">PT BIZNET GIO NUSANTARA</td><td class="p-2.5 text-gray-500">Nama lengkap mitra rekanan</td></tr>
-                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">3</td><td class="p-2.5 font-semibold text-gray-900">Ruang Lingkup / Jenis Pekerjaan</td><td class="p-2.5">Cloud Server Infrastructure</td><td class="p-2.5 text-gray-500">Deskripsi pekerjaan/pengadaan</td></tr>
-                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">4</td><td class="p-2.5 font-semibold text-gray-900">PIC / Divisi</td><td class="p-2.5">IT &amp; Software / Procurement</td><td class="p-2.5 text-gray-500">Divisi pemohon/penanggung jawab</td></tr>
-                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">5</td><td class="p-2.5 font-semibold text-blue-700">Tanggal Pengajuan ke Legal</td><td class="p-2.5">2026-04-10</td><td class="p-2.5 text-gray-500">Titik awal pengerjaan legal (hitung aging/durasi)</td></tr>
-                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">6</td><td class="p-2.5 font-semibold text-gray-900">Tanggal Mulai Kontrak</td><td class="p-2.5">2026-05-01</td><td class="p-2.5 text-gray-500">Awal masa berlaku kontrak</td></tr>
-                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">7</td><td class="p-2.5 font-semibold text-rose-700">Tanggal Selesai Kontrak</td><td class="p-2.5">2027-04-30</td><td class="p-2.5 text-gray-500">Batas akhir kontrak (hitung selisih hari/alert)</td></tr>
-                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">8</td><td class="p-2.5 font-semibold text-indigo-700">Tahap Progress Pengerjaan</td><td class="p-2.5 font-mono">1. Pengajuan ke Legal / 2. Draft Keluar / 3. Paraf Vendor / 4. Paraf Ethos / 5. Revisi / 6. Renvoi / 7. Tanda Tangan / 8. Aktif / Selesai</td><td class="p-2.5 text-gray-500">Status progress workflow yang sedang berjalan</td></tr>
-                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">9</td><td class="p-2.5 font-semibold text-amber-700">Target Selesai SLA</td><td class="p-2.5">2026-04-20</td><td class="p-2.5 text-gray-500">Target batas waktu SLA legalitas (deteksi keterlambatan)</td></tr>
-                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">10</td><td class="p-2.5 font-semibold text-gray-900">Tanggal Realisasi TTD</td><td class="p-2.5">2026-04-18</td><td class="p-2.5 text-gray-500">Tanggal kontrak selesai ditandatangani</td></tr>
-                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">11</td><td class="p-2.5 font-semibold text-rose-600">Status Revisi / Renvoi</td><td class="p-2.5">Renvoi Pasal 7 Hak Cipta</td><td class="p-2.5 text-gray-500">Catatan revisi klausul atau renvoi naskah</td></tr>
-                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">12</td><td class="p-2.5 font-semibold text-gray-900">Kelengkapan Dokumen</td><td class="p-2.5">Lengkap (KTP, NPWP, Akta)</td><td class="p-2.5 text-gray-500">Status kelengkapan syarat legalitas</td></tr>
-                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">13</td><td class="p-2.5 font-semibold text-gray-900">Nilai Kontrak (Rp)</td><td class="p-2.5">125000000</td><td class="p-2.5 text-gray-500">Nominal nilai kontrak angka murni</td></tr>
-                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">14</td><td class="p-2.5 font-semibold text-emerald-700">Status Kepatuhan</td><td class="p-2.5">Comply / Not Comply</td><td class="p-2.5 text-gray-500">Status kepatuhan regulasi</td></tr>
-                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">15</td><td class="p-2.5 font-semibold text-blue-600">Link Dokumen Kontrak</td><td class="p-2.5">https://drive.google.com/...</td><td class="p-2.5 text-gray-500">Link file draft / scan kontrak di Google Drive</td></tr>
-                            <tr class="hover:bg-gray-50/70"><td class="p-2.5 text-center font-bold">16</td><td class="p-2.5 font-semibold text-gray-900">Keterangan</td><td class="p-2.5">Catatan tambahan tim Legal/VMS</td><td class="p-2.5 text-gray-500">Catatan bebas</td></tr>
+                        <tbody class="divide-y divide-slate-100 text-[11px]">
+                            <tr class="hover:bg-slate-50/70"><td class="p-2.5 text-center font-bold">1</td><td class="p-2.5 font-semibold text-ethos-600 font-mono">No Kontrak</td><td class="p-2.5">KTR/ETHOS/2026/001</td><td class="p-2.5 text-slate-500">Nomor unik perjanjian / kontrak</td></tr>
+                            <tr class="hover:bg-slate-50/70"><td class="p-2.5 text-center font-bold">2</td><td class="p-2.5 font-semibold text-slate-900">Nama Vendor</td><td class="p-2.5">PT BIZNET GIO NUSANTARA</td><td class="p-2.5 text-slate-500">Nama lengkap mitra rekanan</td></tr>
+                            <tr class="hover:bg-slate-50/70"><td class="p-2.5 text-center font-bold">3</td><td class="p-2.5 font-semibold text-slate-900">Ruang Lingkup / Jenis Pekerjaan</td><td class="p-2.5">Cloud Server Infrastructure</td><td class="p-2.5 text-slate-500">Deskripsi pekerjaan/pengadaan</td></tr>
+                            <tr class="hover:bg-slate-50/70"><td class="p-2.5 text-center font-bold">4</td><td class="p-2.5 font-semibold text-slate-900">PIC / Divisi</td><td class="p-2.5">IT &amp; Software / Procurement</td><td class="p-2.5 text-slate-500">Divisi pemohon/penanggung jawab</td></tr>
+                            <tr class="hover:bg-slate-50/70"><td class="p-2.5 text-center font-bold">5</td><td class="p-2.5 font-semibold text-indigo-700">Tanggal Pengajuan ke Legal</td><td class="p-2.5">2026-04-10</td><td class="p-2.5 text-slate-500">Titik awal pengerjaan legal (hitung durasi SLA)</td></tr>
+                            <tr class="hover:bg-slate-50/70"><td class="p-2.5 text-center font-bold">6</td><td class="p-2.5 font-semibold text-slate-900">Tanggal Mulai Kontrak</td><td class="p-2.5">2026-05-01</td><td class="p-2.5 text-slate-500">Awal masa berlaku kontrak</td></tr>
+                            <tr class="hover:bg-slate-50/70"><td class="p-2.5 text-center font-bold">7</td><td class="p-2.5 font-semibold text-rose-700">Tanggal Selesai Kontrak</td><td class="p-2.5">2027-04-30</td><td class="p-2.5 text-slate-500">Batas akhir kontrak (hitung selisih hari &amp; alert)</td></tr>
+                            <tr class="hover:bg-slate-50/70"><td class="p-2.5 text-center font-bold">8</td><td class="p-2.5 font-semibold text-indigo-700">Tahap Progress Pengerjaan</td><td class="p-2.5 font-mono text-[10px]">1. Pengajuan s/d 8. Aktif / Selesai</td><td class="p-2.5 text-slate-500">Status siklus workflow legal yang sedang berjalan</td></tr>
+                            <tr class="hover:bg-slate-50/70"><td class="p-2.5 text-center font-bold">9</td><td class="p-2.5 font-semibold text-amber-700">Target Selesai SLA</td><td class="p-2.5">2026-04-20</td><td class="p-2.5 text-slate-500">Target batas waktu SLA legalitas (deteksi overdue)</td></tr>
+                            <tr class="hover:bg-slate-50/70"><td class="p-2.5 text-center font-bold">10</td><td class="p-2.5 font-semibold text-slate-900">Tanggal Realisasi TTD</td><td class="p-2.5">2026-04-18</td><td class="p-2.5 text-slate-500">Tanggal kontrak selesai ditandatangani</td></tr>
+                            <tr class="hover:bg-slate-50/70"><td class="p-2.5 text-center font-bold">11</td><td class="p-2.5 font-semibold text-rose-600">Status Revisi / Renvoi</td><td class="p-2.5">Renvoi Pasal 7 Hak Cipta</td><td class="p-2.5 text-slate-500">Catatan revisi klausul atau renvoi naskah</td></tr>
+                            <tr class="hover:bg-slate-50/70"><td class="p-2.5 text-center font-bold">12</td><td class="p-2.5 font-semibold text-slate-900">Kelengkapan Dokumen</td><td class="p-2.5">Lengkap (KTP, NPWP, Akta)</td><td class="p-2.5 text-slate-500">Status kelengkapan syarat legalitas</td></tr>
+                            <tr class="hover:bg-slate-50/70"><td class="p-2.5 text-center font-bold">13</td><td class="p-2.5 font-semibold text-slate-900">Nilai Kontrak (Rp)</td><td class="p-2.5">125000000</td><td class="p-2.5 text-slate-500">Nominal nilai kontrak angka murni</td></tr>
+                            <tr class="hover:bg-slate-50/70"><td class="p-2.5 text-center font-bold">14</td><td class="p-2.5 font-semibold text-emerald-700">Status Kepatuhan</td><td class="p-2.5">Comply / Not Comply</td><td class="p-2.5 text-slate-500">Status kepatuhan regulasi</td></tr>
+                            <tr class="hover:bg-slate-50/70"><td class="p-2.5 text-center font-bold">15</td><td class="p-2.5 font-semibold text-ethos-600">Link Dokumen Kontrak</td><td class="p-2.5 font-mono text-[10px]">https://drive.google.com/...</td><td class="p-2.5 text-slate-500">Link file draft / scan kontrak di Google Drive</td></tr>
+                            <tr class="hover:bg-slate-50/70"><td class="p-2.5 text-center font-bold">16</td><td class="p-2.5 font-semibold text-slate-900">Keterangan</td><td class="p-2.5">Catatan tim Legal/Procurement</td><td class="p-2.5 text-slate-500">Catatan bebas / tindak lanjut</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <div class="px-5 py-3 bg-gray-50 border-t border-gray-200 flex items-center justify-end">
-                <button onclick="closeContractGuideModal()" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition cursor-pointer">
+            <div class="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-end">
+                <button onclick="closeContractGuideModal()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition cursor-pointer">
                     Mengerti &amp; Tutup
                 </button>
             </div>
@@ -654,6 +773,6 @@ tailwind.config = {
     <div class="toast-box" id="toastBox"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-    <script src="kontrak.js?v=20261110-1"></script>
+    <script src="kontrak.js?v=20261111-1"></script>
 </body>
 </html>

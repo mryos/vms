@@ -548,14 +548,14 @@ function renderContractWorkflowChart(stages) {
     ];
 
     const colors = [
-        '#2563eb', // blue
-        '#4f46e5', // indigo
-        '#d97706', // amber
-        '#7c3aed', // purple
-        '#e11d48', // rose
-        '#ea580c', // orange
-        '#0d9488', // teal
-        '#16a34a'  // green
+        '#0284c7', // 1. Pengajuan (sky-600)
+        '#2563eb', // 2. Draft (blue-600)
+        '#f59e0b', // 3. Paraf Vendor (amber-500)
+        '#7c3aed', // 4. Paraf Ethos (purple-600)
+        '#e11d48', // 5. Revisi (rose-600)
+        '#ea580c', // 6. Renvoi (orange-600)
+        '#0d9488', // 7. TTD (teal-600)
+        '#059669'  // 8. Aktif (emerald-600)
     ];
 
     const elRatio = document.getElementById('pipelineActiveRatio');
@@ -575,7 +575,7 @@ function renderContractWorkflowChart(stages) {
                 data: dataValues,
                 backgroundColor: colors,
                 borderRadius: 6,
-                maxBarThickness: 22
+                maxBarThickness: 20
             }]
         },
         options: {
@@ -593,11 +593,11 @@ function renderContractWorkflowChart(stages) {
             scales: {
                 x: {
                     beginAtZero: true,
-                    ticks: { precision: 0, font: { size: 10 } },
+                    ticks: { precision: 0, font: { size: 10, family: '"Plus Jakarta Sans", sans-serif' } },
                     grid: { color: '#f1f5f9' }
                 },
                 y: {
-                    ticks: { font: { size: 10, weight: '600' }, color: '#334155' },
+                    ticks: { font: { size: 10.5, weight: '600', family: '"Plus Jakarta Sans", sans-serif' }, color: '#334155' },
                     grid: { display: false }
                 }
             }
@@ -617,7 +617,14 @@ function renderTableRows(list) {
     if (badgeCount) badgeCount.textContent = `${totalItems} Kontrak`;
 
     if (totalItems === 0) {
-        tableBody.innerHTML = `<tr><td colspan="8" class="text-center text-gray-400 py-10">Tidak ada kontrak pada kriteria filter yang dipilih.</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="8" class="text-center text-slate-400 py-12">
+            <div class="flex flex-col items-center justify-center">
+                <span class="text-3xl mb-2">🔍</span>
+                <span class="font-bold text-slate-700 text-sm">Tidak ada kontrak ditemukan</span>
+                <span class="text-xs text-slate-400 mt-1">Coba sesuaikan kata kunci pencarian atau ubah filter di atas.</span>
+                <button onclick="resetAllContractFilters()" class="mt-3 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-2xs transition">Reset Filter</button>
+            </div>
+        </td></tr>`;
         renderContractPaginationUI(0, 1, 0, 0);
         return;
     }
@@ -632,10 +639,7 @@ function renderTableRows(list) {
 
     tableBody.innerHTML = pagedList.map(c => {
         const isComply = c.status && c.status.toLowerCase() === 'comply';
-        const statusColor = isComply ? '#10b981' : '#ef4444';
-        
         const isDocComplete = c.kelengkapan && c.kelengkapan.toLowerCase().includes('lengkap');
-        const docColor = isDocComplete ? '#0284c7' : '#f59e0b';
 
         const stage = c._stageObj || normalizeContractStageFrontend(c.tahapProgress, c.status, c.tglSelesai);
         const days = c._daysRemaining !== undefined ? c._daysRemaining : getContractDaysRemaining(c.tglSelesai);
@@ -645,103 +649,133 @@ function renderTableRows(list) {
         const cleanJenis = (c.jenisPekerjaan || '-').replace(/\r?\n|\r/g, ' ').trim();
         const cleanDivisi = (c.picDivisi || '-').replace(/\r?\n|\r/g, ' ').trim();
 
+        // Initials avatar
+        const words = cleanVendor.replace(/[^\w\s]/gi, '').split(/\s+/).filter(w => !['pt', 'cv', 'ud', 'tbk', 'indonesia'].includes(w.toLowerCase()));
+        let initials = 'VN';
+        if (words.length >= 2) {
+            initials = (words[0][0] + words[1][0]).toUpperCase();
+        } else if (words.length === 1 && words[0].length >= 2) {
+            initials = words[0].slice(0, 2).toUpperCase();
+        }
+
         let expiryBadgeHtml = '';
         if (days !== null) {
             if (days < 0) {
-                expiryBadgeHtml = `<span class="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">🔴 Lewat ${Math.abs(days)} hari</span>`;
+                expiryBadgeHtml = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                    <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Lewat ${Math.abs(days)}h (Expired)
+                </span>`;
             } else if (days <= 30) {
-                expiryBadgeHtml = `<span class="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200">🟡 Sisa ${days} hari</span>`;
+                expiryBadgeHtml = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> Sisa ${days}h (Kritis)
+                </span>`;
             } else if (days <= 90) {
-                expiryBadgeHtml = `<span class="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold bg-orange-100 text-orange-900 border border-orange-200">🟠 Sisa ${days} hari</span>`;
+                expiryBadgeHtml = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-orange-50 text-orange-800 border border-orange-200">
+                    <span class="w-1.5 h-1.5 rounded-full bg-orange-400"></span> Sisa ${days}h (Perhatian)
+                </span>`;
             } else {
-                expiryBadgeHtml = `<span class="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">🟢 Sisa ${days} hari</span>`;
+                expiryBadgeHtml = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Sisa ${days}h (Aman)
+                </span>`;
             }
         } else {
-            expiryBadgeHtml = `<span class="text-[10px] text-gray-400">Tidak terbatas</span>`;
+            expiryBadgeHtml = `<span class="text-[10.5px] text-slate-400">Tidak terbatas</span>`;
         }
 
         let revisionBadgeHtml = '';
         if (stage.isRevision || stage.isRenvoi || (c.statusRevisi && c.statusRevisi.trim() !== '' && c.statusRevisi !== '-')) {
             const revText = c.statusRevisi || (stage.isRenvoi ? 'Proses Renvoi' : 'Proses Revisi');
-            revisionBadgeHtml = `<div class="inline-flex items-center gap-1 text-[9.5px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded mt-1 truncate max-w-[150px]" title="${esc(revText)}">⚠️ ${esc(revText)}</div>`;
+            revisionBadgeHtml = `<div class="inline-flex items-center gap-1 text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md mt-1 truncate max-w-[160px]" title="${esc(revText)}">
+                <span>⚠️</span> <span class="truncate">${esc(revText)}</span>
+            </div>`;
         }
 
         let linkDocHtml = '';
         if (c.linkDokumen && c.linkDokumen.trim() !== '' && c.linkDokumen !== '-') {
-            linkDocHtml = `<a href="${esc(c.linkDokumen)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-[10px] text-blue-600 hover:text-blue-800 font-semibold hover:underline mt-0.5 cursor-pointer" title="Buka Dokumen Google Drive">
-                <span>🔗 Draft Drive</span>
+            linkDocHtml = `<a href="${esc(c.linkDokumen)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-[10px] text-ethos-700 hover:text-ethos-900 font-bold hover:underline mt-1 transition cursor-pointer" title="Buka Dokumen Google Drive">
+                <svg class="w-3 h-3 text-ethos-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                <span>Draft Drive</span>
             </a>`;
         }
 
         return `
-        <tr class="hover:bg-blue-50/40 transition-colors">
+        <tr class="hover:bg-slate-50/80 transition-colors">
             <!-- 1. No Kontrak & Divisi -->
             <td>
-                <button onclick="openContractDetailModal('${esc(c.noKontrak)}')" class="font-bold text-blue-600 hover:text-blue-800 hover:underline text-[12px] text-left cursor-pointer transition">
+                <button onclick="openContractDetailModal('${esc(c.noKontrak)}')" class="font-mono font-bold text-ethos-700 hover:text-ethos-900 bg-sky-50/80 hover:bg-sky-100 border border-sky-200/90 px-2 py-0.5 rounded text-[11px] inline-block transition text-left cursor-pointer shadow-2xs">
                     #${esc(c.noKontrak)}
                 </button>
-                <div class="text-[10px] text-slate-500 font-medium flex items-center gap-1 mt-0.5">
-                    <span>🏢</span> <span class="truncate max-w-[140px]" title="${esc(cleanDivisi)}">${esc(cleanDivisi)}</span>
+                <div class="text-[11px] text-slate-500 font-medium flex items-center gap-1.5 mt-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0"></span>
+                    <span class="truncate max-w-[140px]" title="${esc(cleanDivisi)}">${esc(cleanDivisi)}</span>
                 </div>
-                ${c.tglPengajuan && c.tglPengajuan !== '-' ? `<div class="text-[9.5px] text-slate-400">Ajuan: ${esc(c.tglPengajuan)}</div>` : ''}
+                ${c.tglPengajuan && c.tglPengajuan !== '-' ? `<div class="text-[10px] text-slate-400 mt-0.5">Ajuan: ${esc(c.tglPengajuan)}</div>` : ''}
             </td>
 
             <!-- 2. Vendor & Ruang Lingkup -->
             <td>
-                <div class="font-bold text-slate-900 text-xs truncate max-w-[210px]" title="${esc(cleanVendor)}">${esc(cleanVendor)}</div>
-                <div class="text-[11px] text-slate-500 truncate max-w-[190px] mt-0.5" title="${esc(cleanJenis)}">${esc(cleanJenis)}</div>
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 border border-slate-200 text-slate-700 flex items-center justify-center font-bold text-[11px] shrink-0 shadow-2xs">
+                        ${esc(initials)}
+                    </div>
+                    <div class="min-w-0">
+                        <div class="font-bold text-slate-900 text-xs truncate max-w-[210px]" title="${esc(cleanVendor)}">${esc(cleanVendor)}</div>
+                        <div class="text-[11px] text-slate-500 truncate max-w-[190px] mt-0.5" title="${esc(cleanJenis)}">${esc(cleanJenis)}</div>
+                    </div>
+                </div>
             </td>
 
             <!-- 3. Tahap Progress Pengerjaan -->
             <td>
-                <div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md font-bold text-[10.5px]" style="background:${stage.badgeBg}; color:${stage.badgeColor}; border:1px solid ${stage.badgeColor}35;">
-                    ${esc(stage.label)}
+                <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md font-bold text-[10.5px]" style="background:${stage.badgeBg}; color:${stage.badgeColor}; border:1px solid ${stage.badgeColor}35;">
+                    <span class="w-1.5 h-1.5 rounded-full" style="background:${stage.badgeColor};"></span>
+                    <span>${esc(stage.label)}</span>
                 </div>
-                <div class="w-full bg-slate-200/80 rounded-full h-1.5 mt-1 overflow-hidden" style="max-width:130px;">
+                <div class="w-full bg-slate-100 rounded-full h-1.5 mt-1.5 overflow-hidden" style="max-width:130px;">
                     <div class="h-1.5 rounded-full transition-all duration-300" style="width:${stage.percent}%; background:${stage.badgeColor};"></div>
                 </div>
-                <div class="flex items-center justify-between text-[9.5px] text-slate-400 mt-0.5" style="max-width:130px;">
+                <div class="flex items-center justify-between text-[10px] text-slate-400 mt-1" style="max-width:130px;">
                     <span>${stage.percent}% Selesai</span>
-                    ${c.slaStatus && c.slaStatus !== '-' ? `<span class="${c.isOverdueSla ? 'text-rose-600 font-bold' : 'text-slate-400'}">${esc(c.slaStatus)}</span>` : ''}
+                    ${c.slaStatus && c.slaStatus !== '-' ? `<span class="${c.isOverdueSla ? 'text-rose-600 font-bold' : 'text-slate-500'}">${esc(c.slaStatus)}</span>` : ''}
                 </div>
                 ${revisionBadgeHtml}
             </td>
 
-            <!-- 4. Masa Berlaku & Selisih Hari -->
+            <!-- 4. Masa Berlaku & Durasi -->
             <td>
-                <div class="text-[11px] text-slate-700 font-medium whitespace-nowrap mb-0.5">
+                <div class="text-[11px] text-slate-800 font-semibold whitespace-nowrap mb-1">
                     ${esc(c.tglMulai || '-')} &ndash; ${esc(c.tglSelesai || '-')}
                 </div>
                 <div>${expiryBadgeHtml}</div>
-                <div class="text-[10px] text-slate-500 mt-1 flex items-center gap-1">
+                <div class="text-[10px] text-slate-500 mt-1 flex items-center gap-1 font-medium">
                     <span>⏱️</span> <span>${processDays !== null ? processDays + ' hari proses' : '-'}</span>
                 </div>
             </td>
 
-            <!-- 5. Kelengkapan Dokumen -->
+            <!-- 5. Kelengkapan Berkas -->
             <td>
-                <span class="predikat-badge" style="background:${docColor}15; color:${docColor}; border:1px solid ${docColor}30; font-size:0.68rem; font-weight:600; padding:1px 6px;">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10.5px] font-semibold ${isDocComplete ? 'bg-sky-50 text-sky-700 border border-sky-200' : 'bg-amber-50 text-amber-800 border border-amber-200'}">
                     ${esc(c.kelengkapan || 'Lengkap')}
                 </span>
                 <div>${linkDocHtml}</div>
             </td>
 
             <!-- 6. Nilai Kontrak -->
-            <td style="text-align:right; font-weight:700; color:#0f172a; font-size:0.78rem; white-space:nowrap;">
+            <td class="text-right font-bold text-slate-900 text-xs font-mono whitespace-nowrap">
                 ${c.nilai ? formatRupiah(c.nilai) : '-'}
             </td>
 
             <!-- 7. Kepatuhan -->
-            <td style="text-align:center;">
-                <span class="predikat-badge" style="background:${statusColor}15; color:${statusColor}; border:1px solid ${statusColor}30; font-size:0.7rem; font-weight:700; padding:1px 6px;">
+            <td class="text-center">
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold ${isComply ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}">
                     ${isComply ? '✓ Comply' : '✗ Not Comply'}
                 </span>
             </td>
 
             <!-- 8. Aksi Detail -->
-            <td style="text-align:center;">
-                <button onclick="openContractDetailModal('${esc(c.noKontrak)}')" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold text-xs transition border border-blue-200 cursor-pointer shadow-2xs" title="Lihat Timeline & Detail">
-                    <span>🔍</span> <span>Detail</span>
+            <td class="text-center">
+                <button onclick="openContractDetailModal('${esc(c.noKontrak)}')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 hover:text-ethos-700 font-bold text-xs transition border border-slate-200 shadow-2xs hover:border-slate-300 cursor-pointer" title="Lihat Detail & Stepper">
+                    <span>Detail</span>
+                    <svg class="w-3 h-3 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
                 </button>
             </td>
         </tr>`;
@@ -838,9 +872,9 @@ function filterContractsByExpiry(filter) {
         const btn = document.getElementById(btnIds[key]);
         if (btn) {
             if (key === filter) {
-                btn.className = 'px-2.5 py-1 rounded-lg bg-blue-600 text-white font-bold transition shadow-2xs cursor-pointer';
+                btn.className = 'px-2.5 py-1 rounded-lg bg-ethos-600 text-white text-[11px] font-bold transition shadow-2xs cursor-pointer whitespace-nowrap';
             } else {
-                btn.className = 'px-2.5 py-1 rounded-lg bg-white text-gray-700 hover:bg-gray-100 border border-gray-200/80 transition font-medium cursor-pointer';
+                btn.className = 'px-2.5 py-1 rounded-lg bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition text-[11px] font-semibold cursor-pointer whitespace-nowrap';
             }
         }
     }
@@ -868,9 +902,9 @@ function filterContractsByStage(stage) {
         const btn = document.getElementById(btnIds[key]);
         if (btn) {
             if (key === stage) {
-                btn.className = 'px-2.5 py-1 rounded-lg bg-indigo-600 text-white font-bold transition shadow-2xs cursor-pointer';
+                btn.className = 'px-2.5 py-1 rounded-lg bg-indigo-600 text-white text-[11px] font-bold transition shadow-2xs cursor-pointer whitespace-nowrap';
             } else {
-                btn.className = 'px-2.5 py-1 rounded-lg bg-white text-gray-700 hover:bg-gray-100 border border-gray-200/80 transition font-medium cursor-pointer';
+                btn.className = 'px-2.5 py-1 rounded-lg bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition text-[11px] font-semibold cursor-pointer whitespace-nowrap';
             }
         }
     }
@@ -938,15 +972,15 @@ function openContractDetailModal(noKontrak) {
     const hasRevision = stage.isRevision || stage.isRenvoi || (c.statusRevisi && c.statusRevisi.trim() !== '' && c.statusRevisi !== '-');
 
     let stepperHtml = `
-    <div class="bg-slate-50 border border-slate-200/90 rounded-2xl p-4 shadow-2xs">
-        <div class="flex items-center justify-between mb-3">
+    <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-2xs">
+        <div class="flex items-center justify-between mb-3.5 flex-wrap gap-2">
             <div class="flex items-center gap-2">
                 <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Siklus Pengerjaan Kontrak</span>
-                <span class="px-2 py-0.5 rounded-full text-[11px] font-black" style="background:${stage.badgeBg}; color:${stage.badgeColor}; border:1px solid ${stage.badgeColor}40;">
+                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-black" style="background:${stage.badgeBg}; color:${stage.badgeColor}; border:1px solid ${stage.badgeColor}40;">
                     ${esc(stage.label)}
                 </span>
             </div>
-            <span class="text-xs font-bold text-slate-700">${stage.percent}% Selesai</span>
+            <span class="text-xs font-bold text-slate-700 bg-white border border-slate-200 px-2 py-0.5 rounded-lg shadow-2xs">${stage.percent}% Selesai</span>
         </div>
 
         <div class="w-full bg-slate-200/80 rounded-full h-2 mb-4 overflow-hidden">
@@ -969,9 +1003,9 @@ function openContractDetailModal(noKontrak) {
                 textColor = 'text-emerald-800 font-bold';
                 iconHtml = '✓';
             } else if (currentStepNum === st.num) {
-                stepBorder = 'border-blue-500 shadow-xs ring-2 ring-blue-100';
-                stepBg = 'bg-blue-50';
-                textColor = 'text-blue-900 font-black';
+                stepBorder = 'border-sky-500 shadow-xs ring-2 ring-sky-100';
+                stepBg = 'bg-sky-50';
+                textColor = 'text-sky-900 font-black';
                 iconHtml = '▶';
             } else {
                 iconHtml = st.num;
@@ -1032,12 +1066,12 @@ function openContractDetailModal(noKontrak) {
         }
 
         stepperHtml += `
-            <div class="border ${stepBorder} ${stepBg} rounded-xl p-2 flex flex-col items-center justify-between transition-all">
-                <div class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${textColor} mb-1 bg-white/80 shadow-2xs">
+            <div class="border ${stepBorder} ${stepBg} rounded-xl p-2.5 flex flex-col items-center justify-between transition-all shadow-2xs">
+                <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10.5px] font-bold ${textColor} mb-1 bg-white/90 shadow-2xs">
                     ${iconHtml}
                 </div>
                 <div class="text-[10px] font-bold ${textColor} leading-tight">${st.title}</div>
-                <div class="text-[8.5px] text-slate-400 mt-0.5">${st.desc}</div>
+                <div class="text-[9px] text-slate-400 mt-0.5">${st.desc}</div>
             </div>
         `;
     });
@@ -1049,14 +1083,14 @@ function openContractDetailModal(noKontrak) {
 
     let infoHtml = `
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
-        <div class="bg-gray-50/80 border border-gray-200/80 rounded-xl p-3.5 space-y-2.5">
-            <h4 class="font-bold text-slate-900 text-[11px] uppercase tracking-wider flex items-center gap-1.5 border-b border-gray-200/80 pb-1.5">
+        <div class="bg-slate-50/80 border border-slate-200/90 rounded-2xl p-4 space-y-2.5 shadow-2xs">
+            <h4 class="font-bold text-slate-900 text-[11px] uppercase tracking-wider flex items-center gap-1.5 border-b border-slate-200/80 pb-2">
                 <span>⚖️</span> Informasi Legalitas &amp; SLA
             </h4>
             
             <div class="flex justify-between items-center">
                 <span class="text-slate-500">Nomor Kontrak:</span>
-                <strong class="text-blue-600 font-mono font-bold">#${esc(c.noKontrak)}</strong>
+                <strong class="text-ethos-700 font-mono font-bold">#${esc(c.noKontrak)}</strong>
             </div>
 
             <div class="flex justify-between items-center">
@@ -1092,8 +1126,8 @@ function openContractDetailModal(noKontrak) {
             </div>
         </div>
 
-        <div class="bg-gray-50/80 border border-gray-200/80 rounded-xl p-3.5 space-y-2.5">
-            <h4 class="font-bold text-slate-900 text-[11px] uppercase tracking-wider flex items-center gap-1.5 border-b border-gray-200/80 pb-1.5">
+        <div class="bg-slate-50/80 border border-slate-200/90 rounded-2xl p-4 space-y-2.5 shadow-2xs">
+            <h4 class="font-bold text-slate-900 text-[11px] uppercase tracking-wider flex items-center gap-1.5 border-b border-slate-200/80 pb-2">
                 <span>💼</span> Komersial &amp; Masa Berlaku
             </h4>
 
@@ -1104,7 +1138,7 @@ function openContractDetailModal(noKontrak) {
 
             <div class="flex justify-between items-center">
                 <span class="text-slate-500">Nilai Kontrak:</span>
-                <strong class="text-slate-900 font-bold">${c.nilai ? formatRupiah(c.nilai) : '-'}</strong>
+                <strong class="text-slate-900 font-bold font-mono">${c.nilai ? formatRupiah(c.nilai) : '-'}</strong>
             </div>
 
             <div class="flex justify-between items-center">
@@ -1136,7 +1170,7 @@ function openContractDetailModal(noKontrak) {
             <div class="flex justify-between items-center">
                 <span class="text-slate-500">File Draft / Naskah:</span>
                 ${c.linkDokumen && c.linkDokumen.trim() !== '' && c.linkDokumen !== '-' ? `
-                    <a href="${esc(c.linkDokumen)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] transition cursor-pointer">
+                    <a href="${esc(c.linkDokumen)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-ethos-600 hover:bg-ethos-700 text-white font-bold text-[10.5px] transition cursor-pointer shadow-2xs">
                         <span>🔗 Buka File Drive</span>
                     </a>
                 ` : '<span class="text-slate-400">Belum ada link</span>'}
