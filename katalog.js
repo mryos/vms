@@ -767,7 +767,7 @@ function renderCatalog() {
     // 7. Render Mode Grouped (Agregasi Produk & Top 3 Penyuplai Format Kompak)
     if (groupedTbody) {
         if (pagedGrouped.length === 0) {
-            groupedTbody.innerHTML = `<tr><td colspan="8" class="text-center text-gray-400 py-12">Tidak ada produk atau penyuplai yang cocok dengan kriteria filter.</td></tr>`;
+            groupedTbody.innerHTML = `<tr><td colspan="7" class="text-center text-gray-400 py-12">Tidak ada produk atau penyuplai yang cocok dengan kriteria filter.</td></tr>`;
         } else {
             groupedTbody.innerHTML = pagedGrouped.map((item, idx) => {
                 const globalIdx = startIndex + idx;
@@ -947,9 +947,6 @@ function renderCatalog() {
                         <td class="text-center">
                             ${onTimeBadge}
                         </td>
-                        <td class="text-center whitespace-nowrap">
-                            ${item._bestScore ? renderVendorScoreBadge(item._bestScore.matchedName) : '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-500 border border-gray-200">— Belum Dinilai</span>'}
-                        </td>
                         <td class="text-center">
                             <button onclick="toggleProductPoDetail(${globalIdx})" class="px-2 py-1 text-xs font-semibold rounded-lg border border-gray-200 text-blue-600 hover:bg-blue-50 transition shadow-2xs whitespace-nowrap">
                                 Rincian (${item.totalOrders})
@@ -957,7 +954,7 @@ function renderCatalog() {
                         </td>
                     </tr>
                     <tr id="productPoRow_${globalIdx}" style="display: none;" class="bg-gray-50/70 border-b border-gray-200">
-                        <td colspan="8" class="p-3">
+                        <td colspan="7" class="p-3">
                             <div class="bg-white rounded-xl border border-gray-200 p-3 shadow-xs">
                                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2.5 pb-2 border-b border-gray-100">
                                     <div>
