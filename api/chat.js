@@ -32,7 +32,7 @@ async function fetchLiveSpreadsheetData() {
     }
 }
 
-// Ekstrak konteks cerdas dari Spreadsheet berdasarkan pesan pengguna
+// Ekstrak konteks cerdas dan terstruktur dari Spreadsheet berdasarkan pesan pengguna
 function buildRelevantContext(sheetData, userQuery) {
     if (!sheetData) return '';
     const q = (userQuery || '').toLowerCase();
@@ -43,86 +43,121 @@ function buildRelevantContext(sheetData, userQuery) {
     const evals = sheetData.evaluationsList || [];
     const vendorMap = sheetData.poStats?.vendorMap || {};
     const rawOrders = sheetData.allRawOrders || [];
+    const poStats = sheetData.poStats || {};
 
-    // 1. Ekstrak Data Kontrak Relevan
+    // 1. Ekstrak Data PO & Pemetaan Vendor Terbanyak / Terbesar
+    const isPoQuery = q.includes('po') || q.includes('pesanan') || q.includes('order') || q.includes('transaksi') || 
+                      q.includes('terbanyak') || q.includes('sering') || q.includes('volume') || q.includes('pengadaan') ||
+                      q.includes('terbesar') || q.includes('nilai') || q.includes('riwayat');
+
+    // Selalu siapkan data Top 10 Vendor Pemegang PO Terbanyak jika relevan
+    if (isPoQuery || Object.keys(vendorMap).length > 0) {
+        const sortedByPo = Object.entries(vendorMap)
+            .map(([name, s]) => ({
+                name,
+                totalPo: s.totalPo || 0,
+                onTimePo: s.onTimePo || 0,
+                totalValue: s.totalValue || 0,
+                onTimePct: s.onTimeRatePct || 0
+            }))
+            .sort((a, b) => b.totalPo - a.totalPo);
+
+        const top10Po = sortedByPo.slice(0, 10);
+
+        snippets.push(`[DATA RESMI SPREADSHEET - TOP 10 VENDOR DENGAN PO TERBANYAK]:\n` + top10Po.map((v, i) =>
+            `${i + 1}. ${v.name}: Total ${v.totalPo} PO | Nilai Total: Rp ${v.totalValue.toLocaleString('id-ID')} | SLA Tepat Waktu: ${v.onTimePct}% (${v.onTimePo}/${v.totalPo} PO on-time)`
+        ).join('\n'));
+
+        // Jika menanyakan nilai pengadaan terbesar
+        if (q.includes('nilai') || q.includes('terbesar') || q.includes('rupiah') || q.includes('anggaran') || q.includes('biaya')) {
+            const sortedByVal = [...sortedByPo].sort((a, b) => b.totalValue - a.totalValue).slice(0, 5);
+            snippets.push(`[DATA RESMI SPREADSHEET - TOP 5 VENDOR DENGAN NILAI PENGADAAN TERBESAR]:\n` + sortedByVal.map((v, i) =>
+                `${i + 1}. ${v.name}: Rp ${v.totalValue.toLocaleString('id-ID')} (${v.totalPo} PO)`
+            ).join('\n'));
+        }
+    }
+
+    // 2. Ekstrak Data Kontrak Relevan
     let matchedContracts = [];
-    if (q.includes('kontrak') || q.includes('expired') || q.includes('kedaluwarsa') || q.includes('kritis') || q.includes('masa berlaku') || q.includes('revisi') || q.includes('paraf') || q.includes('legal')) {
-        if (q.includes('expired') || q.includes('kedaluwarsa') || q.includes('berakhir')) {
-            matchedContracts = contracts.filter(c => c.selisihHariMasaBerlaku !== null && c.selisihHariMasaBerlaku < 0).slice(0, 10);
-        } else if (q.includes('kritis') || q.includes('perhatian') || q.includes('segera')) {
-            matchedContracts = contracts.filter(c => c.selisihHariMasaBerlaku !== null && c.selisihHariMasaBerlaku >= 0 && c.selisihHariMasaBerlaku <= 90).slice(0, 10);
+    if (q.includes('kontrak') || q.includes('expired') || q.includes('kedaluwarsa') || q.includes('kritis') || 
+        q.includes('masa berlaku') || q.includes('revisi') || q.includes('paraf') || q.includes('legal') || q.includes('sah')) {
+        
+        if (q.includes('expired') || q.includes('kedaluwarsa') || q.includes('berakhir') || q.includes('habis')) {
+            matchedContracts = contracts.filter(c => c.selisihHariMasaBerlaku !== null && c.selisihHariMasaBerlaku < 0).slice(0, 12);
+        } else if (q.includes('kritis') || q.includes('perhatian') || q.includes('segera') || q.includes('30') || q.includes('90')) {
+            matchedContracts = contracts.filter(c => c.selisihHariMasaBerlaku !== null && c.selisihHariMasaBerlaku >= 0 && c.selisihHariMasaBerlaku <= 90).slice(0, 12);
         } else if (q.includes('revisi') || q.includes('renvoi')) {
             matchedContracts = contracts.filter(c => c.statusRevisi || c.tahapProgress?.toLowerCase().includes('revisi')).slice(0, 10);
         } else {
-            matchedContracts = contracts.slice(0, 8);
+            matchedContracts = contracts.slice(0, 10);
         }
     } else {
-        // Cek apakah ada nama vendor atau kata kunci cocok di kontrak
+        // Cek apakah ada nama vendor atau nomor kontrak spesifik yang ditanyakan
         matchedContracts = contracts.filter(c => {
             const v = (c.vendor || '').toLowerCase();
             const jp = (c.jenisPekerjaan || '').toLowerCase();
             const no = String(c.noKontrak || '');
-            return q.includes(v) || (v && v.split(' ').some(w => w.length > 3 && q.includes(w))) || q.includes(jp) || q.includes(no);
-        }).slice(0, 6);
+            return q.includes(v) || (v && v.split(' ').some(w => w.length > 3 && q.includes(w))) || (jp && q.includes(jp)) || q.includes(no);
+        }).slice(0, 8);
     }
 
     if (matchedContracts.length > 0) {
-        snippets.push(`[DATA KONTRAK TERKAIT SPREADSHEET]:\n` + matchedContracts.map(c => 
-            `- No #${c.noKontrak} | Vendor: ${c.vendor} | Lingkup: ${c.jenisPekerjaan || '-'} | Tahap: ${c.tahapProgress} | Selesai: ${c.tglSelesai || '-'} (Sisa: ${c.selisihHariMasaBerlaku !== null ? c.selisihHariMasaBerlaku + ' hari' : '-'}) | Status Kepatuhan: ${c.status || 'Comply'} | SLA Pengerjaan: ${c.slaStatus || '-'}`
+        snippets.push(`[DATA KONTRAK TERKAIT DARI SPREADSHEET]:\n` + matchedContracts.map(c => 
+            `- No #${c.noKontrak} | Vendor: ${c.vendor} | Lingkup: ${c.jenisPekerjaan || '-'} | Tahap: ${c.tahapProgress} | Selesai: ${c.tglSelesai || '-'} (Sisa: ${c.selisihHariMasaBerlaku !== null ? c.selisihHariMasaBerlaku + ' hari' : '-'}) | Kepatuhan: ${c.status || 'Comply'} | Nilai: Rp ${(c.nilai || 0).toLocaleString('id-ID')}`
         ).join('\n'));
     }
 
-    // 2. Ekstrak Penilaian & Catatan Evaluasi Vendor
+    // 3. Ekstrak Penilaian & Catatan Evaluasi Vendor
     let matchedEvals = evals.filter(e => {
         const v = (e.vendor || '').toLowerCase();
         const cat = (e.catatan || '').toLowerCase();
-        return q.includes(v) || (v && v.split(' ').some(w => w.length > 3 && q.includes(w))) || (q.includes('komplain') || q.includes('catatan') || q.includes('keluhan') || q.includes('evaluasi'));
-    }).slice(0, 6);
+        return q.includes(v) || (v && v.split(' ').some(w => w.length > 3 && q.includes(w))) || 
+               q.includes('komplain') || q.includes('catatan') || q.includes('keluhan') || q.includes('evaluasi') || q.includes('ulasan');
+    }).slice(0, 8);
 
     if (matchedEvals.length > 0) {
-        snippets.push(`[DATA CATATAN & EVALUASI USER DARI SPREADSHEET]:\n` + matchedEvals.map(e =>
+        snippets.push(`[DATA EVALUASI & CATATAN PENILAI USER DARI SPREADSHEET]:\n` + matchedEvals.map(e =>
             `- Vendor: ${e.vendor} | Periode: ${e.periode} | Skor: ${e.score}/5 (${e.predikat}) | Catatan Penilai: "${e.catatan || 'Tidak ada catatan'}"`
         ).join('\n'));
     }
 
-    // 3. Ekstrak Skor Terbaik / Terendah
-    if (q.includes('skor') || q.includes('nilai') || q.includes('terbaik') || q.includes('terendah') || q.includes('rating')) {
+    // 4. Ekstrak Peringkat Skor Rating Vendor
+    if (q.includes('skor') || q.includes('nilai') || q.includes('terbaik') || q.includes('terendah') || q.includes('rating') || q.includes('bintang')) {
         const sortedVendors = Object.entries(scoreMap)
             .map(([name, s]) => ({ name, avg: s.avgScore || 0, pred: s.predikat || '-', count: s.count || 0 }))
             .sort((a, b) => q.includes('terendah') ? a.avg - b.avg : b.avg - a.avg)
-            .slice(0, 5);
+            .slice(0, 8);
 
-        snippets.push(`[PERINGKAT NILAI VENDOR SPREADSHEET]:\n` + sortedVendors.map(v =>
-            `- ${v.name}: Nilai Rata-rata ${v.avg.toFixed(2)} / 5.00 (${v.pred}) dari ${v.count} kali dinilai`
+        snippets.push(`[PERINGKAT NILAI EVALUASI VENDOR]:\n` + sortedVendors.map((v, i) =>
+            `${i + 1}. ${v.name}: Rata-rata ${v.avg.toFixed(2)}/5.00 (${v.pred}) dari ${v.count} kali dinilai`
         ).join('\n'));
     }
 
-    // 4. Ekstrak Data Pengadaan & Harga PO (jika menanyakan barang, harga, atau vendor pengadaan)
+    // 5. Ekstrak Transaksi Barang / Produk Spesifik (misal Laptop, Catering, dsb.)
     let matchedOrders = rawOrders.filter(o => {
         const p = (o.product || '').toLowerCase();
         const v = (o.vendor || '').toLowerCase();
-        return (p && q.includes(p)) || (v && q.includes(v)) || q.includes('harga') || q.includes('beli') || q.includes('termurah');
+        return (p && q.includes(p)) || (v && q.includes(v)) || (q.includes('harga') && (p || v));
     }).slice(0, 8);
 
     if (matchedOrders.length > 0) {
-        snippets.push(`[DATA TRANSAKSI PO KATALOG PENGADAAN]:\n` + matchedOrders.map(o =>
+        snippets.push(`[DATA TRANSAKSI KATALOG BARANG/PRODUK]:\n` + matchedOrders.map(o =>
             `- PO: ${o.poNum || '-'} | Produk: ${o.product} | Vendor: ${o.vendor} | Harga: Rp ${(o.price || o.totalValue || 0).toLocaleString('id-ID')} | Status: ${o.status || '-'}`
         ).join('\n'));
     }
 
-    // 5. Ringkasan Keseluruhan jika pertanyaan bersifat umum / salam
-    if (snippets.length === 0) {
-        const totalContracts = contracts.length;
-        const expiredCount = contracts.filter(c => c.selisihHariMasaBerlaku !== null && c.selisihHariMasaBerlaku < 0).length;
-        const criticalCount = contracts.filter(c => c.selisihHariMasaBerlaku !== null && c.selisihHariMasaBerlaku >= 0 && c.selisihHariMasaBerlaku <= 30).length;
-        const totalVendors = Object.keys(vendorMap).length || sheetData.vendors?.length || 190;
-        const totalOrders = rawOrders.length || 956;
+    // 6. Ringkasan Keseluruhan Database
+    const totalContracts = contracts.length;
+    const expiredCount = contracts.filter(c => c.selisihHariMasaBerlaku !== null && c.selisihHariMasaBerlaku < 0).length;
+    const criticalCount = contracts.filter(c => c.selisihHariMasaBerlaku !== null && c.selisihHariMasaBerlaku >= 0 && c.selisihHariMasaBerlaku <= 30).length;
+    const totalOrders = poStats.totalOrders || rawOrders.length || 956;
+    const totalValue = poStats.totalValue || 0;
+    const overallOnTime = poStats.overallOnTimePct || 45;
 
-        snippets.push(`[RINGKASAN DATA DATABASE SPREADSHEET TERKINI]:
+    snippets.push(`[RINGKASAN TOTAL DATABASE SPREADSHEET]:
+- Total Transaksi PO: ${totalOrders} pesanan (Nilai Total: Rp ${totalValue.toLocaleString('id-ID')}, Rata-rata SLA On-Time: ${overallOnTime}%).
 - Total Kontrak Terdata: ${totalContracts} berkas (${expiredCount} Expired, ${criticalCount} Kritis <=30 hari).
-- Total Rekanan Vendor Aktif: ${totalVendors} vendor.
-- Total Riwayat Transaksi PO: ${totalOrders} transaksi pengadaan.`);
-    }
+- Total Rekanan Vendor: ${Object.keys(vendorMap).length} vendor tercatat di riwayat PO.`);
 
     return snippets.join('\n\n');
 }
@@ -157,23 +192,18 @@ export default async function handler(req, res) {
     const lastUserQuery = messages.filter(m => m.role === 'user').pop()?.content || '';
     const relevantSheetContext = buildRelevantContext(sheetData, lastUserQuery);
 
-    // 3. Bangun System Prompt yang kaya akan fakta nyata dari Spreadsheet
-    const systemPrompt = `Anda adalah "Ethos VMS AI Copilot", asisten kecerdasan buatan cerdas untuk Vendor Management System (VMS) PT Etos Kreatif Indonesia.
-Anda memiliki AKSES LANGSUNG ke database Google Spreadsheet VMS (Kontrak Legal, Evaluasi Vendor, Riwayat PO, dan Performa SLA).
+    // 3. Bangun System Prompt yang tegas: AI WAJIB menyajikan data langsung, BUKAN menyuruh pengguna membuka Excel/Pivot!
+    const systemPrompt = `Anda adalah "Ethos VMS AI Copilot", asisten AI resmi untuk Vendor Management System (VMS) PT Etos Kreatif Indonesia.
+Anda SUDAH TERHUBUNG LANGSUNG ke database Google Spreadsheet VMS dan memegang data riil di bawah.
 
-TUGAS UTAMA:
-1. Menjawab pertanyaan pengguna dengan akurat berdasarkan fakta data spreadsheet yang disediakan di bawah.
-2. Jika pengguna menanyakan nomor kontrak, nama vendor, tanggal, skor, atau catatan keluhan, sebutkan data spesifik dari data spreadsheet.
-3. Berikan saran yang solutif, objektif, dan profesional untuk tim Procurement, Legal, dan Manajemen.
+ATURAN UTAMA (PENTING):
+1. JANGAN PERNAH menyuruh pengguna membuka spreadsheet secara manual, membuat Pivot Table, atau menempelkan hasil data ke chat! Anda adalah analis data AI—tugas Anda adalah MENYAJIKAN DATA LANGSUNG secara tuntas dan jelas.
+2. Gunakan angka faktual, nama vendor, nomor kontrak, harga PO, persentase SLA, dan tanggal dari data yang disediakan di bawah.
+3. Sajikan jawaban dengan format rapi (bullet points / nomor tebal) dan bahasa Indonesia yang profesional.
 
-KARAKTER & FORMAT:
-- Berbahasa Indonesia yang sopan, ramah, dan profesional.
-- Gunakan poin-poin tebal (bullet points / bold) agar mudah dibaca.
-- Jika data yang ditanyakan tidak ditemukan di spreadsheet, katakan dengan jujur bahwa data tersebut belum tercatat.
+${relevantSheetContext ? `=== DATA RESMI DARI GOOGLE SPREADSHEET ===\n${relevantSheetContext}\n=========================================` : ''}
 
-${relevantSheetContext ? `=== FAKTA DATA LANGSUNG DARI GOOGLE SPREADSHEET ===\n${relevantSheetContext}\n=================================================` : ''}
-
-${pageContext && pageContext.summary ? `Konteks Halaman Pengguna: ${pageContext.summary}` : ''}`;
+${pageContext && pageContext.summary ? `Konteks Halaman Saat Ini: ${pageContext.summary}` : ''}`;
 
     const fullMessages = [
         { role: 'system', content: systemPrompt },
@@ -204,8 +234,8 @@ ${pageContext && pageContext.summary ? `Konteks Halaman Pengguna: ${pageContext.
                 body: JSON.stringify({
                     model: model,
                     messages: fullMessages,
-                    temperature: 0.2, // Lebih faktual & terarah
-                    max_tokens: 900
+                    temperature: 0.2, // Rendah agar faktual dan presisi
+                    max_tokens: 1000
                 })
             });
 
