@@ -21,7 +21,7 @@
     let chatHistory = [
         {
             role: 'assistant',
-            content: 'Halo! Saya **Ethos VMS AI Copilot** 🤖. Tanya apa saja seputar data vendor, kontrak, PO, atau SLA.'
+            content: 'Silakan tanyakan data seputar vendor, nomor kontrak, riwayat PO, atau performa SLA.'
         }
     ];
     let isWaitingResponse = false;
@@ -76,8 +76,8 @@
         launcher.className = 'vms-ai-launcher';
         launcher.id = 'vmsAiLauncher';
         launcher.innerHTML = `
-            <span class="ai-pulse-dot"></span>
-            <span>✨ Tanya AI Copilot</span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span>Tanya AI</span>
         `;
         document.body.appendChild(launcher);
 
@@ -88,12 +88,10 @@
         win.innerHTML = `
             <div class="vms-ai-header">
                 <div class="vms-ai-title-wrap">
-                    <div class="vms-ai-avatar">🤖</div>
+                    <span class="vms-ai-status-indicator"></span>
                     <div>
-                        <div style="font-weight: 700; font-size: 13px; line-height: 1.2;">Ethos AI Copilot</div>
-                        <div style="font-size: 10.5px; color: #94a3b8; display: flex; items-center; gap: 4px;">
-                            <span style="color: #34d399;">●</span> OpenRouter · DeepSeek AI
-                        </div>
+                        <div style="font-weight: 700; font-size: 13px; line-height: 1.2;">Asisten VMS</div>
+                        <div style="font-size: 10px; color: #94a3b8;">Data Spreadsheet Terhubung</div>
                     </div>
                 </div>
                 <div style="display: flex; align-items: center; gap: 6px;">
@@ -115,17 +113,17 @@
 
             <!-- Quick Suggestions -->
             <div class="vms-ai-quick-prompts">
-                <button class="vms-ai-chip" data-prompt="Siapa vendor termurah & terbaik untuk pengadaan barang?">🏷️ Vendor Termurah</button>
-                <button class="vms-ai-chip" data-prompt="Kontrak mana yang kritis atau mendekati kedaluwarsa?">📑 Cek Kontrak Kritis</button>
-                <button class="vms-ai-chip" data-prompt="Bagaimana analisis ketepatan SLA pengiriman vendor?">⏱️ Analisis SLA</button>
-                <button class="vms-ai-chip" data-prompt="Tampilkan rekomendasi vendor dengan skor tertinggi">⭐ Vendor Terbaik</button>
+                <button class="vms-ai-chip" data-prompt="Siapa vendor dengan jumlah PO terbanyak?">Vendor Terbanyak</button>
+                <button class="vms-ai-chip" data-prompt="Kontrak mana yang kritis atau mendekati kedaluwarsa?">Kontrak Kritis</button>
+                <button class="vms-ai-chip" data-prompt="Bagaimana analisis ketepatan SLA pengiriman vendor?">Analisis SLA</button>
+                <button class="vms-ai-chip" data-prompt="Tampilkan rekomendasi vendor dengan skor tertinggi">Vendor Rating Tertinggi</button>
             </div>
 
             <!-- Input Bar -->
             <form class="vms-ai-input-bar" id="vmsAiForm">
-                <input type="text" id="vmsAiInput" class="vms-ai-input" placeholder="Ketik pertanyaan untuk AI..." autocomplete="off">
+                <input type="text" id="vmsAiInput" class="vms-ai-input" placeholder="Tanyakan data vendor, PO, kontrak..." autocomplete="off">
                 <button type="submit" id="vmsAiSendBtn" class="vms-ai-send-btn" title="Kirim">
-                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </button>
             </form>
         `;
