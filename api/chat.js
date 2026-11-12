@@ -146,7 +146,47 @@ function buildRelevantContext(sheetData, userQuery) {
         ).join('\n'));
     }
 
-    // 6. Ringkasan Keseluruhan Database
+    // 6. Ekstrak Data Kuartal / Periode (Q1, Q2, Q3, Q4 2026)
+    const periods = sheetData.periods || {};
+    const periodList = sheetData.periodList || Object.keys(periods);
+    const hasPeriodMention = q.includes('q1') || q.includes('q2') || q.includes('q3') || q.includes('q4') || 
+                             q.includes('kuartal') || q.includes('quartal') || q.includes('periode') || q.includes('quarter');
+
+    if (hasPeriodMention && periodList.length > 0) {
+        let periodSnippets = [];
+        periodList.forEach(pKey => {
+            const pData = periods[pKey];
+            if (!pData) return;
+            const orders = pData.rawOrders || [];
+            const vendors = pData.vendors || [];
+            const onTimeCount = orders.filter(o => o.isOnTime).length;
+            const slaPct = orders.length > 0 ? Math.round((onTimeCount / orders.length) * 100) : 0;
+            
+            // Hitung total nilai di periode ini
+            const totalVal = orders.reduce((sum, o) => {
+                const val = o.nilai || o.price || o.totalValue || 0;
+                return sum + (typeof val === 'number' ? val : 0);
+            }, 0);
+
+            // Hitung vendor teratas di periode ini
+            const vCounts = {};
+            orders.forEach(o => {
+                const v = o.vendor || 'Unknown';
+                vCounts[v] = (vCounts[v] || 0) + 1;
+            });
+            const topVendorsInPeriod = Object.entries(vCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 3)
+                .map(([name, count]) => `${name} (${count} PO)`)
+                .join(', ');
+
+            periodSnippets.push(`- Periode ${pKey}: Total ${orders.length} Transaksi PO | ${vendors.length} Vendor Aktif | Nilai: Rp ${totalVal.toLocaleString('id-ID')} | SLA Tepat: ${slaPct}% | Vendor Terbanyak: ${topVendorsInPeriod}`);
+        });
+
+        snippets.push(`[DATA RESMI PERIODE KUARATAL (Q1, Q2, Q3, Q4 2026)]:\n` + periodSnippets.join('\n'));
+    }
+
+    // 7. Ringkasan Keseluruhan Database
     const totalContracts = contracts.length;
     const expiredCount = contracts.filter(c => c.selisihHariMasaBerlaku !== null && c.selisihHariMasaBerlaku < 0).length;
     const criticalCount = contracts.filter(c => c.selisihHariMasaBerlaku !== null && c.selisihHariMasaBerlaku >= 0 && c.selisihHariMasaBerlaku <= 30).length;
@@ -156,6 +196,7 @@ function buildRelevantContext(sheetData, userQuery) {
 
     snippets.push(`[RINGKASAN TOTAL DATABASE SPREADSHEET]:
 - Total Transaksi PO: ${totalOrders} pesanan (Nilai Total: Rp ${totalValue.toLocaleString('id-ID')}, Rata-rata SLA On-Time: ${overallOnTime}%).
+- Sheet Periode Kuartal: ${periodList.join(', ')} (${periodList.map(p => `${p}: ${periods[p]?.rawOrders?.length || 0} PO`).join(' | ')}).
 - Total Kontrak Terdata: ${totalContracts} berkas (${expiredCount} Expired, ${criticalCount} Kritis <=30 hari).
 - Total Rekanan Vendor: ${Object.keys(vendorMap).length} vendor tercatat di riwayat PO.`);
 
