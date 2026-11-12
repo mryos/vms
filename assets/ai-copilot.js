@@ -17,10 +17,11 @@
     }
 
     // State Chat
+    let currentAnswerStyle = localStorage.getItem('vms_ai_style') || 'concise'; // 'concise' | 'detailed'
     let chatHistory = [
         {
             role: 'assistant',
-            content: 'Halo! Saya **Ethos VMS AI Copilot** 🤖. Ada yang bisa saya bantu terkait data vendor, katalog pengadaan, evaluasi SLA, atau kepatuhan kontrak?'
+            content: 'Halo! Saya **Ethos VMS AI Copilot** 🤖. Tanya apa saja seputar data vendor, kontrak, PO, atau SLA.'
         }
     ];
     let isWaitingResponse = false;
@@ -95,7 +96,10 @@
                         </div>
                     </div>
                 </div>
-                <div style="display: flex; align-items: center; gap: 4px;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <button class="vms-ai-mode-pill" id="vmsAiModeToggle" title="Ganti mode: Ringkas (To-the-point) vs Detail Analisis">
+                        ${currentAnswerStyle === 'concise' ? '⚡ Ringkas' : '📊 Detail'}
+                    </button>
                     <button class="vms-ai-header-btn" id="vmsAiClearBtn" title="Hapus Riwayat Chat">
                         <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                     </button>
@@ -141,6 +145,16 @@
         document.getElementById('vmsAiCloseBtn').onclick = () => {
             win.classList.remove('active');
         };
+
+        const modeBtn = document.getElementById('vmsAiModeToggle');
+        if (modeBtn) {
+            modeBtn.onclick = () => {
+                currentAnswerStyle = currentAnswerStyle === 'concise' ? 'detailed' : 'concise';
+                localStorage.setItem('vms_ai_style', currentAnswerStyle);
+                modeBtn.textContent = currentAnswerStyle === 'concise' ? '⚡ Ringkas' : '📊 Detail';
+                modeBtn.title = currentAnswerStyle === 'concise' ? 'Mode Ringkas Aktif (Klik untuk Mode Detail)' : 'Mode Detail Aktif (Klik untuk Mode Ringkas)';
+            };
+        }
 
         document.getElementById('vmsAiClearBtn').onclick = () => {
             chatHistory = [
@@ -235,7 +249,8 @@
                 },
                 body: JSON.stringify({
                     messages: recentMessages,
-                    pageContext: pageContext
+                    pageContext: pageContext,
+                    answerStyle: currentAnswerStyle
                 })
             });
 

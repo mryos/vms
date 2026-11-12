@@ -221,7 +221,7 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'OPENROUTER_API_KEY belum dikonfigurasi di server.' });
     }
 
-    const { messages = [], pageContext = {} } = req.body || {};
+    const { messages = [], pageContext = {}, answerStyle = 'concise' } = req.body || {};
     if (!Array.isArray(messages) || messages.length === 0) {
         return res.status(400).json({ error: 'Parameter messages wajib diisi dan berupa array.' });
     }
@@ -233,14 +233,28 @@ export default async function handler(req, res) {
     const lastUserQuery = messages.filter(m => m.role === 'user').pop()?.content || '';
     const relevantSheetContext = buildRelevantContext(sheetData, lastUserQuery);
 
-    // 3. Bangun System Prompt yang tegas: AI WAJIB menyajikan data langsung, BUKAN menyuruh pengguna membuka Excel/Pivot!
+    // 3. Konfigurasi Gaya Menjawab (Ringkas vs Detail)
+    const isConcise = answerStyle !== 'detailed';
+    const styleInstruction = isConcise ? `
+PERINGATAN KERAS GAYA MENJAWAB (MODE RINGKAS - TO THE POINT):
+1. DILARANG BERTELE-TELE! Langsung jawab data intinya secara to-the-point.
+2. DILARANG menulis kalimat pengantar/basa-basi apa pun (JANGAN tulis "Berdasarkan data...", "Tentu, berikut...", "Halo!...", dll).
+3. DILARANG menulis paragraf kesimpulan atau rangkuman penutup berulang di akhir jawaban.
+4. Langsung sajikan data berupa poin-poin singkat atau 1 tabel ringkas.
+5. Maksimal 60-120 kata. Padat, lugas, dan akurat.` : `
+ATURAN GAYA MENJAWAB (MODE DETAIL & ANALISIS):
+1. Jelaskan data secara komprehensif, terstruktur, dan analitis.
+2. Sertakan tabel, perbandingan angka, dan rekomendasi taktis.`;
+
+    // 4. Bangun System Prompt
     const systemPrompt = `Anda adalah "Ethos VMS AI Copilot", asisten AI resmi untuk Vendor Management System (VMS) PT Etos Kreatif Indonesia.
 Anda SUDAH TERHUBUNG LANGSUNG ke database Google Spreadsheet VMS dan memegang data riil di bawah.
 
-ATURAN UTAMA (PENTING):
-1. JANGAN PERNAH menyuruh pengguna membuka spreadsheet secara manual, membuat Pivot Table, atau menempelkan hasil data ke chat! Anda adalah analis data AI—tugas Anda adalah MENYAJIKAN DATA LANGSUNG secara tuntas dan jelas.
-2. Gunakan angka faktual, nama vendor, nomor kontrak, harga PO, persentase SLA, dan tanggal dari data yang disediakan di bawah.
-3. Sajikan jawaban dengan format rapi (bullet points / nomor tebal) dan bahasa Indonesia yang profesional.
+${styleInstruction}
+
+ATURAN INTEGRITAS DATA:
+- JANGAN PERNAH menyuruh pengguna membuka spreadsheet secara manual atau membuat Pivot Table! Tampilkan langsung data angka yang ditanyakan.
+- Gunakan data faktual resmi dari data spreadsheet di bawah.
 
 ${relevantSheetContext ? `=== DATA RESMI DARI GOOGLE SPREADSHEET ===\n${relevantSheetContext}\n=========================================` : ''}
 
@@ -276,7 +290,7 @@ ${pageContext && pageContext.summary ? `Konteks Halaman Saat Ini: ${pageContext.
                     model: model,
                     messages: fullMessages,
                     temperature: 0.2, // Rendah agar faktual dan presisi
-                    max_tokens: 1000
+                    max_tokens: isConcise ? 450 : 1000
                 })
             });
 
