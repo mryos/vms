@@ -240,40 +240,47 @@
         </div>
 
         <!-- ========== MINI KPI SUMMARY ========== -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-            <div class="tremor-card p-4">
-                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">📦 Total Ragam Produk</p>
-                <div class="mt-2 flex items-baseline gap-2">
-                    <span class="text-2xl font-bold text-gray-900" id="catStatTotalProducts">0</span>
-                    <span class="text-xs text-gray-500">item / jenis</span>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+            <div class="tremor-card p-3.5">
+                <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">📦 Ragam Produk</p>
+                <div class="mt-1.5 flex items-baseline gap-1.5">
+                    <span class="text-xl sm:text-2xl font-bold text-gray-900" id="catStatTotalProducts">0</span>
+                    <span class="text-[11px] text-gray-500">item</span>
                 </div>
             </div>
-            <div class="tremor-card p-4">
-                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">📋 Total Transaksi PO</p>
-                <div class="mt-2 flex items-baseline gap-2">
-                    <span class="text-2xl font-bold text-gray-900" id="catStatTotalOrders">0</span>
-                    <span class="text-xs text-gray-500">pesanan tercatat</span>
+            <div class="tremor-card p-3.5">
+                <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">📋 Transaksi PO</p>
+                <div class="mt-1.5 flex items-baseline gap-1.5">
+                    <span class="text-xl sm:text-2xl font-bold text-gray-900" id="catStatTotalOrders">0</span>
+                    <span class="text-[11px] text-gray-500">pesanan</span>
                 </div>
             </div>
-            <div class="tremor-card p-4">
-                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">🏆 Top Produk Terbanyak</p>
-                <div class="mt-2 truncate">
-                    <span class="text-base font-bold text-gray-900 block truncate" id="catStatTopProduct">-</span>
-                    <span class="text-xs text-blue-600 font-medium" id="catStatTopProductMeta">0 pesanan</span>
+            <div class="tremor-card p-3.5">
+                <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">🏆 Top Produk</p>
+                <div class="mt-1.5 truncate">
+                    <span class="text-sm sm:text-base font-bold text-gray-900 block truncate" id="catStatTopProduct">-</span>
+                    <span class="text-[10.5px] text-blue-600 font-medium" id="catStatTopProductMeta">0 pesanan</span>
                 </div>
             </div>
-            <div class="tremor-card p-4">
-                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">⏱️ Ketepatan Pengiriman</p>
-                <div class="mt-2 flex items-baseline gap-2">
-                    <span class="text-2xl font-bold text-emerald-600" id="catStatOnTimeRate">100%</span>
-                    <span class="text-xs text-emerald-700 font-medium">on-time delivery</span>
+            <div class="tremor-card p-3.5">
+                <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">⏱️ Ketepatan SLA</p>
+                <div class="mt-1.5 flex items-baseline gap-1.5">
+                    <span class="text-xl sm:text-2xl font-bold text-emerald-600" id="catStatOnTimeRate">100%</span>
+                    <span class="text-[11px] text-emerald-700 font-medium">on-time</span>
                 </div>
             </div>
-            <div class="tremor-card p-4">
-                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">⚠️ Risiko Pasokan</p>
-                <div class="mt-2 flex items-baseline gap-2">
-                    <span class="text-2xl font-bold text-amber-600" id="catStatRiskProducts">0</span>
-                    <span class="text-xs text-amber-700 font-medium">&ge;70% single-vendor</span>
+            <div class="tremor-card p-3.5">
+                <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">⭐ Penilaian User</p>
+                <div class="mt-1.5 flex items-baseline gap-1.5">
+                    <span class="text-xl sm:text-2xl font-bold text-blue-600" id="catStatVendorScored">0</span>
+                    <span class="text-[11px] text-gray-500 font-medium" id="catStatVendorScoredMeta">dinilai</span>
+                </div>
+            </div>
+            <div class="tremor-card p-3.5">
+                <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">⚠️ Risiko Pasokan</p>
+                <div class="mt-1.5 flex items-baseline gap-1.5">
+                    <span class="text-xl sm:text-2xl font-bold text-amber-600" id="catStatRiskProducts">0</span>
+                    <span class="text-[11px] text-amber-700 font-medium">&ge;70% single</span>
                 </div>
             </div>
         </div>
@@ -302,13 +309,22 @@
                         <option value="all">📅 Semua Periode</option>
                     </select>
 
+                    <!-- Score Filter Selector (Baru) -->
+                    <select id="catalogScoreFilter" class="tremor-select text-xs py-1.5 pl-3 pr-7 rounded-lg border border-gray-200 focus:outline-none focus:border-blue-500 shadow-2xs" title="Filter Penilaian User">
+                        <option value="all">⭐ Semua Status Nilai</option>
+                        <option value="scored">✓ Sudah Dinilai</option>
+                        <option value="unscored">⚠️ Belum Dinilai</option>
+                    </select>
+
                     <!-- Sort Selector -->
                     <select id="catalogSortSelect" class="tremor-select text-xs py-1.5 pl-3 pr-7 rounded-lg border border-gray-200 focus:outline-none focus:border-blue-500 shadow-2xs" title="Urutkan Data">
                         <option value="po-desc">🔢 PO Terbanyak</option>
+                        <option value="score-desc">⭐ Nilai User Tertinggi</option>
+                        <option value="score-asc">⭐ Nilai User Terendah</option>
                         <option value="price-desc">💰 Nilai / Harga Tertinggi</option>
                         <option value="price-asc">🏷️ Nilai / Harga Terendah</option>
                         <option value="name-asc">🔤 Nama Produk (A - Z)</option>
-                        <option value="ontime-desc">⏱️ On-Time Tertinggi</option>
+                        <option value="ontime-desc">⏱️ SLA / On-Time Tertinggi</option>
                         <option value="risk-desc">⚠️ Risiko Ketergantungan Tertinggi</option>
                     </select>
 
@@ -344,15 +360,16 @@
                         <tr>
                             <th class="w-10">#</th>
                             <th>Produk / Jasa &amp; Riset Pasar</th>
-                            <th class="text-center w-20">Total PO</th>
-                            <th>Top 3 Vendor Penyuplai &amp; Harga</th>
-                            <th class="w-40">Harga Terakhir / Kisaran</th>
+                            <th class="text-center w-16">Total PO</th>
+                            <th>Top 3 Vendor Penyuplai (Harga, SLA &amp; Nilai)</th>
+                            <th class="w-36">Harga Terakhir / Kisaran</th>
                             <th class="w-28 text-center">Ketepatan SLA</th>
+                            <th class="w-32 text-center">Nilai Penilai / User</th>
                             <th class="w-20 text-center">Detail</th>
                         </tr>
                     </thead>
                     <tbody id="catalogGroupedTableBody">
-                        <tr><td colspan="7" class="text-center text-gray-400 py-12">Memuat data katalog produk &amp; penyuplai...</td></tr>
+                        <tr><td colspan="8" class="text-center text-gray-400 py-12">Memuat data katalog produk &amp; penyuplai...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -369,11 +386,12 @@
                             <th class="text-right">Nilai / Harga PO</th>
                             <th>Tgl Expected</th>
                             <th>Tgl Realisasi</th>
+                            <th class="text-center">Nilai Vendor (User)</th>
                             <th>Status</th>
                         </tr>
                     </thead>
                     <tbody id="catalogRawTableBody">
-                        <tr><td colspan="8" class="text-center text-gray-400 py-12">Memuat log pemesanan...</td></tr>
+                        <tr><td colspan="9" class="text-center text-gray-400 py-12">Memuat log pemesanan...</td></tr>
                     </tbody>
                 </table>
             </div>

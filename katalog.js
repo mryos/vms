@@ -9,7 +9,8 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzwWF7-IbaKdoUu9kE56
 let catalogData = null;
 let catalogSearchQuery = '';
 let catalogPeriodFilter = 'all'; // 'all' | 'Q1 2026' | 'Q2 2026' | etc.
-let catalogSortBy = 'po-desc'; // 'po-desc' | 'name-asc' | 'ontime-desc' | 'risk-desc'
+let catalogScoreFilter = 'all';  // 'all' | 'scored' | 'unscored'
+let catalogSortBy = 'po-desc'; // 'po-desc' | 'score-desc' | 'score-asc' | 'name-asc' | 'ontime-desc' | 'risk-desc'
 let catalogRiskFilter = 'all'; // 'all' | 'high-risk' | 'diversified'
 let catalogViewMode = 'group'; // 'group' | 'raw'
 let currentPage = 1;
@@ -138,6 +139,17 @@ function initControls() {
         periodSelect.dataset.bound = 'true';
         periodSelect.addEventListener('change', (e) => {
             catalogPeriodFilter = e.target.value;
+            currentPage = 1;
+            renderCatalog();
+        });
+    }
+
+    // 2b. Score Filter Selector
+    const scoreSelect = document.getElementById('catalogScoreFilter');
+    if (scoreSelect && !scoreSelect.dataset.bound) {
+        scoreSelect.dataset.bound = 'true';
+        scoreSelect.addEventListener('change', (e) => {
+            catalogScoreFilter = e.target.value;
             currentPage = 1;
             renderCatalog();
         });
@@ -392,6 +404,84 @@ function getMarketplaceUrl(platform, rawName) {
 }
 
 // =====================================================
+// VENDOR SCORE MATCHING HELPER
+// =====================================================
+function matchVendorScore(vendorName) {
+    if (!vendorName || !catalogData || !catalogData.scoreSummary) return null;
+    const scores = catalogData.scoreSummary;
+    const clean = vendorName.toLowerCase().trim();
+
+    // 1. Exact match (case-insensitive)
+    for (const k in scores) {
+        if (k.toLowerCase().trim() === clean) return { matchedName: k, ...scores[k] };
+    }
+
+    // 2. Fuzzy match: strip PT/CV prefix and EKI/FHI/FH suffix
+    const norm = clean.replace(/^(pt|cv|ud|toko)\.?\s+/i, '').replace(/\s*[-–]\s*(eki|fhi|fh)\s*$/i, '').replace(/\s*\(fhi?\)\s*$/i, '').replace(/[^a-z0-9]/g, '');
+    if (norm.length < 4) return null;
+
+    for (const k in scores) {
+        const kNorm = k.toLowerCase().replace(/^(pt|cv|ud|toko)\.?\s+/i, '').replace(/\s*[-–]\s*(eki|fhi|fh)\s*$/i, '').replace(/\s*\(fhi?\)\s*$/i, '').replace(/[^a-z0-9]/g, '');
+        if (kNorm && kNorm.length >= 4 && (kNorm === norm || (norm.length > 5 && (kNorm.includes(norm) || norm.includes(kNorm))))) {
+            return { matchedName: k, ...scores[k] };
+        }
+    }
+    return null;
+}
+
+function getVendorOnTimeFromPoStats(vendorName) {
+    if (!vendorName || !catalogData || !catalogData.poStats || !catalogData.poStats.vendorMap) return null;
+    const vm = catalogData.poStats.vendorMap;
+    const clean = vendorName.trim();
+
+    // Exact match first
+    if (vm[clean]) return vm[clean];
+
+    // Case-insensitive
+    const lower = clean.toLowerCase();
+    for (const k in vm) {
+        if (k.toLowerCase() === lower) return vm[k];
+    }
+    return null;
+}
+
+function renderVendorScoreBadge(vendorName) {
+    const scoreData = matchVendorScore(vendorName);
+    if (!scoreData || !scoreData.avgScore) {
+        return `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-500 border border-gray-200" title="Vendor belum dinilai oleh user">— Belum Dinilai</span>`;
+    }
+    const avg = scoreData.avgScore;
+    const pred = scoreData.predikat || 'Cukup';
+    let badgeClass = 'bg-gray-100 text-gray-700 border-gray-200';
+    let starIcon = '⭐';
+    if (avg >= 4.5) {
+        badgeClass = 'bg-emerald-50 text-emerald-800 border-emerald-200';
+        starIcon = '🌟';
+    } else if (avg >= 3.5) {
+        badgeClass = 'bg-blue-50 text-blue-800 border-blue-200';
+    } else if (avg >= 2.5) {
+        badgeClass = 'bg-amber-50 text-amber-800 border-amber-200';
+    } else {
+        badgeClass = 'bg-rose-50 text-rose-800 border-rose-200';
+    }
+    return `<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold ${badgeClass} border" title="${esc(pred)} (Skor ${avg.toFixed(2)} / 5.00) dari penilaian user">${starIcon} ${avg.toFixed(1)} <span class="font-medium opacity-80">${esc(pred)}</span></span>`;
+}
+
+function getProductBestScore(topVendors) {
+    let best = null;
+    if (!topVendors || topVendors.length === 0) return best;
+    topVendors.forEach(v => {
+        const s = matchVendorScore(v.vendor);
+        if (s && s.avgScore > 0) {
+            if (!best || s.avgScore > best.avgScore) {
+                best = s;
+            }
+        }
+    });
+    return best;
+}
+
+// =====================================================
 // RENDERING FUNCTIONS
 // =====================================================
 function renderCatalog() {
@@ -478,6 +568,8 @@ function renderCatalog() {
             .map(([vendor, count]) => {
                 const vOrders = p.vendorOrders[vendor] || [];
                 const vPrices = vOrders.map(o => o._cleanPrice).filter(v => v > 0);
+                const vOnTime = vOrders.filter(o => o.isOnTime).length;
+                const vOnTimePct = vOrders.length > 0 ? Math.round((vOnTime / vOrders.length) * 100) : 100;
                 let vLastPrice = 0;
                 for (let i = vOrders.length - 1; i >= 0; i--) {
                     if (vOrders[i]._cleanPrice > 0) {
@@ -493,6 +585,7 @@ function renderCatalog() {
                     vendor,
                     count,
                     percentage: p.totalOrders > 0 ? Math.round((count / p.totalOrders) * 100) : 0,
+                    onTimePct: vOnTimePct,
                     lastPrice: vLastPrice,
                     minPrice: vMinPrice,
                     maxPrice: vMaxPrice,
@@ -510,11 +603,15 @@ function renderCatalog() {
         }
         vendorEntries.forEach(v => {
             v.isBestPrice = (lowestPrice > 0 && v.lastPrice === lowestPrice && vendorsWithPrice.length > 1);
+            v._scoreData = matchVendorScore(v.vendor);
+            v._poStatsData = getVendorOnTimeFromPoStats(v.vendor);
         });
 
         const onTimeRate = p.totalOrders > 0 ? Math.round((p.onTimeOrders / p.totalOrders) * 100) : 100;
         const topShare = vendorEntries.length > 0 ? vendorEntries[0].percentage : 0;
         const isSingleSourceRisk = (p.totalOrders >= 2 && topShare >= 70);
+        const _bestScore = getProductBestScore(vendorEntries);
+        const _hasAnyScore = vendorEntries.some(v => v._scoreData && v._scoreData.avgScore > 0);
         return {
             ...p,
             topVendors: vendorEntries,
@@ -527,7 +624,9 @@ function renderCatalog() {
             lowestPrice,
             onTimeRate,
             topShare,
-            isSingleSourceRisk
+            isSingleSourceRisk,
+            _bestScore,
+            _hasAnyScore
         };
     });
 
@@ -561,6 +660,18 @@ function renderCatalog() {
         elRiskProd.textContent = riskCount;
     }
 
+    // Update KPI Penilaian User
+    const elVendorScored = document.getElementById('catStatVendorScored');
+    const elVendorScoredMeta = document.getElementById('catStatVendorScoredMeta');
+    const allUniqueVendors = new Set();
+    const scoredVendors = new Set();
+    groupedProducts.forEach(p => p.topVendors.forEach(v => {
+        allUniqueVendors.add(v.vendor);
+        if (v._scoreData && v._scoreData.avgScore > 0) scoredVendors.add(v.vendor);
+    }));
+    if (elVendorScored) elVendorScored.textContent = scoredVendors.size;
+    if (elVendorScoredMeta) elVendorScoredMeta.textContent = `dari ${allUniqueVendors.size} vendor`;
+
     // 4. Filter Pencarian & Risiko
     let filteredGrouped = groupedProducts;
     let filteredOrders = allOrders;
@@ -569,6 +680,12 @@ function renderCatalog() {
         filteredGrouped = filteredGrouped.filter(p => p.isSingleSourceRisk);
     } else if (catalogRiskFilter === 'diversified') {
         filteredGrouped = filteredGrouped.filter(p => !p.isSingleSourceRisk);
+    }
+
+    if (catalogScoreFilter === 'scored') {
+        filteredGrouped = filteredGrouped.filter(p => p._hasAnyScore);
+    } else if (catalogScoreFilter === 'unscored') {
+        filteredGrouped = filteredGrouped.filter(p => !p._hasAnyScore);
     }
 
     if (catalogSearchQuery) {
@@ -611,6 +728,16 @@ function renderCatalog() {
         filteredOrders.sort((a, b) => (b.isOnTime ? 1 : 0) - (a.isOnTime ? 1 : 0));
     } else if (catalogSortBy === 'risk-desc') {
         filteredGrouped.sort((a, b) => (b.topShare || 0) - (a.topShare || 0) || b.totalOrders - a.totalOrders);
+    } else if (catalogSortBy === 'score-desc') {
+        filteredGrouped.sort((a, b) => ((b._bestScore?.avgScore || 0) - (a._bestScore?.avgScore || 0)) || b.totalOrders - a.totalOrders);
+    } else if (catalogSortBy === 'score-asc') {
+        filteredGrouped.sort((a, b) => {
+            const aS = a._bestScore?.avgScore || 0;
+            const bS = b._bestScore?.avgScore || 0;
+            if (aS === 0 && bS > 0) return 1;
+            if (bS === 0 && aS > 0) return -1;
+            return aS - bS || b.totalOrders - a.totalOrders;
+        });
     } else {
         // Default: po-desc
         filteredGrouped.sort((a, b) => b.totalOrders - a.totalOrders);
@@ -640,7 +767,7 @@ function renderCatalog() {
     // 7. Render Mode Grouped (Agregasi Produk & Top 3 Penyuplai Format Kompak)
     if (groupedTbody) {
         if (pagedGrouped.length === 0) {
-            groupedTbody.innerHTML = `<tr><td colspan="7" class="text-center text-gray-400 py-12">Tidak ada produk atau penyuplai yang cocok dengan kriteria filter.</td></tr>`;
+            groupedTbody.innerHTML = `<tr><td colspan="8" class="text-center text-gray-400 py-12">Tidak ada produk atau penyuplai yang cocok dengan kriteria filter.</td></tr>`;
         } else {
             groupedTbody.innerHTML = pagedGrouped.map((item, idx) => {
                 const globalIdx = startIndex + idx;
@@ -655,6 +782,7 @@ function renderCatalog() {
                     const bestPriceBadge = v.isBestPrice
                         ? `<span class="inline-flex items-center gap-0.5 px-1 py-0.2 rounded bg-emerald-100 text-emerald-800 text-[10px] font-extrabold tracking-tight" title="Vendor dengan harga pengadaan paling hemat untuk produk ini">🟢 Termurah</span>`
                         : '';
+                    const vScoreBadge = renderVendorScoreBadge(v.vendor);
 
                     return `
                         <div class="inline-flex flex-col gap-0.5 px-2 py-1 rounded-md border ${colorClass} text-xs shadow-2xs min-w-[130px] sm:min-w-[150px]">
@@ -675,6 +803,14 @@ function renderCatalog() {
                                     </span>
                                     ${bestPriceBadge}
                                 </div>
+                            </div>
+                            <div class="flex items-center justify-between gap-1 pt-0.5">
+                                <span class="text-[10px] text-gray-500 font-medium">SLA Tepat:</span>
+                                <span class="text-[10px] font-bold ${v.onTimePct >= 80 ? 'text-emerald-700' : 'text-amber-700'}">${v.onTimePct}%</span>
+                            </div>
+                            <div class="flex items-center justify-between gap-1 pt-0.5">
+                                <span class="text-[10px] text-gray-500 font-medium">Nilai User:</span>
+                                ${vScoreBadge}
                             </div>
                         </div>
                     `;
@@ -811,6 +947,9 @@ function renderCatalog() {
                         <td class="text-center">
                             ${onTimeBadge}
                         </td>
+                        <td class="text-center whitespace-nowrap">
+                            ${item._bestScore ? renderVendorScoreBadge(item._bestScore.matchedName) : '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-500 border border-gray-200">— Belum Dinilai</span>'}
+                        </td>
                         <td class="text-center">
                             <button onclick="toggleProductPoDetail(${globalIdx})" class="px-2 py-1 text-xs font-semibold rounded-lg border border-gray-200 text-blue-600 hover:bg-blue-50 transition shadow-2xs whitespace-nowrap">
                                 Rincian (${item.totalOrders})
@@ -818,7 +957,7 @@ function renderCatalog() {
                         </td>
                     </tr>
                     <tr id="productPoRow_${globalIdx}" style="display: none;" class="bg-gray-50/70 border-b border-gray-200">
-                        <td colspan="7" class="p-3">
+                        <td colspan="8" class="p-3">
                             <div class="bg-white rounded-xl border border-gray-200 p-3 shadow-xs">
                                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2.5 pb-2 border-b border-gray-100">
                                     <div>
@@ -879,7 +1018,7 @@ function renderCatalog() {
     // 8. Render Mode Raw (Log Seluruh PO Format Kompak)
     if (rawTbody) {
         if (pagedOrders.length === 0) {
-            rawTbody.innerHTML = `<tr><td colspan="8" class="text-center text-gray-400 py-12">Tidak ada data pesanan PO yang ditemukan.</td></tr>`;
+            rawTbody.innerHTML = `<tr><td colspan="9" class="text-center text-gray-400 py-12">Tidak ada data pesanan PO yang ditemukan.</td></tr>`;
         } else {
             rawTbody.innerHTML = pagedOrders.map((o, idx) => {
                 const globalIdx = startIndex + idx;
@@ -919,6 +1058,7 @@ function renderCatalog() {
                         <td class="text-xs text-right whitespace-nowrap">${rawPriceCell}</td>
                         <td class="text-xs text-gray-500 font-mono text-[11px]">${esc(o.expectedDate || '-')}</td>
                         <td class="text-xs text-gray-500 font-mono text-[11px]">${esc(o.effectiveDate || '-')}</td>
+                        <td class="text-xs text-center whitespace-nowrap">${renderVendorScoreBadge(o.vendor)}</td>
                         <td class="text-xs">${statusBadge}</td>
                     </tr>
                 `;
