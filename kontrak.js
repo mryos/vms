@@ -917,10 +917,10 @@ function renderTableRows(list) {
                 </span>
             </td>
 
-            <!-- 8. Aksi (Alur PKS) -->
+            <!-- 8. Aksi (Detail PKS) -->
             <td class="text-center whitespace-nowrap">
-                <button onclick="toggleContractRowExpand('${esc(c.noKontrak)}')" id="btnExpand_${esc(c.noKontrak)}" class="px-2.5 py-1 rounded-md bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-[11px] border border-indigo-200 shadow-2xs transition cursor-pointer inline-flex items-center gap-1" title="Buka alur progres pengerjaan PKS ini">
-                    <span>Alur</span>
+                <button onclick="toggleContractRowExpand('${esc(c.noKontrak)}')" id="btnExpand_${esc(c.noKontrak)}" class="px-2.5 py-1 rounded-md bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-[11px] border border-indigo-200 shadow-2xs transition cursor-pointer inline-flex items-center gap-1" title="Buka detail alur pengerjaan PKS ini">
+                    <span>Detail</span>
                     <span class="expand-arrow text-[9px]">▼</span>
                 </button>
             </td>
@@ -946,20 +946,8 @@ function renderTableRows(list) {
                     </div>
 
                     <!-- 12-Step Horizontal Milestone Tracker -->
-                    <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-1 sm:gap-1.5 text-[10px] mb-2">
+                    <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-1.5 text-[10px] mb-2.5">
                         ${renderInlineWorkflowSteps(c, stage)}
-                    </div>
-
-                    <div class="flex items-center justify-between text-[10px] text-slate-500 mb-2.5 px-1 flex-wrap gap-1">
-                        <div class="flex items-center gap-1.5 flex-wrap">
-                            <span class="font-bold text-slate-700">⏱ Audit Alur:</span>
-                            <span class="inline-flex items-center gap-0.5"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span> <strong>+Xh</strong> = lead time durasi pengerjaan</span>
-                            <span class="text-slate-300">·</span>
-                            <span class="inline-flex items-center gap-0.5"><span class="w-2 h-2 rounded-full bg-amber-500 inline-block animate-pulse"></span> <strong>⏳ Hr ke-X</strong> = tahap aktif sedang berjalan</span>
-                        </div>
-                        <div class="text-[10px] text-slate-400">
-                            12 Tahapan Siklus PKS &amp; Kepatuhan
-                        </div>
                     </div>
 
                     <!-- Ringkasan Info Tambahan (Ruang Lingkup, PIC, Keterangan, Revisi) -->
@@ -1161,109 +1149,113 @@ function renderInlineWorkflowSteps(c, stage) {
         const dateDisplay = formatCompactStageDate(rawDate);
         const hasDate = Boolean(thisDate);
 
-        // Calculate lead time / duration
-        let leadBadge = '';
-        let badgeTooltip = '';
-
-        if (st.num === 11) {
-            // Expired step: show remaining days / overdue days
-            const rem = c._daysRemaining !== undefined ? c._daysRemaining : getContractDaysRemaining(c.tglSelesai);
-            if (rem !== null) {
-                if (rem < 0) {
-                    leadBadge = `<span class="inline-block px-1 py-0.5 rounded text-[8.5px] font-bold bg-rose-100 text-rose-800 border border-rose-200">Lewat ${Math.abs(rem)}h</span>`;
-                    badgeTooltip = `Masa berlaku habis ${Math.abs(rem)} hari yang lalu`;
-                } else if (rem <= 30) {
-                    leadBadge = `<span class="inline-block px-1 py-0.5 rounded text-[8.5px] font-bold bg-amber-100 text-amber-800 border border-amber-300">Sisa ${rem}h</span>`;
-                    badgeTooltip = `Masa berlaku sisa ${rem} hari lagi`;
-                } else {
-                    leadBadge = `<span class="inline-block px-1 py-0.5 rounded text-[8.5px] font-semibold bg-emerald-100 text-emerald-800">Sisa ${rem}h</span>`;
-                    badgeTooltip = `Masa berlaku sisa ${rem} hari`;
-                }
-            } else {
-                leadBadge = `<span class="text-[8.5px] text-slate-300">-</span>`;
-            }
-        } else if (hasDate) {
-            // Find most recent preceding step with a date
-            let prevNum = null;
-            let prevDate = null;
-            for (let p = st.num - 1; p >= 1; p--) {
-                if (parsedDates[p]) {
-                    prevNum = p;
-                    prevDate = parsedDates[p];
-                    break;
-                }
-            }
-
-            if (prevDate) {
-                const diffDays = Math.round((thisDate - prevDate) / (1000 * 60 * 60 * 24));
-                if (diffDays >= 0) {
-                    leadBadge = `<span class="inline-block px-1 py-0.5 rounded text-[8.5px] font-mono font-bold bg-emerald-100 text-emerald-800 border border-emerald-200" title="Selesai dalam ${diffDays} hari dari tahap ${prevNum}">+${diffDays}h</span>`;
-                    badgeTooltip = `Selisih +${diffDays} hari dari step ${prevNum}`;
-                } else {
-                    leadBadge = `<span class="inline-block px-1 py-0.5 rounded text-[8.5px] font-mono font-bold bg-slate-100 text-slate-700">${diffDays}h</span>`;
-                    badgeTooltip = `Tanggal mendahului step sebelumnya (${diffDays} hari)`;
-                }
-            } else {
-                leadBadge = `<span class="inline-block px-1 py-0.5 rounded text-[8.5px] font-bold bg-slate-100 text-slate-600">Start</span>`;
-                badgeTooltip = 'Tahap awal tanggal tercatat';
-            }
-        } else if (isCurrent) {
-            // In progress: running days from preceding completed date until today
-            let prevDate = null;
-            let prevNum = null;
-            for (let p = st.num - 1; p >= 1; p--) {
-                if (parsedDates[p]) {
-                    prevNum = p;
-                    prevDate = parsedDates[p];
-                    break;
-                }
-            }
-            if (prevDate) {
-                const runDays = Math.max(0, Math.round((today - prevDate) / (1000 * 60 * 60 * 24)));
-                leadBadge = `<span class="inline-block px-1 py-0.5 rounded text-[8.5px] font-mono font-extrabold bg-amber-100 text-amber-900 border border-amber-300 animate-pulse" title="Sedang berjalan ${runDays} hari sejak tahap ${prevNum}">⏳ Hr ke-${runDays}</span>`;
-                badgeTooltip = `Sedang berjalan ${runDays} hari sejak tahap ${prevNum}`;
-            } else {
-                leadBadge = `<span class="inline-block px-1 py-0.5 rounded text-[8.5px] font-bold bg-sky-100 text-sky-800 animate-pulse">⏳ Proses</span>`;
-                badgeTooltip = 'Sedang dalam pengerjaan';
-            }
-        } else if (isDone) {
-            leadBadge = `<span class="inline-block px-1 py-0.5 rounded text-[8.5px] font-semibold text-emerald-600">✓ Selesai</span>`;
-            badgeTooltip = 'Tahap telah selesai';
-        } else {
-            leadBadge = `<span class="text-[8.5px] text-slate-300">-</span>`;
-            badgeTooltip = 'Belum dimulai';
-        }
-
-        // Box styling
-        let boxClass = 'bg-white border-slate-200 text-slate-500';
-        let prefix = '○';
-        let titleColor = 'text-slate-600';
-        let dateColor = 'text-slate-400';
+        let cardClass = 'bg-slate-50/60 border-slate-200 text-slate-400';
+        let headerHtml = '';
+        let bodyHtml = '';
 
         if (isCurrent) {
-            boxClass = 'bg-sky-50/90 border-sky-400 ring-2 ring-sky-300/60 shadow-xs';
-            prefix = '●';
-            titleColor = 'text-sky-950 font-black';
-            dateColor = hasDate ? 'text-sky-900 font-bold' : 'text-sky-500 italic';
+            // TAHAP AKTIF (IN PROGRESS)
+            cardClass = 'bg-white border-sky-400 ring-2 ring-sky-200 shadow-xs';
+            headerHtml = `
+                <div class="flex items-center justify-between gap-1 text-[10px] font-black text-sky-950">
+                    <span class="truncate">${st.title}</span>
+                    <span class="w-2 h-2 rounded-full bg-sky-500 animate-ping shrink-0" title="Sedang berjalan"></span>
+                </div>`;
+
+            let prevDate = null;
+            let prevNum = null;
+            for (let p = st.num - 1; p >= 1; p--) {
+                if (parsedDates[p]) {
+                    prevNum = p;
+                    prevDate = parsedDates[p];
+                    break;
+                }
+            }
+
+            let runText = '⏳ Proses';
+            if (prevDate) {
+                const runDays = Math.max(0, Math.round((today - prevDate) / (1000 * 60 * 60 * 24)));
+                runText = `⏳ Hari ke-${runDays}`;
+            }
+
+            bodyHtml = `
+                <div class="mt-1">
+                    <span class="inline-block px-1.5 py-0.5 rounded text-[9.5px] font-bold font-mono bg-amber-100 text-amber-900 border border-amber-300">
+                        ${runText}
+                    </span>
+                </div>`;
         } else if (isDone) {
-            boxClass = 'bg-emerald-50/60 border-emerald-300 text-emerald-900';
-            prefix = '✓';
-            titleColor = 'text-emerald-900 font-bold';
-            dateColor = hasDate ? 'text-emerald-800 font-semibold' : 'text-slate-400';
+            // TAHAP SUDAH SELESAI
+            cardClass = 'bg-emerald-50/40 border-emerald-200 text-emerald-900';
+            headerHtml = `
+                <div class="flex items-center justify-between gap-1 text-[10px] font-bold text-emerald-900">
+                    <span class="truncate">${st.title}</span>
+                    <span class="w-3.5 h-3.5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[9px] font-black shrink-0">✓</span>
+                </div>`;
+
+            if (hasDate) {
+                let prevDate = null;
+                for (let p = st.num - 1; p >= 1; p--) {
+                    if (parsedDates[p]) {
+                        prevDate = parsedDates[p];
+                        break;
+                    }
+                }
+
+                let diffText = '';
+                if (prevDate) {
+                    const diffDays = Math.round((thisDate - prevDate) / (1000 * 60 * 60 * 24));
+                    if (diffDays >= 0) diffText = `<span class="text-[8.5px] font-bold text-emerald-700 font-mono ml-0.5">(+${diffDays}h)</span>`;
+                } else {
+                    diffText = `<span class="text-[8px] font-semibold text-slate-500 ml-0.5">Start</span>`;
+                }
+
+                bodyHtml = `
+                    <div class="text-[9.5px] font-mono text-slate-700 mt-1 truncate" title="${esc(rawDate)}">
+                        ${esc(dateDisplay)} ${diffText}
+                    </div>`;
+            } else {
+                bodyHtml = `
+                    <div class="text-[9.5px] font-medium text-emerald-700/80 mt-1">
+                        Selesai
+                    </div>`;
+            }
+        } else {
+            // TAHAP MENDATANG (BELUM TERCAPAI)
+            headerHtml = `
+                <div class="flex items-center justify-between gap-1 text-[10px] font-medium text-slate-500">
+                    <span class="truncate">${st.title}</span>
+                    <span class="text-slate-300 text-[9px] shrink-0">○</span>
+                </div>`;
+
+            if (st.num === 11) {
+                // Step 11 (Expired / Batas Berlaku)
+                const rem = c._daysRemaining !== undefined ? c._daysRemaining : getContractDaysRemaining(c.tglSelesai);
+                if (rem !== null) {
+                    let remBadge = '';
+                    if (rem < 0) {
+                        remBadge = `<span class="text-rose-700 font-bold">Lewat ${Math.abs(rem)}h</span>`;
+                    } else if (rem <= 30) {
+                        remBadge = `<span class="text-amber-800 font-bold">Sisa ${rem}h</span>`;
+                    } else {
+                        remBadge = `<span class="text-emerald-700 font-medium">Sisa ${rem}h</span>`;
+                    }
+                    bodyHtml = `
+                        <div class="text-[9px] font-mono text-slate-600 mt-0.5 truncate" title="${esc(rawDate || '')}">
+                            ${esc(dateDisplay !== '-' ? dateDisplay : '')} <span class="text-[8.5px]">${remBadge}</span>
+                        </div>`;
+                } else {
+                    bodyHtml = `<div class="text-[9.5px] text-slate-300 mt-1 font-light">Menunggu</div>`;
+                }
+            } else {
+                bodyHtml = `<div class="text-[9.5px] text-slate-300 mt-1 font-light">Menunggu</div>`;
+            }
         }
 
         return `
-        <div class="p-1 rounded-lg border text-center transition flex flex-col justify-between min-h-[58px] ${boxClass}" title="${esc(badgeTooltip)}">
-            <div class="flex items-center justify-center gap-0.5 font-bold text-[9.5px] leading-tight truncate ${titleColor}">
-                <span class="text-[8.5px] shrink-0">${prefix}</span>
-                <span class="truncate">${st.title}</span>
-            </div>
-            <div class="text-[9px] font-mono my-0.5 ${dateColor} truncate" title="${esc(rawDate || '-')}">
-                ${esc(dateDisplay)}
-            </div>
-            <div class="leading-none">
-                ${leadBadge}
-            </div>
+        <div class="p-2 rounded-lg border transition-all flex flex-col justify-between min-h-[52px] ${cardClass}">
+            ${headerHtml}
+            ${bodyHtml}
         </div>`;
     }).join('');
 }
@@ -1509,7 +1501,7 @@ function toggleExpandAllContractRows() {
     });
 
     if (toggleAllBtn) {
-        toggleAllBtn.innerHTML = allRowsExpanded ? '<span>▲ Tutup Semua Alur</span>' : '<span>⚡ Buka Semua Alur</span>';
+        toggleAllBtn.innerHTML = allRowsExpanded ? '<span>▲ Tutup Semua Detail</span>' : '<span>⚡ Buka Semua Detail</span>';
     }
 }
 
