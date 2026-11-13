@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // =====================================================
-// ADMIN AUTHENTICATION (PIN 9999)
+// AUTHENTICATION (PIN 9999 Admin / PIN 1282 User Kontrak)
 // =====================================================
 function checkAdminAccess() {
     const savedPin = sessionStorage.getItem('ethos_pin') || localStorage.getItem('ethos_pin');
@@ -33,7 +33,7 @@ function checkAdminAccess() {
         return;
     }
 
-    if (savedPin === '9999') {
+    if (savedPin === '9999' || savedPin === '1282') {
         if (authOverlay) authOverlay.style.display = 'none';
         initHeader();
         initFilterListeners();
@@ -52,9 +52,19 @@ function initAdminAuth() {
 
     function verify() {
         const pin = (input ? input.value : '').trim();
-        if (pin === '9999') {
-            localStorage.setItem('ethos_pin', '9999');
-            localStorage.setItem('ethos_nama', 'Administrator');
+        if (pin === '9999' || pin === '1282') {
+            const roleName = pin === '1282' ? 'User Kontrak' : 'Administrator';
+            sessionStorage.setItem('ethos_pin', pin);
+            sessionStorage.setItem('ethos_nama', roleName);
+            localStorage.setItem('ethos_pin', pin);
+            localStorage.setItem('ethos_nama', roleName);
+            if (pin === '1282') {
+                sessionStorage.setItem('ethos_role', 'kontrak_only');
+                localStorage.setItem('ethos_role', 'kontrak_only');
+            } else {
+                sessionStorage.removeItem('ethos_role');
+                localStorage.removeItem('ethos_role');
+            }
             if (errEl) errEl.style.display = 'none';
             if (authOverlay) authOverlay.style.display = 'none';
             initHeader();
@@ -67,7 +77,7 @@ function initAdminAuth() {
             }
         } else {
             if (errEl) {
-                errEl.textContent = '❌ PIN salah. Akses Dashboard Kontrak hanya untuk Administrator (PIN: 9999).';
+                errEl.textContent = '❌ PIN salah. Akses Contract Repository hanya untuk Administrator (PIN: 9999) atau User Kontrak (PIN: 1282).';
                 errEl.style.display = 'block';
             }
             if (input) {
@@ -88,17 +98,39 @@ function initAdminAuth() {
 }
 
 function initHeader() {
-    const savedPin = localStorage.getItem('ethos_pin');
-    const savedName = localStorage.getItem('ethos_nama');
+    const savedPin = sessionStorage.getItem('ethos_pin') || localStorage.getItem('ethos_pin');
+    const savedName = sessionStorage.getItem('ethos_nama') || localStorage.getItem('ethos_nama');
     const userEl = document.getElementById('headerUser');
-    if (savedPin && savedName && userEl) {
-        userEl.textContent = `👤 ${savedName} (PIN: ${savedPin})`;
+    const navDashboard = document.getElementById('navLinkDashboard');
+    const navKatalog = document.getElementById('navLinkKatalog');
+    const navPenilaian = document.getElementById('navLinkPenilaian');
+    const footerNav = document.getElementById('footerNavLinks');
+
+    if (savedPin === '1282') {
+        if (userEl) userEl.textContent = `👤 User Kontrak (PIN: 1282)`;
+        if (navDashboard) navDashboard.style.display = 'none';
+        if (navKatalog) navKatalog.style.display = 'none';
+        if (navPenilaian) navPenilaian.style.display = 'none';
+        if (footerNav) footerNav.style.display = 'none';
+    } else {
+        const displayName = savedName || 'Administrator';
+        const displayPin = savedPin || '9999';
+        if (userEl) userEl.textContent = `👤 ${displayName} (PIN: ${displayPin})`;
+        if (navDashboard) navDashboard.style.display = '';
+        if (navKatalog) navKatalog.style.display = '';
+        if (navPenilaian) navPenilaian.style.display = '';
+        if (footerNav) footerNav.style.display = '';
     }
 }
 
 function adminLogout() {
+    sessionStorage.removeItem('ethos_pin');
+    sessionStorage.removeItem('ethos_nama');
+    sessionStorage.removeItem('ethos_role');
+    sessionStorage.removeItem('ethos_user_vendors');
     localStorage.removeItem('ethos_pin');
     localStorage.removeItem('ethos_nama');
+    localStorage.removeItem('ethos_role');
     localStorage.removeItem('ethos_user_vendors');
     window.location.href = 'index.html';
 }

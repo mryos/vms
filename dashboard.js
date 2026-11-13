@@ -37,6 +37,12 @@ function checkAdminAccess() {
         return;
     }
 
+    // Khusus pengguna PIN 1282: dilarang akses dashboard, otomatis dialihkan ke kumpulan kontrak
+    if (savedPin === '1282') {
+        window.location.href = 'kontrak.html';
+        return;
+    }
+
     // Hanya PIN 9999 yang boleh mengakses Dashboard
     if (savedPin === '9999') {
         if (authOverlay) authOverlay.style.display = 'none';
@@ -58,6 +64,9 @@ function initAdminAuth() {
     function verify() {
         const pin = (input ? input.value : '').trim();
         if (pin === '9999') {
+            sessionStorage.setItem('ethos_pin', '9999');
+            sessionStorage.setItem('ethos_nama', 'Administrator');
+            sessionStorage.removeItem('ethos_role');
             localStorage.setItem('ethos_pin', '9999');
             localStorage.setItem('ethos_nama', 'Administrator');
             localStorage.removeItem('ethos_role');
@@ -69,6 +78,11 @@ function initAdminAuth() {
         } else if (pin === '8899') {
             if (errEl) {
                 errEl.innerHTML = '❌ Akses Ditolak. PIN 8899 hanya diizinkan mengakses <strong>Katalog Produk</strong>.<br><a href="katalog.html" class="underline font-bold text-blue-600 mt-1 inline-block">Buka Katalog Produk &rarr;</a>';
+                errEl.style.display = 'block';
+            }
+        } else if (pin === '1282') {
+            if (errEl) {
+                errEl.innerHTML = '❌ Akses Ditolak. PIN 1282 hanya diizinkan mengakses <strong>Kumpulan Kontrak Kerja</strong>.<br><a href="kontrak.html" class="underline font-bold text-indigo-600 mt-1 inline-block">Buka Contract Repository &rarr;</a>';
                 errEl.style.display = 'block';
             }
         } else {
@@ -94,8 +108,8 @@ function initAdminAuth() {
 }
 
 function initHeader() {
-    const savedPin = localStorage.getItem('ethos_pin');
-    const savedName = localStorage.getItem('ethos_nama');
+    const savedPin = sessionStorage.getItem('ethos_pin') || localStorage.getItem('ethos_pin');
+    const savedName = sessionStorage.getItem('ethos_nama') || localStorage.getItem('ethos_nama');
     const userEl = document.getElementById('headerUser');
 
     if (savedPin && savedName && userEl) {
@@ -104,8 +118,13 @@ function initHeader() {
 }
 
 function adminLogout() {
+    sessionStorage.removeItem('ethos_pin');
+    sessionStorage.removeItem('ethos_nama');
+    sessionStorage.removeItem('ethos_role');
+    sessionStorage.removeItem('ethos_user_vendors');
     localStorage.removeItem('ethos_pin');
     localStorage.removeItem('ethos_nama');
+    localStorage.removeItem('ethos_role');
     localStorage.removeItem('ethos_user_vendors');
     window.location.href = 'index.html';
 }

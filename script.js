@@ -309,6 +309,12 @@ function checkWelcome() {
         return;
     }
 
+    // Khusus PIN 1282: Hanya boleh akses halaman Kumpulan Kontrak Kerja
+    if (savedPin === '1282') {
+        window.location.href = 'kontrak.html';
+        return;
+    }
+
     const savedName = sessionStorage.getItem('ethos_nama');
     const savedVendors = sessionStorage.getItem('ethos_user_vendors');
     const savedKriteria = localStorage.getItem('ethos_kriteria');
@@ -509,6 +515,18 @@ async function processPinLogin(pin) {
         localStorage.setItem('ethos_nama', 'User Katalog');
         localStorage.setItem('ethos_role', 'katalog_only');
         window.location.href = 'katalog.html';
+        return;
+    }
+
+    // Khusus PIN 1282: Pengguna Khusus Kontrak Kerja (Langsung menuju ke kontrak.html)
+    if (pin === '1282') {
+        sessionStorage.setItem('ethos_pin', '1282');
+        sessionStorage.setItem('ethos_nama', 'User Kontrak');
+        sessionStorage.setItem('ethos_role', 'kontrak_only');
+        localStorage.setItem('ethos_pin', '1282');
+        localStorage.setItem('ethos_nama', 'User Kontrak');
+        localStorage.setItem('ethos_role', 'kontrak_only');
+        window.location.href = 'kontrak.html';
         return;
     }
 
