@@ -355,13 +355,13 @@ function normalizeContractStageFrontend(rawStage, rawStatus, tglSelesai) {
     if (s.includes('aktif') || s.includes('selesai') || s.includes('berlaku') || s.includes('done')) {
         return { step: 10, key: 'aktif', label: '10. Aktif Sah', percent: 100, badgeColor: '#16a34a', badgeBg: '#f0fdf4', isRevision: false, isRenvoi: false, isFinal: true };
     }
-    // 11. Renvoi (paling bawah sendiri)
-    if (s.includes('renvoi')) {
-        return { step: 11, key: 'renvoi', label: '11. Renvoi', percent: 75, badgeColor: '#ea580c', badgeBg: '#fff7ed', isRevision: false, isRenvoi: true, isFinal: false };
-    }
-    // 12. Expired
+    // 11. Expired
     if (s.includes('expired') || s.includes('kadaluarsa') || s.includes('berakhir')) {
-        return { step: 12, key: 'expired', label: '12. Berakhir / Expired', percent: 100, badgeColor: '#64748b', badgeBg: '#f8fafc', isRevision: false, isRenvoi: false, isFinal: true };
+        return { step: 11, key: 'expired', label: '11. Berakhir / Expired', percent: 100, badgeColor: '#64748b', badgeBg: '#f8fafc', isRevision: false, isRenvoi: false, isFinal: true };
+    }
+    // 12. Renvoi (paling bawah sendiri)
+    if (s.includes('renvoi')) {
+        return { step: 12, key: 'renvoi', label: '12. Renvoi', percent: 75, badgeColor: '#ea580c', badgeBg: '#fff7ed', isRevision: false, isRenvoi: true, isFinal: false };
     }
 
     if (rawStage && rawStage.toString().trim() !== '') {
@@ -564,6 +564,7 @@ function applyAndRender() {
         'countStageRevisi': stageCounts.revisi,
         'countStageTtd': stageCounts.ttd,
         'countStageAktif': stageCounts.aktif,
+        'countStageExpired': stageCounts.expired,
         'countStageRenvoi': stageCounts.renvoi
     };
     for (const id in stageBadgeMap) {
@@ -679,7 +680,8 @@ function renderContractWorkflowChart(stages) {
         '8. Revisi',
         '9. Tanda Tangan',
         '10. Aktif Sah',
-        '11. Renvoi'
+        '11. Berakhir / Expired',
+        '12. Renvoi'
     ];
 
     const dataValues = [
@@ -693,6 +695,7 @@ function renderContractWorkflowChart(stages) {
         stages.revisi || 0,
         stages.ttd || 0,
         stages.aktif || 0,
+        stages.expired || 0,
         stages.renvoi || 0
     ];
 
@@ -707,7 +710,8 @@ function renderContractWorkflowChart(stages) {
         '#e11d48', // 8. Revisi (rose-600)
         '#0d9488', // 9. Tanda Tangan (teal-600)
         '#059669', // 10. Aktif Sah (emerald-600)
-        '#ea580c'  // 11. Renvoi (orange-600 - paling bawah)
+        '#64748b', // 11. Berakhir / Expired (slate-500)
+        '#ea580c'  // 12. Renvoi (orange-600 - paling bawah)
     ];
 
     const elRatio = document.getElementById('pipelineActiveRatio');
@@ -844,12 +848,19 @@ function renderTableRows(list) {
                 ${subText}
             </td>
 
-            <!-- 3. Tahap Progress (Single line compact badge) -->
+            <!-- 3. Tahap Progress (Visual Progress Bar & Segmented Indicator) -->
             <td class="whitespace-nowrap">
-                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-bold" style="background:${stage.badgeBg}; color:${stage.badgeColor}; border:1px solid ${stage.badgeColor}35;">
-                    <span class="w-1.5 h-1.5 rounded-full" style="background:${stage.badgeColor};"></span>
-                    <span>${esc(stage.label)}</span>
-                </span>
+                <div class="flex items-center justify-between gap-1 mb-1">
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold" style="background:${stage.badgeBg}; color:${stage.badgeColor}; border:1px solid ${stage.badgeColor}35;">
+                        <span class="w-1.5 h-1.5 rounded-full" style="background:${stage.badgeColor};"></span>
+                        <span>${esc(stage.label)}</span>
+                    </span>
+                    <span class="text-[9.5px] font-bold text-slate-500 font-mono">${stage.percent}%</span>
+                </div>
+                <!-- 12-Segment Progress Tracker Bar -->
+                <div class="flex items-center gap-0.5 w-32" title="Progres PKS #${esc(c.noKontrak)}: ${stage.percent}% (${stage.label})">
+                    ${renderMiniStepSegments(stage.step, stage.badgeColor)}
+                </div>
             </td>
 
             <!-- 4. Masa Berlaku & Sisa Hari -->
@@ -875,11 +886,39 @@ function renderTableRows(list) {
                 </span>
             </td>
 
-            <!-- 8. Aksi Detail -->
+            <!-- 8. Aksi (Alur Accordion & Detail Modal) -->
             <td class="text-center whitespace-nowrap">
-                <button onclick="openContractDetailModal('${esc(c.noKontrak)}')" class="px-2.5 py-1 rounded-md bg-white hover:bg-slate-50 text-slate-700 hover:text-sky-700 font-bold text-[11px] border border-slate-200 shadow-2xs hover:border-slate-300 transition cursor-pointer">
-                    Detail
-                </button>
+                <div class="inline-flex items-center gap-1">
+                    <button onclick="toggleContractRowExpand('${esc(c.noKontrak)}')" id="btnExpand_${esc(c.noKontrak)}" class="px-2 py-1 rounded-md bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-[10.5px] border border-indigo-200 shadow-2xs transition cursor-pointer inline-flex items-center gap-0.5" title="Buka alur progres pengerjaan PKS ini langsung di tabel">
+                        <span>Alur</span>
+                        <span class="expand-arrow text-[9px]">▼</span>
+                    </button>
+                    <button onclick="openContractDetailModal('${esc(c.noKontrak)}')" class="px-2 py-1 rounded-md bg-white hover:bg-slate-50 text-slate-700 hover:text-sky-700 font-bold text-[10.5px] border border-slate-200 shadow-2xs hover:border-slate-300 transition cursor-pointer" title="Buka Detail 16 Kolom Lengkap">
+                        Detail
+                    </button>
+                </div>
+            </td>
+        </tr>
+        <!-- Expandable Inline Stepper Row -->
+        <tr id="expandRow_${esc(c.noKontrak)}" class="bg-indigo-50/40 border-y border-indigo-100/60" style="display: none;">
+            <td colspan="8" class="p-3">
+                <div class="bg-white border border-indigo-100 rounded-xl p-3 shadow-xs">
+                    <div class="flex items-center justify-between mb-2 pb-1.5 border-b border-slate-100 flex-wrap gap-2">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="text-xs font-bold text-slate-800">Alur Pengerjaan: #${esc(c.noKontrak)} - ${esc(cleanVendor)}</span>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold" style="background:${stage.badgeBg}; color:${stage.badgeColor}; border:1px solid ${stage.badgeColor}35;">
+                                ${esc(stage.label)} (${stage.percent}% Selesai)
+                            </span>
+                        </div>
+                        <div class="text-[11px] text-slate-500 font-medium">
+                            Target SLA: <strong class="text-slate-800">${esc(c.targetSelesai || '-')}</strong> · Realisasi: <strong class="text-slate-800">${esc(c.tglRealisasi || '-')}</strong>
+                        </div>
+                    </div>
+                    <!-- Horizontal Mini Stepper 12 Stages -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-1 text-[10px]">
+                        ${renderInlineWorkflowSteps(c, stage)}
+                    </div>
+                </div>
             </td>
         </tr>`;
     }).join('');
@@ -957,6 +996,96 @@ function changeContractPageSize(newSize) {
 }
 
 // =====================================================
+// INLINE PROGRESS & EXPANDABLE ACCORDION PER PKS
+// =====================================================
+function renderMiniStepSegments(currentStep, color) {
+    let html = '';
+    for (let i = 1; i <= 12; i++) {
+        let bg = '#e2e8f0';
+        let op = '0.45';
+        if (i < currentStep || (currentStep >= 10 && i <= 10)) {
+            bg = '#10b981'; // completed green
+            op = '1';
+        } else if (i === currentStep) {
+            bg = color || '#0284c7'; // active current
+            op = '1';
+        }
+        html += `<span class="flex-1 h-1 rounded-xs transition" style="background: ${bg}; opacity: ${op};"></span>`;
+    }
+    return html;
+}
+
+function renderInlineWorkflowSteps(c, stage) {
+    const steps = [
+        { num: 1, key: 'pemenuhan_dokumen', title: '1. Dokumen' },
+        { num: 2, key: 'pengajuan', title: '2. Pengajuan' },
+        { num: 3, key: 'review_legal_ethos', title: '3. Rev Ethos' },
+        { num: 4, key: 'draft', title: '4. Draft' },
+        { num: 5, key: 'review_legal_vendor', title: '5. Rev Vendor' },
+        { num: 6, key: 'paraf_vendor', title: '6. Paraf Vendor' },
+        { num: 7, key: 'paraf_ethos', title: '7. Paraf Ethos' },
+        { num: 8, key: 'revisi', title: '8. Revisi' },
+        { num: 9, key: 'ttd', title: '9. TTD' },
+        { num: 10, key: 'aktif', title: '10. Aktif Sah' },
+        { num: 11, key: 'expired', title: '11. Expired' },
+        { num: 12, key: 'renvoi', title: '12. Renvoi' }
+    ];
+
+    const currentStepNum = stage.step;
+    const hasRenvoi = stage.isRenvoi;
+
+    return steps.map(st => {
+        let isDone = false;
+        let isCurrent = false;
+
+        if (st.num < 10) {
+            if (currentStepNum > st.num || currentStepNum >= 10) isDone = true;
+            else if (currentStepNum === st.num) isCurrent = true;
+        } else if (st.num === 10) {
+            if (currentStepNum === 10) isCurrent = true;
+            else if (currentStepNum > 10) isDone = true;
+        } else if (st.num === 11) {
+            if (currentStepNum === 11) isCurrent = true;
+        } else if (st.num === 12) {
+            if (currentStepNum === 12) isCurrent = true;
+            else if (hasRenvoi) isDone = true;
+        }
+
+        let badgeClass = 'text-slate-400 bg-white border-slate-200';
+        let prefix = '○';
+        if (isDone) {
+            badgeClass = 'text-emerald-700 bg-emerald-50 border-emerald-300 font-bold';
+            prefix = '✓';
+        } else if (isCurrent) {
+            badgeClass = 'text-sky-800 bg-sky-100 border-sky-400 font-black ring-1 ring-sky-300 animate-pulse';
+            prefix = '●';
+        }
+
+        return `
+        <div class="px-1.5 py-1 rounded border text-center ${badgeClass} transition leading-tight">
+            <span class="mr-0.5 text-[9px]">${prefix}</span>
+            <span>${st.title}</span>
+        </div>`;
+    }).join('');
+}
+
+function toggleContractRowExpand(noKontrak) {
+    const row = document.getElementById(`expandRow_${noKontrak}`);
+    const btn = document.getElementById(`btnExpand_${noKontrak}`);
+    if (!row) return;
+    const isHidden = row.style.display === 'none';
+    row.style.display = isHidden ? 'table-row' : 'none';
+    if (btn) {
+        const arrow = btn.querySelector('.expand-arrow');
+        if (arrow) arrow.textContent = isHidden ? '▲' : '▼';
+        btn.classList.toggle('bg-indigo-600', isHidden);
+        btn.classList.toggle('text-white', isHidden);
+        btn.classList.toggle('bg-indigo-50', !isHidden);
+        btn.classList.toggle('text-indigo-700', !isHidden);
+    }
+}
+
+// =====================================================
 // QUICK FILTER PILLS (EXPIRY & WORKFLOW STAGE)
 // =====================================================
 function filterContractsByExpiry(filter) {
@@ -1001,6 +1130,7 @@ function filterContractsByStage(stage) {
         'revisi': 'btnStageRevisi',
         'ttd': 'btnStageTtd',
         'aktif': 'btnStageAktif',
+        'expired': 'btnStageExpired',
         'renvoi': 'btnStageRenvoi'
     };
 
@@ -1098,7 +1228,8 @@ function openContractDetailModal(noKontrak) {
         { num: 8, key: 'revisi', title: '8. Revisi' },
         { num: 9, key: 'ttd', title: '9. TTD' },
         { num: 10, key: 'aktif', title: '10. Aktif Sah' },
-        { num: 11, key: 'renvoi', title: '11. Renvoi' }
+        { num: 11, key: 'expired', title: '11. Expired' },
+        { num: 12, key: 'renvoi', title: '12. Renvoi' }
     ];
 
     const currentStepNum = stage.step;
@@ -1137,6 +1268,8 @@ function openContractDetailModal(noKontrak) {
             else if (currentStepNum > 10) isDone = true;
         } else if (st.num === 11) {
             if (currentStepNum === 11) isCurrent = true;
+        } else if (st.num === 12) {
+            if (currentStepNum === 12) isCurrent = true;
             else if (hasRenvoi) isDone = true;
         }
 

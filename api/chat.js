@@ -265,18 +265,24 @@ ${pageContext && pageContext.summary ? `Konteks Halaman Saat Ini: ${pageContext.
         ...messages
     ];
 
-    // Daftar model: coba DeepSeek terlebih dahulu, jika credit habis (402) otomatis fallback ke model gratis aktif
+    // Model utama: google/gemma-4-26b-a4b-it:free (OpenRouter)
+    const primaryModel = process.env.OPENROUTER_MODEL || 'google/gemma-4-26b-a4b-it:free';
     const modelsToTry = [
-        process.env.OPENROUTER_MODEL || 'deepseek/deepseek-chat',
+        primaryModel,
+        'google/gemma-4-26b-a4b-it:free',
+        'google/gemma-4-26b-a4b-it',
+        'deepseek/deepseek-chat',
         'baidu/ernie-5.5-flash-preview:free',
         'nvidia/nemotron-3.5-lightning:free'
     ];
+    // Hilangkan duplikasi jika primaryModel sama dengan entri berikutnya
+    const uniqueModelsToTry = [...new Set(modelsToTry)];
 
     let lastError = null;
     let successfulReply = null;
     let modelUsed = null;
 
-    for (const model of modelsToTry) {
+    for (const model of uniqueModelsToTry) {
         try {
             const openRouterResp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
                 method: 'POST',

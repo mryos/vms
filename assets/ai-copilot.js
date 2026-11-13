@@ -1,6 +1,6 @@
 // =====================================================
 // ETHOS VMS AI COPILOT - FLOATING CHATBOT CLIENT
-// Integrated with OpenRouter AI API (DeepSeek / Free Models)
+// Integrated with OpenRouter AI API (Google Gemma 4 26B)
 // =====================================================
 
 (function () {
@@ -91,7 +91,7 @@
                     <span class="vms-ai-status-indicator"></span>
                     <div>
                         <div style="font-weight: 700; font-size: 13px; line-height: 1.2;">Asisten VMS</div>
-                        <div style="font-size: 10px; color: #94a3b8;">Data Spreadsheet Terhubung</div>
+                        <div style="font-size: 10px; color: #94a3b8;">Gemma 4 26B · Live Data</div>
                     </div>
                 </div>
                 <div style="display: flex; align-items: center; gap: 6px;">
