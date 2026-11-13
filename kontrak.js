@@ -943,8 +943,20 @@ function renderTableRows(list) {
                     </div>
 
                     <!-- 12-Step Horizontal Milestone Tracker -->
-                    <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-1 text-[10px] mb-2.5">
+                    <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-1 sm:gap-1.5 text-[10px] mb-2">
                         ${renderInlineWorkflowSteps(c, stage)}
+                    </div>
+
+                    <div class="flex items-center justify-between text-[10px] text-slate-500 mb-2.5 px-1 flex-wrap gap-1">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <span class="font-bold text-slate-700">⏱ Audit Alur:</span>
+                            <span class="inline-flex items-center gap-0.5"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span> <strong>+Xh</strong> = lead time durasi pengerjaan</span>
+                            <span class="text-slate-300">·</span>
+                            <span class="inline-flex items-center gap-0.5"><span class="w-2 h-2 rounded-full bg-amber-500 inline-block animate-pulse"></span> <strong>⏳ Hr ke-X</strong> = tahap aktif sedang berjalan</span>
+                        </div>
+                        <div class="text-[10px] text-slate-400">
+                            12 Tahapan Siklus PKS &amp; Kepatuhan
+                        </div>
                     </div>
 
                     <!-- Ringkasan Info Tambahan (Ruang Lingkup, PIC, Keterangan, Revisi) -->
@@ -1062,6 +1074,32 @@ function renderMiniStepSegments(currentStep, color) {
     return html;
 }
 
+function getContractStageDatesMap(c) {
+    const raw = (c && c.stageDates && typeof c.stageDates === 'object') ? c.stageDates : {};
+    return {
+        1: raw[1] || c.tglDokumen || '-',
+        2: raw[2] || c.tglPengajuan || '-',
+        3: raw[3] || c.tglReviewEthos || '-',
+        4: raw[4] || c.tglDraft || '-',
+        5: raw[5] || c.tglReviewVendor || '-',
+        6: raw[6] || c.tglParafVendor || '-',
+        7: raw[7] || c.tglParafEthos || '-',
+        8: raw[8] || c.tglRevisi || '-',
+        9: raw[9] || c.tglRealisasi || '-',
+        10: raw[10] || c._cleanMulai || c.tglMulai || '-',
+        11: raw[11] || c._cleanSelesai || c.tglSelesai || '-',
+        12: raw[12] || c.tglRenvoi || '-'
+    };
+}
+
+function formatCompactStageDate(val) {
+    const d = parseAnyDate(val);
+    if (!d) return (typeof val === 'string' && val.length > 0 && val !== '-' && val !== '---' && !val.toLowerCase().includes('belum')) ? val : '-';
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    const yy = String(d.getFullYear()).slice(-2);
+    return `${d.getDate()} ${months[d.getMonth()]} '${yy}`;
+}
+
 function renderInlineWorkflowSteps(c, stage) {
     const steps = [
         { num: 1, key: 'pemenuhan_dokumen', title: '1. Dokumen' },
@@ -1080,6 +1118,23 @@ function renderInlineWorkflowSteps(c, stage) {
 
     const currentStepNum = stage.step;
     const hasRenvoi = stage.isRenvoi;
+    const stageDates = getContractStageDatesMap(c);
+
+    // Parse all dates to Date objects normalized to 00:00:00
+    const parsedDates = {};
+    for (let i = 1; i <= 12; i++) {
+        const raw = stageDates[i];
+        const dt = parseAnyDate(raw);
+        if (dt) {
+            dt.setHours(0, 0, 0, 0);
+            parsedDates[i] = dt;
+        } else {
+            parsedDates[i] = null;
+        }
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
     return steps.map(st => {
         let isDone = false;
@@ -1095,23 +1150,117 @@ function renderInlineWorkflowSteps(c, stage) {
             if (currentStepNum === 11) isCurrent = true;
         } else if (st.num === 12) {
             if (currentStepNum === 12) isCurrent = true;
-            else if (hasRenvoi) isDone = true;
+            else if (hasRenvoi || (parsedDates[12] !== null)) isDone = true;
         }
 
-        let badgeClass = 'text-slate-400 bg-white border-slate-200';
-        let prefix = '○';
-        if (isDone) {
-            badgeClass = 'text-emerald-700 bg-emerald-50 border-emerald-300 font-bold';
-            prefix = '✓';
+        const rawDate = stageDates[st.num];
+        const thisDate = parsedDates[st.num];
+        const dateDisplay = formatCompactStageDate(rawDate);
+        const hasDate = Boolean(thisDate);
+
+        // Calculate lead time / duration
+        let leadBadge = '';
+        let badgeTooltip = '';
+
+        if (st.num === 11) {
+            // Expired step: show remaining days / overdue days
+            const rem = c._daysRemaining !== undefined ? c._daysRemaining : getContractDaysRemaining(c.tglSelesai);
+            if (rem !== null) {
+                if (rem < 0) {
+                    leadBadge = `<span class="inline-block px-1 py-0.5 rounded text-[8.5px] font-bold bg-rose-100 text-rose-800 border border-rose-200">Lewat ${Math.abs(rem)}h</span>`;
+                    badgeTooltip = `Masa berlaku habis ${Math.abs(rem)} hari yang lalu`;
+                } else if (rem <= 30) {
+                    leadBadge = `<span class="inline-block px-1 py-0.5 rounded text-[8.5px] font-bold bg-amber-100 text-amber-800 border border-amber-300">Sisa ${rem}h</span>`;
+                    badgeTooltip = `Masa berlaku sisa ${rem} hari lagi`;
+                } else {
+                    leadBadge = `<span class="inline-block px-1 py-0.5 rounded text-[8.5px] font-semibold bg-emerald-100 text-emerald-800">Sisa ${rem}h</span>`;
+                    badgeTooltip = `Masa berlaku sisa ${rem} hari`;
+                }
+            } else {
+                leadBadge = `<span class="text-[8.5px] text-slate-300">-</span>`;
+            }
+        } else if (hasDate) {
+            // Find most recent preceding step with a date
+            let prevNum = null;
+            let prevDate = null;
+            for (let p = st.num - 1; p >= 1; p--) {
+                if (parsedDates[p]) {
+                    prevNum = p;
+                    prevDate = parsedDates[p];
+                    break;
+                }
+            }
+
+            if (prevDate) {
+                const diffDays = Math.round((thisDate - prevDate) / (1000 * 60 * 60 * 24));
+                if (diffDays >= 0) {
+                    leadBadge = `<span class="inline-block px-1 py-0.5 rounded text-[8.5px] font-mono font-bold bg-emerald-100 text-emerald-800 border border-emerald-200" title="Selesai dalam ${diffDays} hari dari tahap ${prevNum}">+${diffDays}h</span>`;
+                    badgeTooltip = `Selisih +${diffDays} hari dari step ${prevNum}`;
+                } else {
+                    leadBadge = `<span class="inline-block px-1 py-0.5 rounded text-[8.5px] font-mono font-bold bg-slate-100 text-slate-700">${diffDays}h</span>`;
+                    badgeTooltip = `Tanggal mendahului step sebelumnya (${diffDays} hari)`;
+                }
+            } else {
+                leadBadge = `<span class="inline-block px-1 py-0.5 rounded text-[8.5px] font-bold bg-slate-100 text-slate-600">Start</span>`;
+                badgeTooltip = 'Tahap awal tanggal tercatat';
+            }
         } else if (isCurrent) {
-            badgeClass = 'text-sky-800 bg-sky-100 border-sky-400 font-black ring-1 ring-sky-300 animate-pulse';
+            // In progress: running days from preceding completed date until today
+            let prevDate = null;
+            let prevNum = null;
+            for (let p = st.num - 1; p >= 1; p--) {
+                if (parsedDates[p]) {
+                    prevNum = p;
+                    prevDate = parsedDates[p];
+                    break;
+                }
+            }
+            if (prevDate) {
+                const runDays = Math.max(0, Math.round((today - prevDate) / (1000 * 60 * 60 * 24)));
+                leadBadge = `<span class="inline-block px-1 py-0.5 rounded text-[8.5px] font-mono font-extrabold bg-amber-100 text-amber-900 border border-amber-300 animate-pulse" title="Sedang berjalan ${runDays} hari sejak tahap ${prevNum}">⏳ Hr ke-${runDays}</span>`;
+                badgeTooltip = `Sedang berjalan ${runDays} hari sejak tahap ${prevNum}`;
+            } else {
+                leadBadge = `<span class="inline-block px-1 py-0.5 rounded text-[8.5px] font-bold bg-sky-100 text-sky-800 animate-pulse">⏳ Proses</span>`;
+                badgeTooltip = 'Sedang dalam pengerjaan';
+            }
+        } else if (isDone) {
+            leadBadge = `<span class="inline-block px-1 py-0.5 rounded text-[8.5px] font-semibold text-emerald-600">✓ Selesai</span>`;
+            badgeTooltip = 'Tahap telah selesai';
+        } else {
+            leadBadge = `<span class="text-[8.5px] text-slate-300">-</span>`;
+            badgeTooltip = 'Belum dimulai';
+        }
+
+        // Box styling
+        let boxClass = 'bg-white border-slate-200 text-slate-500';
+        let prefix = '○';
+        let titleColor = 'text-slate-600';
+        let dateColor = 'text-slate-400';
+
+        if (isCurrent) {
+            boxClass = 'bg-sky-50/90 border-sky-400 ring-2 ring-sky-300/60 shadow-xs';
             prefix = '●';
+            titleColor = 'text-sky-950 font-black';
+            dateColor = hasDate ? 'text-sky-900 font-bold' : 'text-sky-500 italic';
+        } else if (isDone) {
+            boxClass = 'bg-emerald-50/60 border-emerald-300 text-emerald-900';
+            prefix = '✓';
+            titleColor = 'text-emerald-900 font-bold';
+            dateColor = hasDate ? 'text-emerald-800 font-semibold' : 'text-slate-400';
         }
 
         return `
-        <div class="px-1.5 py-1 rounded border text-center ${badgeClass} transition leading-tight">
-            <span class="mr-0.5 text-[9px]">${prefix}</span>
-            <span>${st.title}</span>
+        <div class="p-1 rounded-lg border text-center transition flex flex-col justify-between min-h-[58px] ${boxClass}" title="${esc(badgeTooltip)}">
+            <div class="flex items-center justify-center gap-0.5 font-bold text-[9.5px] leading-tight truncate ${titleColor}">
+                <span class="text-[8.5px] shrink-0">${prefix}</span>
+                <span class="truncate">${st.title}</span>
+            </div>
+            <div class="text-[9px] font-mono my-0.5 ${dateColor} truncate" title="${esc(rawDate || '-')}">
+                ${esc(dateDisplay)}
+            </div>
+            <div class="leading-none">
+                ${leadBadge}
+            </div>
         </div>`;
     }).join('');
 }
@@ -1489,12 +1638,20 @@ function copyContractHeadersToClipboard() {
         'Nama Vendor',
         'Ruang Lingkup / Jenis Pekerjaan',
         'PIC / Divisi',
-        'Tanggal Pengajuan ke Legal',
-        'Tanggal Mulai Kontrak',
-        'Tanggal Selesai Kontrak',
         'Tahap Progress Pengerjaan',
+        'Tanggal Dokumen',
+        'Tanggal Pengajuan ke Legal',
+        'Tanggal Review Legal Ethos',
+        'Tanggal Draft Keluar',
+        'Tanggal Review Legal Vendor',
+        'Tanggal Paraf Vendor',
+        'Tanggal Paraf Ethos',
+        'Tanggal Revisi',
         'Target Selesai SLA',
         'Tanggal Realisasi TTD',
+        'Tanggal Mulai Kontrak',
+        'Tanggal Selesai Kontrak',
+        'Tanggal Renvoi',
         'Status Revisi / Renvoi',
         'Kelengkapan Dokumen',
         'Nilai Kontrak (Rp)',
@@ -1506,16 +1663,45 @@ function copyContractHeadersToClipboard() {
     
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(textToCopy).then(() => {
-            showToast('16 Header Kolom berhasil disalin ke Clipboard! Tinggal paste di Baris 1 Sheet Google.', 'success');
+            showToast('24 Header Lengkap (termasuk 12 Tanggal Alur) berhasil disalin ke Clipboard! Tinggal paste di Baris 1 Sheet.', 'success');
         }).catch(() => {
-            fallbackCopyText(textToCopy);
+            fallbackCopyText(textToCopy, '24 Header Lengkap berhasil disalin ke Clipboard!');
         });
     } else {
-        fallbackCopyText(textToCopy);
+        fallbackCopyText(textToCopy, '24 Header Lengkap berhasil disalin ke Clipboard!');
     }
 }
 
-function fallbackCopyText(text) {
+function copyAuditDateHeadersToClipboard() {
+    const headers = [
+        'Tanggal Dokumen',
+        'Tanggal Pengajuan ke Legal',
+        'Tanggal Review Legal Ethos',
+        'Tanggal Draft Keluar',
+        'Tanggal Review Legal Vendor',
+        'Tanggal Paraf Vendor',
+        'Tanggal Paraf Ethos',
+        'Tanggal Revisi',
+        'Target Selesai SLA',
+        'Tanggal Realisasi TTD',
+        'Tanggal Mulai Kontrak',
+        'Tanggal Selesai Kontrak',
+        'Tanggal Renvoi'
+    ];
+    const textToCopy = headers.join('\t');
+    
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            showToast('13 Kolom Tanggal Audit & SLA disalin! Tempel langsung di baris 1 di sebelah kolom terakhir spreadsheet Anda.', 'success');
+        }).catch(() => {
+            fallbackCopyText(textToCopy, '13 Kolom Tanggal Audit & SLA berhasil disalin!');
+        });
+    } else {
+        fallbackCopyText(textToCopy, '13 Kolom Tanggal Audit & SLA berhasil disalin!');
+    }
+}
+
+function fallbackCopyText(text, successMsg) {
     const ta = document.createElement('textarea');
     ta.value = text;
     ta.style.position = 'fixed';
@@ -1524,7 +1710,7 @@ function fallbackCopyText(text) {
     ta.select();
     try {
         document.execCommand('copy');
-        showToast('16 Header Kolom berhasil disalin ke Clipboard!', 'success');
+        showToast(successMsg || 'Header kolom berhasil disalin ke Clipboard!', 'success');
     } catch (e) {
         prompt('Silakan salin header di bawah ini:', text);
     }
@@ -1540,13 +1726,14 @@ function exportContractCsv() {
         return;
     }
     const list = contractDashboardData.contractCompliance.list;
-    let csv = 'No Kontrak,Vendor,Ruang Lingkup,Divisi/PIC,Tgl Pengajuan Legal,Tgl Mulai,Tgl Selesai,Tahap Progress,Target SLA,Tgl Realisasi TTD,Status Revisi/Renvoi,Sisa Hari Masa Berlaku,Durasi Pengerjaan (Hari),Status SLA,Kelengkapan Dokumen,Nilai Kontrak,Status Kepatuhan,Link Dokumen,Keterangan\n';
+    let csv = 'No Kontrak,Vendor,Ruang Lingkup,Divisi/PIC,Tahap Progress,Tgl Dokumen,Tgl Pengajuan Legal,Tgl Review Ethos,Tgl Draft Keluar,Tgl Review Vendor,Tgl Paraf Vendor,Tgl Paraf Ethos,Tgl Revisi,Target SLA,Tgl Realisasi TTD,Tgl Mulai Kontrak,Tgl Selesai Kontrak,Tgl Renvoi,Status Revisi/Renvoi,Sisa Hari Masa Berlaku,Durasi Pengerjaan (Hari),Status SLA,Kelengkapan Dokumen,Nilai Kontrak,Status Kepatuhan,Link Dokumen,Keterangan\n';
     list.forEach(c => {
         const stage = c._stageObj || normalizeContractStageFrontend(c.tahapProgress, c.status, c.tglSelesai);
         const daysRemaining = c._daysRemaining !== undefined ? c._daysRemaining : getContractDaysRemaining(c.tglSelesai);
         const processDays = c._processDays !== undefined ? c._processDays : getContractProcessDays(c.tglPengajuan, c.tglRealisasi);
         const slaStatus = c.slaStatus || '-';
-        csv += `"${escCsv(c.noKontrak)}","${escCsv(c.vendor)}","${escCsv(c.jenisPekerjaan || '-')}","${escCsv(c.picDivisi || '-')}","${escCsv(c.tglPengajuan || '-')}","${escCsv(c.tglMulai || '-')}","${escCsv(c.tglSelesai || '-')}","${escCsv(stage.label)}","${escCsv(c.targetSelesai || '-')}","${escCsv(c.tglRealisasi || '-')}","${escCsv(c.statusRevisi || '-')}","${daysRemaining !== null ? daysRemaining : '-'}","${processDays !== null ? processDays : '-'}","${escCsv(slaStatus)}","${escCsv(c.kelengkapan || '-')}","${c.nilai || 0}","${escCsv(c.status || 'Comply')}","${escCsv(c.linkDokumen || '-')}","${escCsv(c.keterangan || '-')}"\n`;
+        const stageDates = getContractStageDatesMap(c);
+        csv += `"${escCsv(c.noKontrak)}","${escCsv(c.vendor)}","${escCsv(c.jenisPekerjaan || '-')}","${escCsv(c.picDivisi || '-')}","${escCsv(stage.label)}","${escCsv(stageDates[1])}","${escCsv(stageDates[2])}","${escCsv(stageDates[3])}","${escCsv(stageDates[4])}","${escCsv(stageDates[5])}","${escCsv(stageDates[6])}","${escCsv(stageDates[7])}","${escCsv(stageDates[8])}","${escCsv(c.targetSelesai || '-')}","${escCsv(stageDates[9])}","${escCsv(stageDates[10])}","${escCsv(stageDates[11])}","${escCsv(stageDates[12])}","${escCsv(c.statusRevisi || '-')}","${daysRemaining !== null ? daysRemaining : '-'}","${processDays !== null ? processDays : '-'}","${escCsv(slaStatus)}","${escCsv(c.kelengkapan || '-')}","${c.nilai || 0}","${escCsv(c.status || 'Comply')}","${escCsv(c.linkDokumen || '-')}","${escCsv(c.keterangan || '-')}"\n`;
     });
     const nowStr = new Date().toISOString().slice(0, 10);
     downloadCsv(csv, `Laporan_Contract_Repository_Compliance_${nowStr}.csv`);

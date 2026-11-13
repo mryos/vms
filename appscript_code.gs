@@ -2027,12 +2027,23 @@ function getContractCompliance(ss) {
 
   var idxPekerjaan = getHeaderIndex(headers, ['jenis pekerjaan', 'pekerjaan', 'ruang lingkup', 'deskripsi', 'uraian', 'item', 'scope of work', 'scope']);
   var idxDivisi = getHeaderIndex(headers, ['pic / divisi', 'pic', 'divisi', 'dept', 'departemen', 'pemohon', 'user', 'pic pengaju', 'divisi pemohon']);
+  
+  // 12 Tanggal Audit Alur Pengerjaan Kontrak
+  var idxTglDokumen = getHeaderIndex(headers, ['tanggal dokumen', 'tgl dokumen', 'tanggal pemenuhan dokumen', 'tgl pemenuhan dokumen', 'tgl berkas', 'tanggal berkas', 'dokumen lengkap', 'tgl kelengkapan']);
   var idxTglPengajuan = getHeaderIndex(headers, ['tanggal pengajuan ke legal', 'tgl pengajuan ke legal', 'tgl pengajuan', 'tanggal pengajuan', 'tgl masuk legal', 'tanggal masuk', 'tgl ajukan', 'tgl request', 'pengajuan legal']);
-  var idxMulai = getHeaderIndex(headers, ['tanggal mulai kontrak', 'tgl mulai kontrak', 'tanggal mulai', 'tgl mulai', 'mulai', 'start date', 'periode awal']);
-  var idxSelesai = getHeaderIndex(headers, ['tanggal selesai kontrak', 'tgl selesai kontrak', 'tanggal selesai', 'tanggal berakhir', 'tgl selesai', 'tgl berakhir', 'end date', 'deadline', 'masa berlaku', 'periode akhir']);
-  var idxTahap = getHeaderIndex(headers, ['tahap progress pengerjaan', 'tahap progress', 'progress pengerjaan', 'progress', 'tahap', 'status progress', 'tahapan', 'current stage', 'workflow', 'status pengerjaan', 'tahap pengerjaan']);
+  var idxTglReviewEthos = getHeaderIndex(headers, ['tanggal review legal ethos', 'tgl review legal ethos', 'tgl review ethos', 'tanggal review ethos', 'tgl review internal', 'review legal ethos', 'review ethos']);
+  var idxTglDraft = getHeaderIndex(headers, ['tanggal draft keluar', 'tgl draft keluar', 'tgl draft', 'tanggal draft', 'tgl draf', 'draft keluar']);
+  var idxTglReviewVendor = getHeaderIndex(headers, ['tanggal review legal vendor', 'tgl review legal vendor', 'tgl review vendor', 'tanggal review vendor', 'tgl review rekanan', 'review legal vendor', 'review vendor']);
+  var idxTglParafVendor = getHeaderIndex(headers, ['tanggal paraf vendor', 'tgl paraf vendor', 'tgl paraf rekanan', 'tanggal paraf rekanan', 'paraf vendor']);
+  var idxTglParafEthos = getHeaderIndex(headers, ['tanggal paraf ethos', 'tgl paraf ethos', 'tgl paraf internal', 'tanggal paraf internal', 'paraf ethos', 'paraf internal']);
+  var idxTglRevisi = getHeaderIndex(headers, ['tanggal revisi', 'tgl revisi', 'tgl perbaikan', 'tanggal perbaikan', 'tgl catatan revisi']);
   var idxTargetSla = getHeaderIndex(headers, ['target selesai sla', 'target selesai', 'target legal', 'sla target', 'sla', 'target draft', 'deadline proses']);
   var idxTglRealisasi = getHeaderIndex(headers, ['tanggal realisasi ttd', 'tgl realisasi ttd', 'tgl realisasi', 'tanggal selesai proses', 'tgl ttd', 'tanggal ttd', 'tgl sah', 'realisasi ttd']);
+  var idxMulai = getHeaderIndex(headers, ['tanggal mulai kontrak', 'tgl mulai kontrak', 'tanggal mulai', 'tgl mulai', 'mulai', 'start date', 'periode awal']);
+  var idxSelesai = getHeaderIndex(headers, ['tanggal selesai kontrak', 'tgl selesai kontrak', 'tanggal selesai', 'tanggal berakhir', 'tgl selesai', 'tgl berakhir', 'end date', 'deadline', 'masa berlaku', 'periode akhir']);
+  var idxTglRenvoi = getHeaderIndex(headers, ['tanggal renvoi', 'tgl renvoi', 'tgl addendum', 'tanggal addendum', 'renvoi']);
+
+  var idxTahap = getHeaderIndex(headers, ['tahap progress pengerjaan', 'tahap progress', 'progress pengerjaan', 'progress', 'tahap', 'status progress', 'tahapan', 'current stage', 'workflow', 'status pengerjaan', 'tahap pengerjaan']);
   var idxRevisi = getHeaderIndex(headers, ['status revisi / renvoi', 'status revisi', 'revisi', 'renvoi', 'revisi / renvoi', 'catatan revisi', 'addendum', 'keterangan revisi']);
   var idxKelengkapan = getHeaderIndex(headers, ['kelengkapan dokumen', 'kelengkapan', 'dokumen', 'status dokumen', 'legalitas']);
   var idxNilai = getHeaderIndex(headers, ['nilai kontrak (rp)', 'nilai kontrak', 'nilai', 'nominal', 'amount', 'harga', 'total', 'nominal kontrak']);
@@ -2053,12 +2064,23 @@ function getContractCompliance(ss) {
 
     var jenisPekerjaan = idxPekerjaan !== -1 && data[i][idxPekerjaan] ? data[i][idxPekerjaan].toString().trim() : '-';
     var picDivisi = idxDivisi !== -1 && data[i][idxDivisi] ? data[i][idxDivisi].toString().trim() : '-';
+    
+    // 12 Tanggal Alur PKS
+    var tglDokumen = idxTglDokumen !== -1 && data[i][idxTglDokumen] ? formatDate(data[i][idxTglDokumen]) : '-';
     var tglPengajuan = idxTglPengajuan !== -1 && data[i][idxTglPengajuan] ? formatDate(data[i][idxTglPengajuan]) : '-';
-    var tglMulai = idxMulai !== -1 && data[i][idxMulai] ? formatDate(data[i][idxMulai]) : '-';
-    var tglSelesai = idxSelesai !== -1 && data[i][idxSelesai] ? formatDate(data[i][idxSelesai]) : '-';
-    var rawTahap = idxTahap !== -1 && data[i][idxTahap] ? data[i][idxTahap].toString().trim() : '';
+    var tglReviewEthos = idxTglReviewEthos !== -1 && data[i][idxTglReviewEthos] ? formatDate(data[i][idxTglReviewEthos]) : '-';
+    var tglDraft = idxTglDraft !== -1 && data[i][idxTglDraft] ? formatDate(data[i][idxTglDraft]) : '-';
+    var tglReviewVendor = idxTglReviewVendor !== -1 && data[i][idxTglReviewVendor] ? formatDate(data[i][idxTglReviewVendor]) : '-';
+    var tglParafVendor = idxTglParafVendor !== -1 && data[i][idxTglParafVendor] ? formatDate(data[i][idxTglParafVendor]) : '-';
+    var tglParafEthos = idxTglParafEthos !== -1 && data[i][idxTglParafEthos] ? formatDate(data[i][idxTglParafEthos]) : '-';
+    var tglRevisi = idxTglRevisi !== -1 && data[i][idxTglRevisi] ? formatDate(data[i][idxTglRevisi]) : '-';
     var targetSelesai = idxTargetSla !== -1 && data[i][idxTargetSla] ? formatDate(data[i][idxTargetSla]) : '-';
     var tglRealisasi = idxTglRealisasi !== -1 && data[i][idxTglRealisasi] ? formatDate(data[i][idxTglRealisasi]) : '-';
+    var tglMulai = idxMulai !== -1 && data[i][idxMulai] ? formatDate(data[i][idxMulai]) : '-';
+    var tglSelesai = idxSelesai !== -1 && data[i][idxSelesai] ? formatDate(data[i][idxSelesai]) : '-';
+    var tglRenvoi = idxTglRenvoi !== -1 && data[i][idxTglRenvoi] ? formatDate(data[i][idxTglRenvoi]) : '-';
+
+    var rawTahap = idxTahap !== -1 && data[i][idxTahap] ? data[i][idxTahap].toString().trim() : '';
     var statusRevisi = idxRevisi !== -1 && data[i][idxRevisi] ? data[i][idxRevisi].toString().trim() : '';
     var kelengkapan = idxKelengkapan !== -1 && data[i][idxKelengkapan] ? data[i][idxKelengkapan].toString().trim() : 'Lengkap';
     
@@ -2167,9 +2189,32 @@ function getContractCompliance(ss) {
       vendor: vendor,
       jenisPekerjaan: jenisPekerjaan,
       picDivisi: picDivisi,
+      tglDokumen: tglDokumen,
       tglPengajuan: tglPengajuan,
+      tglReviewEthos: tglReviewEthos,
+      tglDraft: tglDraft,
+      tglReviewVendor: tglReviewVendor,
+      tglParafVendor: tglParafVendor,
+      tglParafEthos: tglParafEthos,
+      tglRevisi: tglRevisi,
+      tglRealisasi: tglRealisasi,
       tglMulai: tglMulai,
       tglSelesai: tglSelesai,
+      tglRenvoi: tglRenvoi,
+      stageDates: {
+        1: tglDokumen,
+        2: tglPengajuan,
+        3: tglReviewEthos,
+        4: tglDraft,
+        5: tglReviewVendor,
+        6: tglParafVendor,
+        7: tglParafEthos,
+        8: tglRevisi,
+        9: tglRealisasi,
+        10: tglMulai,
+        11: tglSelesai,
+        12: tglRenvoi
+      },
       tahapProgress: stageObj.label,
       stageKey: stageObj.key,
       progressStep: stageObj.step,
@@ -2335,12 +2380,20 @@ function setupSheetKontrakVendor(ss) {
     'Nama Vendor',
     'Ruang Lingkup / Jenis Pekerjaan',
     'PIC / Divisi',
-    'Tanggal Pengajuan ke Legal',
-    'Tanggal Mulai Kontrak',
-    'Tanggal Selesai Kontrak',
     'Tahap Progress Pengerjaan',
+    'Tanggal Dokumen',
+    'Tanggal Pengajuan ke Legal',
+    'Tanggal Review Legal Ethos',
+    'Tanggal Draft Keluar',
+    'Tanggal Review Legal Vendor',
+    'Tanggal Paraf Vendor',
+    'Tanggal Paraf Ethos',
+    'Tanggal Revisi',
     'Target Selesai SLA',
     'Tanggal Realisasi TTD',
+    'Tanggal Mulai Kontrak',
+    'Tanggal Selesai Kontrak',
+    'Tanggal Renvoi',
     'Status Revisi / Renvoi',
     'Kelengkapan Dokumen',
     'Nilai Kontrak (Rp)',
@@ -2456,10 +2509,18 @@ function setupSheetKontrakVendor(ss) {
       
       var checkHeaders = [
         { key: 'pic / divisi', label: 'PIC / Divisi' },
-        { key: 'tanggal pengajuan', label: 'Tanggal Pengajuan ke Legal' },
         { key: 'tahap progress', label: 'Tahap Progress Pengerjaan' },
+        { key: 'tanggal dokumen', label: 'Tanggal Dokumen' },
+        { key: 'tanggal pengajuan', label: 'Tanggal Pengajuan ke Legal' },
+        { key: 'tanggal review legal ethos', label: 'Tanggal Review Legal Ethos' },
+        { key: 'tanggal draft', label: 'Tanggal Draft Keluar' },
+        { key: 'tanggal review legal vendor', label: 'Tanggal Review Legal Vendor' },
+        { key: 'tanggal paraf vendor', label: 'Tanggal Paraf Vendor' },
+        { key: 'tanggal paraf ethos', label: 'Tanggal Paraf Ethos' },
+        { key: 'tanggal revisi', label: 'Tanggal Revisi' },
         { key: 'target selesai sla', label: 'Target Selesai SLA' },
         { key: 'tanggal realisasi', label: 'Tanggal Realisasi TTD' },
+        { key: 'tanggal renvoi', label: 'Tanggal Renvoi' },
         { key: 'status revisi', label: 'Status Revisi / Renvoi' },
         { key: 'link dokumen', label: 'Link Dokumen Kontrak' }
       ];
