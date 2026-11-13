@@ -13,6 +13,7 @@ let contractComplianceFilter = 'all';
 
 let contractCurrentPage = 1;
 let contractPageSize = 10;
+let contractViewMode = 'table'; // 'table' | 'kanban'
 
 let complianceChartInstance = null;
 let workflowChartInstance = null;
@@ -606,8 +607,10 @@ function applyAndRender() {
         });
     }
 
-    // Render Table
+    // Render Table or Kanban based on current view mode
     renderTableRows(tableDisplayList);
+    renderKanbanBoard(tableDisplayList);
+    syncViewModeVisibility();
 }
 
 // =====================================================
@@ -1263,6 +1266,210 @@ function renderInlineWorkflowSteps(c, stage) {
             </div>
         </div>`;
     }).join('');
+}
+
+// =====================================================
+// KANBAN BOARD VIEW
+// =====================================================
+const KANBAN_PHASES = [
+    {
+        id: 'pra_kontrak', title: '📥 Pra-Kontrak & Legal',
+        color: 'sky', borderColor: '#0284c7', bgColor: '#f0f9ff',
+        steps: [1, 2, 3, 4],
+        stepLabels: { 1: 'Dokumen', 2: 'Pengajuan', 3: 'Rev Ethos', 4: 'Draft' }
+    },
+    {
+        id: 'negosiasi', title: '🤝 Negosiasi & Review',
+        color: 'amber', borderColor: '#d97706', bgColor: '#fffbeb',
+        steps: [5, 8],
+        stepLabels: { 5: 'Rev Vendor', 8: 'Revisi' }
+    },
+    {
+        id: 'paraf_ttd', title: '✍️ Paraf & TTD',
+        color: 'violet', borderColor: '#7c3aed', bgColor: '#f5f3ff',
+        steps: [6, 7, 9],
+        stepLabels: { 6: 'Paraf Vendor', 7: 'Paraf Ethos', 9: 'TTD' }
+    },
+    {
+        id: 'aktif', title: '🟢 Kontrak Aktif',
+        color: 'emerald', borderColor: '#059669', bgColor: '#ecfdf5',
+        steps: [10],
+        stepLabels: { 10: 'Aktif Sah' }
+    },
+    {
+        id: 'pasca', title: '📑 Pasca Kontrak',
+        color: 'rose', borderColor: '#e11d48', bgColor: '#fff1f2',
+        steps: [11, 12],
+        stepLabels: { 11: 'Expired', 12: 'Renvoi' }
+    }
+];
+
+function toggleContractViewMode() {
+    contractViewMode = contractViewMode === 'table' ? 'kanban' : 'table';
+    syncViewModeVisibility();
+    const btn = document.getElementById('btnViewToggle');
+    if (btn) {
+        btn.innerHTML = contractViewMode === 'table'
+            ? '<span>⊞</span><span>Kanban</span>'
+            : '<span>☰</span><span>Tabel</span>';
+    }
+}
+
+function syncViewModeVisibility() {
+    const tableCard = document.getElementById('sectionContractsTableCard');
+    const kanbanCard = document.getElementById('sectionKanbanBoard');
+    const pagination = document.getElementById('contractPagination');
+    const expandAllBtn = document.getElementById('btnToggleExpandAll');
+
+    if (contractViewMode === 'kanban') {
+        if (tableCard) tableCard.style.display = 'none';
+        if (kanbanCard) kanbanCard.style.display = 'block';
+        if (pagination) pagination.style.display = 'none';
+        if (expandAllBtn) expandAllBtn.style.display = 'none';
+    } else {
+        if (tableCard) tableCard.style.display = '';
+        if (kanbanCard) kanbanCard.style.display = 'none';
+        if (pagination) pagination.style.display = '';
+        if (expandAllBtn) expandAllBtn.style.display = '';
+    }
+}
+
+function renderKanbanBoard(list) {
+    const container = document.getElementById('kanbanBoardContent');
+    if (!container) return;
+
+    // Group contracts by phase
+    const phaseGroups = {};
+    KANBAN_PHASES.forEach(p => { phaseGroups[p.id] = []; });
+
+    list.forEach(c => {
+        const step = c._stageObj ? c._stageObj.step : (c.progressStep || 10);
+        for (const phase of KANBAN_PHASES) {
+            if (phase.steps.includes(step)) {
+                phaseGroups[phase.id].push(c);
+                return;
+            }
+        }
+        // Fallback: Aktif
+        phaseGroups['aktif'].push(c);
+    });
+
+    container.innerHTML = KANBAN_PHASES.map(phase => {
+        const items = phaseGroups[phase.id] || [];
+        const totalValue = items.reduce((s, c) => s + (c.nilai || 0), 0);
+
+        return `
+        <div class="kanban-col flex flex-col bg-slate-50/80 rounded-xl border border-slate-200 min-w-[220px] max-w-[280px] w-full shadow-xs">
+            <!-- Column Header -->
+            <div class="px-3 py-2.5 rounded-t-xl border-b-2" style="border-color: ${phase.borderColor}; background: ${phase.bgColor};">
+                <div class="flex items-center justify-between mb-1">
+                    <span class="font-black text-xs text-slate-800 truncate">${phase.title}</span>
+                    <span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-[11px] font-black text-white shadow-sm" style="background: ${phase.borderColor};">${items.length}</span>
+                </div>
+                <div class="text-[10px] text-slate-500 font-mono">${totalValue > 0 ? formatRupiah(totalValue) : '-'}</div>
+            </div>
+
+            <!-- Cards Container -->
+            <div class="flex-1 overflow-y-auto p-2 space-y-2 kanban-scroll" style="max-height: 520px;">
+                ${items.length === 0
+                    ? `<div class="text-center text-[11px] text-slate-400 py-6 italic">Tidak ada kontrak</div>`
+                    : items.map(c => renderKanbanCard(c, phase)).join('')
+                }
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function renderKanbanCard(c, phase) {
+    const stage = c._stageObj || normalizeContractStageFrontend(c.tahapProgress, c.status, c._cleanSelesai || c.tglSelesai);
+    const days = c._daysRemaining;
+    const cleanVendor = (c.vendor || '').replace(/\r?\n|\r/g, ' ').trim();
+    const shortVendor = cleanVendor.length > 28 ? cleanVendor.substring(0, 26) + '…' : cleanVendor;
+    const shortNo = (c.noKontrak || '-').length > 22 ? (c.noKontrak || '-').substring(0, 20) + '…' : (c.noKontrak || '-');
+
+    // Urgency color
+    let urgencyBorder = 'border-slate-200';
+    let urgencyDot = '';
+    if (days !== null && days !== undefined) {
+        if (days < 0) {
+            urgencyBorder = 'border-rose-300';
+            urgencyDot = '<span class="w-2 h-2 rounded-full bg-rose-500 shrink-0 animate-pulse" title="Expired"></span>';
+        } else if (days <= 30) {
+            urgencyBorder = 'border-amber-300';
+            urgencyDot = '<span class="w-2 h-2 rounded-full bg-amber-500 shrink-0 animate-pulse" title="Kritis"></span>';
+        } else if (days <= 90) {
+            urgencyBorder = 'border-orange-200';
+            urgencyDot = '<span class="w-2 h-2 rounded-full bg-orange-400 shrink-0" title="Perhatian"></span>';
+        }
+    }
+
+    // SLA badge
+    let slaBadge = '';
+    if (c.isOverdueSla) {
+        slaBadge = `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-700 border border-rose-200">⚠ Lewat SLA</span>`;
+    } else if (c._processDays !== null && c._processDays !== undefined) {
+        slaBadge = `<span class="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">${c._processDays}h proses</span>`;
+    }
+
+    // Days remaining badge
+    let daysBadge = '';
+    if (days !== null && days !== undefined) {
+        if (days < 0) {
+            daysBadge = `<span class="text-[9px] font-bold text-rose-700">Lewat ${Math.abs(days)}h</span>`;
+        } else if (days <= 30) {
+            daysBadge = `<span class="text-[9px] font-bold text-amber-800">Sisa ${days}h</span>`;
+        } else if (days <= 90) {
+            daysBadge = `<span class="text-[9px] font-semibold text-orange-700">Sisa ${days}h</span>`;
+        } else {
+            daysBadge = `<span class="text-[9px] font-semibold text-emerald-700">Sisa ${days}h</span>`;
+        }
+    }
+
+    // Compliance badge
+    const isComply = c.status && c.status.toLowerCase() === 'comply';
+
+    return `
+    <div class="bg-white rounded-lg border ${urgencyBorder} p-2.5 shadow-2xs hover:shadow-md hover:border-slate-300 transition-all cursor-pointer group" onclick="openContractDetailModal('${esc(c.noKontrak)}')">
+        <!-- Header: Vendor + urgency dot -->
+        <div class="flex items-start gap-1.5 mb-1.5">
+            ${urgencyDot}
+            <div class="min-w-0 flex-1">
+                <div class="font-bold text-[11px] text-slate-900 leading-tight truncate group-hover:text-sky-700 transition" title="${esc(cleanVendor)}">
+                    ${esc(shortVendor)}
+                </div>
+                <div class="text-[9.5px] font-mono text-slate-400 truncate mt-0.5" title="${esc(c.noKontrak || '-')}">
+                    ${esc(shortNo)}
+                </div>
+            </div>
+            ${isComply
+                ? '<span class="text-[8px] px-1 py-0.5 rounded bg-emerald-50 text-emerald-700 font-bold border border-emerald-200 shrink-0">✓</span>'
+                : '<span class="text-[8px] px-1 py-0.5 rounded bg-rose-50 text-rose-700 font-bold border border-rose-200 shrink-0">✗</span>'
+            }
+        </div>
+
+        <!-- Stage badge -->
+        <div class="flex items-center gap-1.5 mb-1.5 flex-wrap">
+            <span class="px-1.5 py-0.5 rounded text-[9px] font-bold" style="background:${stage.badgeBg}; color:${stage.badgeColor}; border: 1px solid ${stage.badgeColor}30;">
+                ${esc(stage.label)}
+            </span>
+            ${slaBadge}
+        </div>
+
+        <!-- Info: Divisi + Nilai -->
+        <div class="flex items-center justify-between text-[9.5px] text-slate-500 mb-1">
+            <span class="truncate" title="${esc(c.picDivisi || '-')}">${esc(c.picDivisi || '-')}</span>
+            <span class="font-bold text-slate-700 shrink-0 ml-1">${c.nilai ? formatRupiah(c.nilai) : '-'}</span>
+        </div>
+
+        <!-- Footer: Days remaining + link -->
+        <div class="flex items-center justify-between pt-1 border-t border-slate-100">
+            ${daysBadge || '<span class="text-[9px] text-slate-400">-</span>'}
+            ${c.linkDokumen && c.linkDokumen !== '-' && c.linkDokumen.startsWith('http')
+                ? `<a href="${esc(c.linkDokumen)}" target="_blank" rel="noopener noreferrer" class="text-[9px] text-sky-600 hover:underline font-semibold" onclick="event.stopPropagation();">🔗 Drive</a>`
+                : ''
+            }
+        </div>
+    </div>`;
 }
 
 function toggleContractRowExpand(noKontrak) {
