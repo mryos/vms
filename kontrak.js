@@ -315,32 +315,53 @@ function getContractProcessDays(tglPengajuan, tglRealisasi) {
 function normalizeContractStageFrontend(rawStage, rawStatus, tglSelesai) {
     const s = (rawStage || '').toString().trim().toLowerCase();
     
+    // 1. Pemenuhan Dokumen
+    if (s.includes('pemenuhan') || s.includes('kelengkapan dokumen') || s.includes('syarat dokumen') || s.includes('pemenuhan dokumen')) {
+        return { step: 1, key: 'pemenuhan_dokumen', label: '1. Pemenuhan Dokumen', percent: 10, badgeColor: '#0284c7', badgeBg: '#f0f9ff', isRevision: false, isRenvoi: false, isFinal: false };
+    }
+    // 3. Review Legal Ethos (sebelum generic ethos/legal)
+    if (s.includes('review legal ethos') || s.includes('review ethos') || s.includes('legal ethos') || s.includes('review internal')) {
+        return { step: 3, key: 'review_legal_ethos', label: '3. Review Legal Ethos', percent: 30, badgeColor: '#4f46e5', badgeBg: '#eef2ff', isRevision: false, isRenvoi: false, isFinal: false };
+    }
+    // 5. Review Legal Vendor (sebelum generic vendor)
+    if (s.includes('review legal vendor') || s.includes('review legal rekanan') || s.includes('review legal pihak ke')) {
+        return { step: 5, key: 'review_legal_vendor', label: '5. Review Legal Vendor', percent: 50, badgeColor: '#c026d3', badgeBg: '#fdf4ff', isRevision: false, isRenvoi: false, isFinal: false };
+    }
+    // 2. Pengajuan Legal
     if (s.includes('pengajuan') || s.includes('masuk legal') || s.includes('ajukan')) {
-        return { step: 1, key: 'pengajuan', label: '1. Pengajuan ke Legal', percent: 15, badgeColor: '#2563eb', badgeBg: '#eff6ff', isRevision: false, isRenvoi: false, isFinal: false };
+        return { step: 2, key: 'pengajuan', label: '2. Pengajuan Legal', percent: 20, badgeColor: '#2563eb', badgeBg: '#eff6ff', isRevision: false, isRenvoi: false, isFinal: false };
     }
+    // 4. Draft Keluar
     if (s.includes('draft') || s.includes('penyusunan')) {
-        return { step: 2, key: 'draft', label: '2. Draft Keluar', percent: 35, badgeColor: '#4f46e5', badgeBg: '#eef2ff', isRevision: false, isRenvoi: false, isFinal: false };
+        return { step: 4, key: 'draft', label: '4. Draft Keluar', percent: 40, badgeColor: '#7c3aed', badgeBg: '#f5f3ff', isRevision: false, isRenvoi: false, isFinal: false };
     }
-    if (s.includes('paraf vendor') || s.includes('review vendor')) {
-        return { step: 3, key: 'paraf_vendor', label: '3. Paraf Vendor', percent: 50, badgeColor: '#d97706', badgeBg: '#fffbeb', isRevision: false, isRenvoi: false, isFinal: false };
+    // 6. Paraf Vendor
+    if (s.includes('paraf vendor') || s.includes('review vendor') || s.includes('paraf rekanan')) {
+        return { step: 6, key: 'paraf_vendor', label: '6. Paraf Vendor', percent: 60, badgeColor: '#d97706', badgeBg: '#fffbeb', isRevision: false, isRenvoi: false, isFinal: false };
     }
+    // 7. Paraf Ethos
     if (s.includes('paraf ethos') || s.includes('paraf internal') || (s.includes('paraf') && !s.includes('vendor'))) {
-        return { step: 4, key: 'paraf_ethos', label: '4. Paraf Ethos', percent: 65, badgeColor: '#7c3aed', badgeBg: '#f5f3ff', isRevision: false, isRenvoi: false, isFinal: false };
+        return { step: 7, key: 'paraf_ethos', label: '7. Paraf Ethos', percent: 70, badgeColor: '#9333ea', badgeBg: '#faf5ff', isRevision: false, isRenvoi: false, isFinal: false };
     }
+    // 8. Revisi
     if (s.includes('revisi')) {
-        return { step: 5, key: 'revisi', label: '5. Revisi', percent: 60, badgeColor: '#e11d48', badgeBg: '#fff1f2', isRevision: true, isRenvoi: false, isFinal: false };
+        return { step: 8, key: 'revisi', label: '8. Revisi', percent: 65, badgeColor: '#e11d48', badgeBg: '#fff1f2', isRevision: true, isRenvoi: false, isFinal: false };
     }
-    if (s.includes('renvoi')) {
-        return { step: 6, key: 'renvoi', label: '6. Renvoi', percent: 75, badgeColor: '#ea580c', badgeBg: '#fff7ed', isRevision: false, isRenvoi: true, isFinal: false };
-    }
+    // 9. Tanda Tangan
     if (s.includes('tanda tangan') || s.includes('ttd') || s.includes('signing') || s.includes('e-sign')) {
-        return { step: 7, key: 'ttd', label: '7. Tanda Tangan', percent: 85, badgeColor: '#0d9488', badgeBg: '#f0fdfa', isRevision: false, isRenvoi: false, isFinal: false };
+        return { step: 9, key: 'ttd', label: '9. Tanda Tangan', percent: 85, badgeColor: '#0d9488', badgeBg: '#f0fdfa', isRevision: false, isRenvoi: false, isFinal: false };
     }
+    // 10. Aktif Sah
     if (s.includes('aktif') || s.includes('selesai') || s.includes('berlaku') || s.includes('done')) {
-        return { step: 8, key: 'aktif', label: '8. Aktif / Selesai', percent: 100, badgeColor: '#16a34a', badgeBg: '#f0fdf4', isRevision: false, isRenvoi: false, isFinal: true };
+        return { step: 10, key: 'aktif', label: '10. Aktif Sah', percent: 100, badgeColor: '#16a34a', badgeBg: '#f0fdf4', isRevision: false, isRenvoi: false, isFinal: true };
     }
+    // 11. Renvoi (paling bawah sendiri)
+    if (s.includes('renvoi')) {
+        return { step: 11, key: 'renvoi', label: '11. Renvoi', percent: 75, badgeColor: '#ea580c', badgeBg: '#fff7ed', isRevision: false, isRenvoi: true, isFinal: false };
+    }
+    // 12. Expired
     if (s.includes('expired') || s.includes('kadaluarsa') || s.includes('berakhir')) {
-        return { step: 9, key: 'expired', label: '9. Berakhir / Expired', percent: 100, badgeColor: '#64748b', badgeBg: '#f8fafc', isRevision: false, isRenvoi: false, isFinal: true };
+        return { step: 12, key: 'expired', label: '12. Berakhir / Expired', percent: 100, badgeColor: '#64748b', badgeBg: '#f8fafc', isRevision: false, isRenvoi: false, isFinal: true };
     }
 
     if (rawStage && rawStage.toString().trim() !== '') {
@@ -349,10 +370,10 @@ function normalizeContractStageFrontend(rawStage, rawStatus, tglSelesai) {
 
     const isComply = (rawStatus || '').toString().toLowerCase().includes('comply');
     if (isComply) {
-        return { step: 8, key: 'aktif', label: '8. Aktif / Selesai', percent: 100, badgeColor: '#16a34a', badgeBg: '#f0fdf4', isRevision: false, isRenvoi: false, isFinal: true };
+        return { step: 10, key: 'aktif', label: '10. Aktif Sah', percent: 100, badgeColor: '#16a34a', badgeBg: '#f0fdf4', isRevision: false, isRenvoi: false, isFinal: true };
     }
 
-    return { step: 1, key: 'pengajuan', label: '1. Pengajuan ke Legal', percent: 15, badgeColor: '#2563eb', badgeBg: '#eff6ff', isRevision: false, isRenvoi: false, isFinal: false };
+    return { step: 2, key: 'pengajuan', label: '2. Pengajuan Legal', percent: 20, badgeColor: '#2563eb', badgeBg: '#eff6ff', isRevision: false, isRenvoi: false, isFinal: false };
 }
 
 // =====================================================
@@ -430,14 +451,17 @@ function applyAndRender() {
     let countSafe = 0;
 
     const stageCounts = {
+        pemenuhan_dokumen: 0,
         pengajuan: 0,
+        review_legal_ethos: 0,
         draft: 0,
+        review_legal_vendor: 0,
         paraf_vendor: 0,
         paraf_ethos: 0,
         revisi: 0,
-        renvoi: 0,
         ttd: 0,
         aktif: 0,
+        renvoi: 0,
         expired: 0
     };
 
@@ -447,8 +471,8 @@ function applyAndRender() {
         if (isComply) countComply++; else countNotComply++;
 
         const step = c._stageObj.step;
-        if (step === 8) countActive++;
-        if (step >= 1 && step <= 7) countInProgress++;
+        if (step === 10) countActive++;
+        if (step >= 1 && step <= 9) countInProgress++;
         if (c.isOverdueSla) countOverdueSla++;
 
         if (stageCounts[c._stageObj.key] !== undefined) {
@@ -512,8 +536,8 @@ function applyAndRender() {
     if (elSumTot) elSumTot.textContent = totalCount;
     if (elSumAct) elSumAct.textContent = `${countActive} aktif`;
     if (elSumVal) elSumVal.textContent = totalValue > 0 ? formatRupiah(totalValue) : 'Rp 0';
-    if (elSumLegal) elSumLegal.textContent = stageCounts.pengajuan + stageCounts.draft;
-    if (elSumParaf) elSumParaf.textContent = stageCounts.paraf_vendor + stageCounts.paraf_ethos;
+    if (elSumLegal) elSumLegal.textContent = stageCounts.pemenuhan_dokumen + stageCounts.pengajuan + stageCounts.review_legal_ethos + stageCounts.draft;
+    if (elSumParaf) elSumParaf.textContent = stageCounts.review_legal_vendor + stageCounts.paraf_vendor + stageCounts.paraf_ethos;
     if (elSumRev) elSumRev.textContent = stageCounts.revisi + stageCounts.renvoi;
     if (elSumTtd) elSumTtd.textContent = stageCounts.ttd + stageCounts.aktif;
     if (elSumExp) elSumExp.textContent = countExpiring;
@@ -530,14 +554,17 @@ function applyAndRender() {
 
     // Update Stage Badges
     const stageBadgeMap = {
+        'countStagePemenuhanDokumen': stageCounts.pemenuhan_dokumen,
         'countStagePengajuan': stageCounts.pengajuan,
+        'countStageReviewLegalEthos': stageCounts.review_legal_ethos,
         'countStageDraft': stageCounts.draft,
+        'countStageReviewLegalVendor': stageCounts.review_legal_vendor,
         'countStageParafVendor': stageCounts.paraf_vendor,
         'countStageParafEthos': stageCounts.paraf_ethos,
         'countStageRevisi': stageCounts.revisi,
-        'countStageRenvoi': stageCounts.renvoi,
         'countStageTtd': stageCounts.ttd,
-        'countStageAktif': stageCounts.aktif
+        'countStageAktif': stageCounts.aktif,
+        'countStageRenvoi': stageCounts.renvoi
     };
     for (const id in stageBadgeMap) {
         const el = document.getElementById(id);
@@ -642,36 +669,45 @@ function renderContractWorkflowChart(stages) {
     if (!canvas) return;
 
     const labels = [
-        '1. Pengajuan Legal',
-        '2. Draft Keluar',
-        '3. Paraf Vendor',
-        '4. Paraf Ethos',
-        '5. Revisi',
-        '6. Renvoi',
-        '7. Tanda Tangan',
-        '8. Aktif Sah'
+        '1. Pemenuhan Dokumen',
+        '2. Pengajuan Legal',
+        '3. Review Legal Ethos',
+        '4. Draft Keluar',
+        '5. Review Legal Vendor',
+        '6. Paraf Vendor',
+        '7. Paraf Ethos',
+        '8. Revisi',
+        '9. Tanda Tangan',
+        '10. Aktif Sah',
+        '11. Renvoi'
     ];
 
     const dataValues = [
+        stages.pemenuhan_dokumen || 0,
         stages.pengajuan || 0,
+        stages.review_legal_ethos || 0,
         stages.draft || 0,
+        stages.review_legal_vendor || 0,
         stages.paraf_vendor || 0,
         stages.paraf_ethos || 0,
         stages.revisi || 0,
-        stages.renvoi || 0,
         stages.ttd || 0,
-        stages.aktif || 0
+        stages.aktif || 0,
+        stages.renvoi || 0
     ];
 
     const colors = [
-        '#0284c7', // 1. Pengajuan (sky-600)
-        '#2563eb', // 2. Draft (blue-600)
-        '#f59e0b', // 3. Paraf Vendor (amber-500)
-        '#7c3aed', // 4. Paraf Ethos (purple-600)
-        '#e11d48', // 5. Revisi (rose-600)
-        '#ea580c', // 6. Renvoi (orange-600)
-        '#0d9488', // 7. TTD (teal-600)
-        '#059669'  // 8. Aktif (emerald-600)
+        '#0284c7', // 1. Pemenuhan Dokumen (sky-600)
+        '#3b82f6', // 2. Pengajuan Legal (blue-500)
+        '#6366f1', // 3. Review Legal Ethos (indigo-500)
+        '#8b5cf6', // 4. Draft Keluar (violet-500)
+        '#d946ef', // 5. Review Legal Vendor (fuchsia-500)
+        '#f59e0b', // 6. Paraf Vendor (amber-500)
+        '#7c3aed', // 7. Paraf Ethos (purple-600)
+        '#e11d48', // 8. Revisi (rose-600)
+        '#0d9488', // 9. Tanda Tangan (teal-600)
+        '#059669', // 10. Aktif Sah (emerald-600)
+        '#ea580c'  // 11. Renvoi (orange-600 - paling bawah)
     ];
 
     const elRatio = document.getElementById('pipelineActiveRatio');
@@ -955,14 +991,17 @@ function filterContractsByStage(stage) {
 
     const btnIds = {
         'all': 'btnStageAll',
+        'pemenuhan_dokumen': 'btnStagePemenuhanDokumen',
         'pengajuan': 'btnStagePengajuan',
+        'review_legal_ethos': 'btnStageReviewLegalEthos',
         'draft': 'btnStageDraft',
+        'review_legal_vendor': 'btnStageReviewLegalVendor',
         'paraf_vendor': 'btnStageParafVendor',
         'paraf_ethos': 'btnStageParafEthos',
         'revisi': 'btnStageRevisi',
-        'renvoi': 'btnStageRenvoi',
         'ttd': 'btnStageTtd',
-        'aktif': 'btnStageAktif'
+        'aktif': 'btnStageAktif',
+        'renvoi': 'btnStageRenvoi'
     };
 
     for (const key in btnIds) {
@@ -1049,17 +1088,22 @@ function openContractDetailModal(noKontrak) {
     }
 
     const workflowSteps = [
-        { num: 1, key: 'pengajuan', title: '1. Pengajuan' },
-        { num: 2, key: 'draft', title: '2. Draft' },
-        { num: 3, key: 'paraf_vendor', title: '3. Paraf Rekanan' },
-        { num: 4, key: 'paraf_ethos', title: '4. Paraf Ethos' },
-        { num: 5, key: 'revisi', title: '5. Revisi' },
-        { num: 6, key: 'ttd', title: '6. Tanda Tangan' },
-        { num: 7, key: 'aktif', title: '7. Aktif & Sah' }
+        { num: 1, key: 'pemenuhan_dokumen', title: '1. Dokumen' },
+        { num: 2, key: 'pengajuan', title: '2. Pengajuan' },
+        { num: 3, key: 'review_legal_ethos', title: '3. Rev Ethos' },
+        { num: 4, key: 'draft', title: '4. Draft' },
+        { num: 5, key: 'review_legal_vendor', title: '5. Rev Vendor' },
+        { num: 6, key: 'paraf_vendor', title: '6. Paraf Vendor' },
+        { num: 7, key: 'paraf_ethos', title: '7. Paraf Ethos' },
+        { num: 8, key: 'revisi', title: '8. Revisi' },
+        { num: 9, key: 'ttd', title: '9. TTD' },
+        { num: 10, key: 'aktif', title: '10. Aktif Sah' },
+        { num: 11, key: 'renvoi', title: '11. Renvoi' }
     ];
 
     const currentStepNum = stage.step;
-    const hasRevision = stage.isRevision || stage.isRenvoi || (c.statusRevisi && c.statusRevisi.trim() !== '' && c.statusRevisi !== '-');
+    const hasRevision = stage.isRevision || (c.statusRevisi && c.statusRevisi.trim() !== '' && c.statusRevisi !== '-');
+    const hasRenvoi = stage.isRenvoi;
 
     // 1. Sleek Compact Stepper
     let stepperHtml = `
@@ -1085,21 +1129,15 @@ function openContractDetailModal(noKontrak) {
         let isDone = false;
         let isCurrent = false;
 
-        if (st.num < 5) {
-            if (currentStepNum > st.num || currentStepNum >= 7) isDone = true;
+        if (st.num < 10) {
+            if (currentStepNum > st.num || currentStepNum >= 10) isDone = true;
             else if (currentStepNum === st.num) isCurrent = true;
-        } else if (st.num === 5) {
-            if (hasRevision) {
-                if (currentStepNum > 6) isDone = true;
-                else if (currentStepNum === 5 || currentStepNum === 6) isCurrent = true;
-            } else if (currentStepNum >= 7) {
-                isDone = true;
-            }
-        } else if (st.num === 6) {
-            if (currentStepNum > 7) isDone = true;
-            else if (currentStepNum === 7) isCurrent = true;
-        } else if (st.num === 7) {
-            if (currentStepNum >= 8) isDone = true;
+        } else if (st.num === 10) {
+            if (currentStepNum === 10) isCurrent = true;
+            else if (currentStepNum > 10) isDone = true;
+        } else if (st.num === 11) {
+            if (currentStepNum === 11) isCurrent = true;
+            else if (hasRenvoi) isDone = true;
         }
 
         let badgeClass = 'text-slate-400 bg-white border-slate-200';

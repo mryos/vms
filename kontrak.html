@@ -388,11 +388,11 @@ tailwind.config = {
                     <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Siklus Pengerjaan Kontrak</h3>
                     <span class="text-[10.5px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full" id="chartWorkflowBadge">Workflow Tracker</span>
                 </div>
-                <div class="w-full py-1" style="min-height: 190px;">
-                    <canvas id="contractWorkflowChart" style="height: 190px; max-height: 210px; width: 100%;"></canvas>
+                <div class="w-full py-1" style="min-height: 250px;">
+                    <canvas id="contractWorkflowChart" style="height: 250px; max-height: 280px; width: 100%;"></canvas>
                 </div>
                 <div class="text-[10.5px] text-slate-500 pt-2 border-t border-slate-100 flex items-center justify-between flex-wrap gap-2">
-                    <span>💡 Tahapan 1 s/d 8 memantau pengerjaan legalitas vendor.</span>
+                    <span>💡 Tahapan 1 s/d 11 memantau pengerjaan legalitas vendor.</span>
                     <span class="font-bold text-slate-700" id="pipelineActiveRatio">0/0 Aktif</span>
                 </div>
             </div>
@@ -443,14 +443,17 @@ tailwind.config = {
                     <span class="text-slate-400 font-bold shrink-0 min-w-[85px]">Tahap Progress:</span>
                     <div class="flex items-center gap-1 overflow-x-auto no-scrollbar">
                         <button onclick="filterContractsByStage('all')" id="btnStageAll" class="px-2 py-0.5 rounded bg-indigo-600 text-white font-bold transition whitespace-nowrap">Semua</button>
-                        <button onclick="filterContractsByStage('pengajuan')" id="btnStagePengajuan" class="px-2 py-0.5 rounded bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition font-medium whitespace-nowrap">1. Pengajuan (<span id="countStagePengajuan">0</span>)</button>
-                        <button onclick="filterContractsByStage('draft')" id="btnStageDraft" class="px-2 py-0.5 rounded bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition font-medium whitespace-nowrap">2. Draft (<span id="countStageDraft">0</span>)</button>
-                        <button onclick="filterContractsByStage('paraf_vendor')" id="btnStageParafVendor" class="px-2 py-0.5 rounded bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition font-medium whitespace-nowrap">3. Paraf Vendor (<span id="countStageParafVendor">0</span>)</button>
-                        <button onclick="filterContractsByStage('paraf_ethos')" id="btnStageParafEthos" class="px-2 py-0.5 rounded bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition font-medium whitespace-nowrap">4. Paraf Ethos (<span id="countStageParafEthos">0</span>)</button>
-                        <button onclick="filterContractsByStage('revisi')" id="btnStageRevisi" class="px-2 py-0.5 rounded bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition font-medium whitespace-nowrap">5. Revisi (<span id="countStageRevisi">0</span>)</button>
-                        <button onclick="filterContractsByStage('renvoi')" id="btnStageRenvoi" class="px-2 py-0.5 rounded bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition font-medium whitespace-nowrap">6. Renvoi (<span id="countStageRenvoi">0</span>)</button>
-                        <button onclick="filterContractsByStage('ttd')" id="btnStageTtd" class="px-2 py-0.5 rounded bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition font-medium whitespace-nowrap">7. TTD (<span id="countStageTtd">0</span>)</button>
-                        <button onclick="filterContractsByStage('aktif')" id="btnStageAktif" class="px-2 py-0.5 rounded bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition font-medium whitespace-nowrap">8. Aktif (<span id="countStageAktif">0</span>)</button>
+                        <button onclick="filterContractsByStage('pemenuhan_dokumen')" id="btnStagePemenuhanDokumen" class="px-2 py-0.5 rounded bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition font-medium whitespace-nowrap">1. Dokumen (<span id="countStagePemenuhanDokumen">0</span>)</button>
+                        <button onclick="filterContractsByStage('pengajuan')" id="btnStagePengajuan" class="px-2 py-0.5 rounded bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition font-medium whitespace-nowrap">2. Pengajuan (<span id="countStagePengajuan">0</span>)</button>
+                        <button onclick="filterContractsByStage('review_legal_ethos')" id="btnStageReviewLegalEthos" class="px-2 py-0.5 rounded bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition font-medium whitespace-nowrap">3. Review Ethos (<span id="countStageReviewLegalEthos">0</span>)</button>
+                        <button onclick="filterContractsByStage('draft')" id="btnStageDraft" class="px-2 py-0.5 rounded bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition font-medium whitespace-nowrap">4. Draft (<span id="countStageDraft">0</span>)</button>
+                        <button onclick="filterContractsByStage('review_legal_vendor')" id="btnStageReviewLegalVendor" class="px-2 py-0.5 rounded bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition font-medium whitespace-nowrap">5. Review Vendor (<span id="countStageReviewLegalVendor">0</span>)</button>
+                        <button onclick="filterContractsByStage('paraf_vendor')" id="btnStageParafVendor" class="px-2 py-0.5 rounded bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition font-medium whitespace-nowrap">6. Paraf Vendor (<span id="countStageParafVendor">0</span>)</button>
+                        <button onclick="filterContractsByStage('paraf_ethos')" id="btnStageParafEthos" class="px-2 py-0.5 rounded bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition font-medium whitespace-nowrap">7. Paraf Ethos (<span id="countStageParafEthos">0</span>)</button>
+                        <button onclick="filterContractsByStage('revisi')" id="btnStageRevisi" class="px-2 py-0.5 rounded bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition font-medium whitespace-nowrap">8. Revisi (<span id="countStageRevisi">0</span>)</button>
+                        <button onclick="filterContractsByStage('ttd')" id="btnStageTtd" class="px-2 py-0.5 rounded bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition font-medium whitespace-nowrap">9. TTD (<span id="countStageTtd">0</span>)</button>
+                        <button onclick="filterContractsByStage('aktif')" id="btnStageAktif" class="px-2 py-0.5 rounded bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition font-medium whitespace-nowrap">10. Aktif (<span id="countStageAktif">0</span>)</button>
+                        <button onclick="filterContractsByStage('renvoi')" id="btnStageRenvoi" class="px-2 py-0.5 rounded bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition font-medium whitespace-nowrap">11. Renvoi (<span id="countStageRenvoi">0</span>)</button>
                     </div>
                 </div>
             </div>
