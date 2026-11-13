@@ -713,7 +713,11 @@ function renderContractWorkflowChart(stages) {
                     grid: { color: '#f1f5f9' }
                 },
                 y: {
-                    ticks: { font: { size: 10.5, weight: '600', family: '"Plus Jakarta Sans", sans-serif' }, color: '#334155' },
+                    ticks: { 
+                        autoSkip: false,
+                        font: { size: 10.5, weight: '600', family: '"Plus Jakarta Sans", sans-serif' }, 
+                        color: '#334155' 
+                    },
                     grid: { display: false }
                 }
             }
