@@ -738,6 +738,34 @@ function renderContractWorkflowChart(stages) {
             indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
+            layout: {
+                padding: { top: 4, bottom: 6, left: 2, right: 10 }
+            },
+            onClick: (event, elements) => {
+                if (elements && elements.length > 0) {
+                    const idx = elements[0].index;
+                    const stageKeys = [
+                        'pemenuhan_dokumen',
+                        'pengajuan',
+                        'review_legal_ethos',
+                        'draft',
+                        'review_legal_vendor',
+                        'paraf_vendor',
+                        'paraf_ethos',
+                        'revisi',
+                        'ttd',
+                        'aktif',
+                        'expired',
+                        'renvoi'
+                    ];
+                    const selectedStage = stageKeys[idx];
+                    if (selectedStage) {
+                        filterContractsByStage(selectedStage);
+                        const tableSection = document.getElementById('sectionContractsTableCard');
+                        if (tableSection) tableSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }
+            },
             plugins: {
                 legend: { display: false },
                 tooltip: {
@@ -886,37 +914,56 @@ function renderTableRows(list) {
                 </span>
             </td>
 
-            <!-- 8. Aksi (Alur Accordion & Detail Modal) -->
+            <!-- 8. Aksi (Alur PKS) -->
             <td class="text-center whitespace-nowrap">
-                <div class="inline-flex items-center gap-1">
-                    <button onclick="toggleContractRowExpand('${esc(c.noKontrak)}')" id="btnExpand_${esc(c.noKontrak)}" class="px-2 py-1 rounded-md bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-[10.5px] border border-indigo-200 shadow-2xs transition cursor-pointer inline-flex items-center gap-0.5" title="Buka alur progres pengerjaan PKS ini langsung di tabel">
-                        <span>Alur</span>
-                        <span class="expand-arrow text-[9px]">▼</span>
-                    </button>
-                    <button onclick="openContractDetailModal('${esc(c.noKontrak)}')" class="px-2 py-1 rounded-md bg-white hover:bg-slate-50 text-slate-700 hover:text-sky-700 font-bold text-[10.5px] border border-slate-200 shadow-2xs hover:border-slate-300 transition cursor-pointer" title="Buka Detail 16 Kolom Lengkap">
-                        Detail
-                    </button>
-                </div>
+                <button onclick="toggleContractRowExpand('${esc(c.noKontrak)}')" id="btnExpand_${esc(c.noKontrak)}" class="px-2.5 py-1 rounded-md bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-[11px] border border-indigo-200 shadow-2xs transition cursor-pointer inline-flex items-center gap-1" title="Buka alur progres pengerjaan PKS ini">
+                    <span>Alur</span>
+                    <span class="expand-arrow text-[9px]">▼</span>
+                </button>
             </td>
         </tr>
-        <!-- Expandable Inline Stepper Row -->
-        <tr id="expandRow_${esc(c.noKontrak)}" class="bg-indigo-50/40 border-y border-indigo-100/60" style="display: none;">
+        <!-- Expandable Inline Stepper & Context Row -->
+        <tr id="expandRow_${esc(c.noKontrak)}" class="bg-indigo-50/30 border-y border-indigo-100/70" style="display: none;">
             <td colspan="8" class="p-3">
-                <div class="bg-white border border-indigo-100 rounded-xl p-3 shadow-xs">
-                    <div class="flex items-center justify-between mb-2 pb-1.5 border-b border-slate-100 flex-wrap gap-2">
+                <div class="bg-white border border-indigo-100 rounded-xl p-3.5 shadow-xs">
+                    <!-- Header Alur -->
+                    <div class="flex items-center justify-between mb-2.5 pb-2 border-b border-slate-100 flex-wrap gap-2">
                         <div class="flex items-center gap-2 flex-wrap">
-                            <span class="text-xs font-bold text-slate-800">Alur Pengerjaan: #${esc(c.noKontrak)} - ${esc(cleanVendor)}</span>
+                            <span class="text-xs font-bold text-slate-900">Alur Pengerjaan: #${esc(c.noKontrak)} - ${esc(cleanVendor)}</span>
                             <span class="px-2 py-0.5 rounded-full text-[10px] font-bold" style="background:${stage.badgeBg}; color:${stage.badgeColor}; border:1px solid ${stage.badgeColor}35;">
                                 ${esc(stage.label)} (${stage.percent}% Selesai)
                             </span>
                         </div>
-                        <div class="text-[11px] text-slate-500 font-medium">
-                            Target SLA: <strong class="text-slate-800">${esc(c.targetSelesai || '-')}</strong> · Realisasi: <strong class="text-slate-800">${esc(c.tglRealisasi || '-')}</strong>
+                        <div class="text-[11px] text-slate-500 font-medium flex items-center gap-2 flex-wrap">
+                            <span>Target SLA: <strong class="text-slate-800">${esc(c.targetSelesai || '-')}</strong></span>
+                            <span>·</span>
+                            <span>Realisasi TTD: <strong class="text-slate-800">${esc(c.tglRealisasi || '-')}</strong></span>
+                            ${c.linkDokumen && c.linkDokumen !== '-' && c.linkDokumen.startsWith('http') ? `<span>·</span> <a href="${esc(c.linkDokumen)}" target="_blank" rel="noopener noreferrer" class="text-sky-600 hover:underline font-bold inline-flex items-center gap-0.5"><span>🔗</span><span>Buka Drive</span></a>` : ''}
                         </div>
                     </div>
-                    <!-- Horizontal Mini Stepper 12 Stages -->
-                    <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-1 text-[10px]">
+
+                    <!-- 12-Step Horizontal Milestone Tracker -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-1 text-[10px] mb-2.5">
                         ${renderInlineWorkflowSteps(c, stage)}
+                    </div>
+
+                    <!-- Ringkasan Info Tambahan (Ruang Lingkup, PIC, Keterangan, Revisi) -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-[11px]">
+                        <div class="bg-slate-50 p-2 rounded-lg border border-slate-100">
+                            <span class="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">Ruang Lingkup &amp; PIC</span>
+                            <div class="font-bold text-slate-800 mt-0.5 truncate" title="${esc(c.jenisPekerjaan || '-')}">${esc(c.jenisPekerjaan || '-')}</div>
+                            <div class="text-slate-500 text-[10.5px]">Divisi/PIC: <span class="font-semibold text-slate-700">${esc(c.picDivisi || '-')}</span></div>
+                        </div>
+                        <div class="bg-slate-50 p-2 rounded-lg border border-slate-100">
+                            <span class="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">Durasi &amp; Status SLA</span>
+                            <div class="font-bold text-slate-800 mt-0.5">${c._processDays !== null ? `${c._processDays} hari kalender` : '-'}</div>
+                            <div class="text-[10.5px] ${c.isOverdueSla ? 'text-rose-600 font-bold' : 'text-emerald-600 font-semibold'}">${c.slaStatus || (c.isOverdueSla ? '⚠️ Lewat SLA' : '✓ Sesuai SLA')}</div>
+                        </div>
+                        <div class="bg-slate-50 p-2 rounded-lg border border-slate-100">
+                            <span class="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">Revisi &amp; Catatan</span>
+                            <div class="font-medium text-slate-700 mt-0.5 truncate" title="${esc(c.statusRevisi || c.keterangan || '-')}">${esc(c.statusRevisi || c.keterangan || 'Tidak ada catatan revisi')}</div>
+                            <div class="text-[10px] text-slate-400">Kelengkapan: ${esc(c.kelengkapan || 'Lengkap')}</div>
+                        </div>
                     </div>
                 </div>
             </td>
@@ -1082,6 +1129,31 @@ function toggleContractRowExpand(noKontrak) {
         btn.classList.toggle('text-white', isHidden);
         btn.classList.toggle('bg-indigo-50', !isHidden);
         btn.classList.toggle('text-indigo-700', !isHidden);
+    }
+}
+
+let allRowsExpanded = false;
+function toggleExpandAllContractRows() {
+    allRowsExpanded = !allRowsExpanded;
+    const expandRows = document.querySelectorAll('[id^="expandRow_"]');
+    const expandBtns = document.querySelectorAll('[id^="btnExpand_"]');
+    const toggleAllBtn = document.getElementById('btnToggleExpandAll');
+
+    expandRows.forEach(row => {
+        row.style.display = allRowsExpanded ? 'table-row' : 'none';
+    });
+
+    expandBtns.forEach(btn => {
+        const arrow = btn.querySelector('.expand-arrow');
+        if (arrow) arrow.textContent = allRowsExpanded ? '▲' : '▼';
+        btn.classList.toggle('bg-indigo-600', allRowsExpanded);
+        btn.classList.toggle('text-white', allRowsExpanded);
+        btn.classList.toggle('bg-indigo-50', !allRowsExpanded);
+        btn.classList.toggle('text-indigo-700', !allRowsExpanded);
+    });
+
+    if (toggleAllBtn) {
+        toggleAllBtn.innerHTML = allRowsExpanded ? '<span>▲ Tutup Semua Alur</span>' : '<span>⚡ Buka Semua Alur</span>';
     }
 }
 
