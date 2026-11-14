@@ -569,34 +569,42 @@ function applyAndRender() {
     if (elSumTtd) elSumTtd.textContent = stageCounts.ttd + stageCounts.aktif;
     if (elSumExp) elSumExp.textContent = countExpiring;
 
-    // Update Expiry Badges
-    const elCountExpired = document.getElementById('countExpExpired');
-    const elCountCritical = document.getElementById('countExpCritical');
-    const elCountWarning = document.getElementById('countExpWarning');
-    const elCountSafe = document.getElementById('countExpSafe');
-    if (elCountExpired) elCountExpired.textContent = countExpired;
-    if (elCountCritical) elCountCritical.textContent = countCritical;
-    if (elCountWarning) elCountWarning.textContent = countWarning;
-    if (elCountSafe) elCountSafe.textContent = countSafe;
+    // Update Expiry Dropdown Options with counts
+    const expirySelect = document.getElementById('slicerExpirySelect');
+    if (expirySelect) {
+        const expiryOpts = expirySelect.options;
+        for (let i = 0; i < expiryOpts.length; i++) {
+            const val = expiryOpts[i].value;
+            if (val === 'expired') expiryOpts[i].textContent = `🔴 Expired (${countExpired})`;
+            else if (val === 'critical') expiryOpts[i].textContent = `🟡 Kritis ≤30h (${countCritical})`;
+            else if (val === 'warning') expiryOpts[i].textContent = `🟠 Perhatian 31-90h (${countWarning})`;
+            else if (val === 'safe') expiryOpts[i].textContent = `🟢 Aman (${countSafe})`;
+        }
+    }
 
-    // Update Stage Badges
-    const stageBadgeMap = {
-        'countStagePemenuhanDokumen': stageCounts.pemenuhan_dokumen,
-        'countStagePengajuan': stageCounts.pengajuan,
-        'countStageReviewLegalEthos': stageCounts.review_legal_ethos,
-        'countStageDraft': stageCounts.draft,
-        'countStageReviewLegalVendor': stageCounts.review_legal_vendor,
-        'countStageParafVendor': stageCounts.paraf_vendor,
-        'countStageParafEthos': stageCounts.paraf_ethos,
-        'countStageRevisi': stageCounts.revisi,
-        'countStageTtd': stageCounts.ttd,
-        'countStageAktif': stageCounts.aktif,
-        'countStageExpired': stageCounts.expired,
-        'countStageRenvoi': stageCounts.renvoi
-    };
-    for (const id in stageBadgeMap) {
-        const el = document.getElementById(id);
-        if (el) el.textContent = stageBadgeMap[id];
+    // Update Stage Dropdown Options with counts
+    const stageSelect = document.getElementById('slicerStageSelect');
+    if (stageSelect) {
+        const stageOptMap = {
+            'pemenuhan_dokumen': `1. Dokumen (${stageCounts.pemenuhan_dokumen})`,
+            'pengajuan': `2. Pengajuan (${stageCounts.pengajuan})`,
+            'review_legal_ethos': `3. Review Ethos (${stageCounts.review_legal_ethos})`,
+            'draft': `4. Draft (${stageCounts.draft})`,
+            'review_legal_vendor': `5. Review Vendor (${stageCounts.review_legal_vendor})`,
+            'paraf_vendor': `6. Paraf Vendor (${stageCounts.paraf_vendor})`,
+            'paraf_ethos': `7. Paraf Ethos (${stageCounts.paraf_ethos})`,
+            'revisi': `8. Revisi (${stageCounts.revisi})`,
+            'ttd': `9. TTD (${stageCounts.ttd})`,
+            'aktif': `10. Aktif (${stageCounts.aktif})`,
+            'expired': `11. Expired (${stageCounts.expired})`,
+            'renvoi': `12. Renvoi (${stageCounts.renvoi})`
+        };
+        const stageOpts = stageSelect.options;
+        for (let i = 0; i < stageOpts.length; i++) {
+            if (stageOptMap[stageOpts[i].value]) {
+                stageOpts[i].textContent = stageOptMap[stageOpts[i].value];
+            }
+        }
     }
 
     // Hitung Executive Insights: Lead Time & Top Bottleneck
@@ -1693,65 +1701,21 @@ function toggleExpandAllContractRows() {
 }
 
 // =====================================================
-// QUICK FILTER PILLS (EXPIRY & WORKFLOW STAGE)
+// QUICK FILTER DROPDOWNS (EXPIRY & WORKFLOW STAGE)
 // =====================================================
 function filterContractsByExpiry(filter) {
     contractExpiryFilter = filter;
     contractCurrentPage = 1;
-    
-    const btnIds = {
-        'all': 'btnExpAll',
-        'expired': 'btnExpExpired',
-        'critical': 'btnExpCritical',
-        'warning': 'btnExpWarning',
-        'safe': 'btnExpSafe'
-    };
-    
-    for (const key in btnIds) {
-        const btn = document.getElementById(btnIds[key]);
-        if (btn) {
-            if (key === filter) {
-                btn.className = 'px-2.5 py-1 rounded-lg bg-ethos-600 text-white text-[11px] font-bold transition shadow-2xs cursor-pointer whitespace-nowrap';
-            } else {
-                btn.className = 'px-2.5 py-1 rounded-lg bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition text-[11px] font-semibold cursor-pointer whitespace-nowrap';
-            }
-        }
-    }
-    
+    const sel = document.getElementById('slicerExpirySelect');
+    if (sel) sel.value = filter;
     applyAndRender();
 }
 
 function filterContractsByStage(stage) {
     contractStageFilter = stage;
     contractCurrentPage = 1;
-
-    const btnIds = {
-        'all': 'btnStageAll',
-        'pemenuhan_dokumen': 'btnStagePemenuhanDokumen',
-        'pengajuan': 'btnStagePengajuan',
-        'review_legal_ethos': 'btnStageReviewLegalEthos',
-        'draft': 'btnStageDraft',
-        'review_legal_vendor': 'btnStageReviewLegalVendor',
-        'paraf_vendor': 'btnStageParafVendor',
-        'paraf_ethos': 'btnStageParafEthos',
-        'revisi': 'btnStageRevisi',
-        'ttd': 'btnStageTtd',
-        'aktif': 'btnStageAktif',
-        'expired': 'btnStageExpired',
-        'renvoi': 'btnStageRenvoi'
-    };
-
-    for (const key in btnIds) {
-        const btn = document.getElementById(btnIds[key]);
-        if (btn) {
-            if (key === stage) {
-                btn.className = 'px-2.5 py-1 rounded-lg bg-indigo-600 text-white text-[11px] font-bold transition shadow-2xs cursor-pointer whitespace-nowrap';
-            } else {
-                btn.className = 'px-2.5 py-1 rounded-lg bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition text-[11px] font-semibold cursor-pointer whitespace-nowrap';
-            }
-        }
-    }
-
+    const sel = document.getElementById('slicerStageSelect');
+    if (sel) sel.value = stage;
     applyAndRender();
 }
 
@@ -1766,12 +1730,14 @@ function resetAllContractFilters() {
     if (catSelect) catSelect.value = 'all';
     const compSelect = document.getElementById('slicerComplianceSelect');
     if (compSelect) compSelect.value = 'all';
+    const expSelect = document.getElementById('slicerExpirySelect');
+    if (expSelect) expSelect.value = 'all';
+    const stgSelect = document.getElementById('slicerStageSelect');
+    if (stgSelect) stgSelect.value = 'all';
     const searchInput = document.getElementById('contractSearchInput');
     if (searchInput) searchInput.value = '';
 
-    filterContractsByExpiry('all');
-    filterContractsByStage('all');
-
+    applyAndRender();
     showToast('Filter telah direset ke kondisi awal.', 'info');
 }
 

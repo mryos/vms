@@ -451,7 +451,7 @@ tailwind.config = {
 
         <!-- ========== 4. COMPACT FILTER TOOLBAR ========== -->
         <div class="card-executive p-3 mb-3.5" id="sectionFilterControls">
-            <div class="flex flex-wrap items-center gap-2 mb-2.5">
+            <div class="flex flex-wrap items-center gap-2">
                 <div class="relative flex-1 min-w-[200px]">
                     <svg class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                     <input type="text" id="contractSearchInput" placeholder="Cari No. Kontrak, Vendor..." class="w-full text-xs pl-8 pr-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-sky-500 shadow-2xs">
@@ -465,6 +465,30 @@ tailwind.config = {
                     <option value="all">Semua Kepatuhan</option>
                     <option value="comply">Comply</option>
                     <option value="not-comply">Not Comply</option>
+                </select>
+
+                <select id="slicerExpirySelect" class="select-modern text-xs" title="Filter Masa Berlaku" onchange="filterContractsByExpiry(this.value)">
+                    <option value="all">Semua Masa Berlaku</option>
+                    <option value="expired">🔴 Expired (0)</option>
+                    <option value="critical">🟡 Kritis ≤30h (0)</option>
+                    <option value="warning">🟠 Perhatian 31-90h (0)</option>
+                    <option value="safe">🟢 Aman (0)</option>
+                </select>
+
+                <select id="slicerStageSelect" class="select-modern text-xs" title="Filter Tahap Progress" onchange="filterContractsByStage(this.value)">
+                    <option value="all">Semua Tahap</option>
+                    <option value="pemenuhan_dokumen">1. Dokumen (0)</option>
+                    <option value="pengajuan">2. Pengajuan (0)</option>
+                    <option value="review_legal_ethos">3. Review Ethos (0)</option>
+                    <option value="draft">4. Draft (0)</option>
+                    <option value="review_legal_vendor">5. Review Vendor (0)</option>
+                    <option value="paraf_vendor">6. Paraf Vendor (0)</option>
+                    <option value="paraf_ethos">7. Paraf Ethos (0)</option>
+                    <option value="revisi">8. Revisi (0)</option>
+                    <option value="ttd">9. TTD (0)</option>
+                    <option value="aktif">10. Aktif (0)</option>
+                    <option value="expired">11. Expired (0)</option>
+                    <option value="renvoi">12. Renvoi (0)</option>
                 </select>
 
                 <button id="slicerResetBtn" onclick="resetAllContractFilters()" class="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-600 shadow-2xs hover:bg-slate-50 transition cursor-pointer whitespace-nowrap">
@@ -483,39 +507,6 @@ tailwind.config = {
                 <span class="inline-flex items-center px-2 py-1 rounded-lg bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 whitespace-nowrap" id="contractBadgeCount">
                     0 Kontrak
                 </span>
-            </div>
-
-            <!-- Pill Filters Compact -->
-            <div class="space-y-1.5 bg-slate-50/70 p-2 rounded-lg border border-slate-100 text-[11px]">
-                <div class="flex items-center gap-1.5" id="contractExpiryFilters">
-                    <span class="text-slate-400 font-bold shrink-0 min-w-[85px]">Masa Berlaku:</span>
-                    <div class="flex items-center gap-1 overflow-x-auto no-scrollbar">
-                        <button onclick="filterContractsByExpiry('all')" id="btnExpAll" class="px-2 py-0.5 rounded bg-sky-600 text-white font-bold transition whitespace-nowrap">Semua</button>
-                        <button onclick="filterContractsByExpiry('expired')" id="btnExpExpired" class="px-2 py-0.5 rounded bg-white text-slate-700 hover:bg-rose-50 hover:text-rose-700 border border-slate-200 transition font-medium whitespace-nowrap">🔴 Expired (<span id="countExpExpired">0</span>)</button>
-                        <button onclick="filterContractsByExpiry('critical')" id="btnExpCritical" class="px-2 py-0.5 rounded bg-white text-slate-700 hover:bg-amber-50 hover:text-amber-800 border border-slate-200 transition font-medium whitespace-nowrap">🟡 Kritis ≤30h (<span id="countExpCritical">0</span>)</button>
-                        <button onclick="filterContractsByExpiry('warning')" id="btnExpWarning" class="px-2 py-0.5 rounded bg-white text-slate-700 hover:bg-orange-50 hover:text-orange-700 border border-slate-200 transition font-medium whitespace-nowrap">🟠 Perhatian 31-90h (<span id="countExpWarning">0</span>)</button>
-                        <button onclick="filterContractsByExpiry('safe')" id="btnExpSafe" class="px-2 py-0.5 rounded bg-white text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 border border-slate-200 transition font-medium whitespace-nowrap">🟢 Aman (<span id="countExpSafe">0</span>)</button>
-                    </div>
-                </div>
-
-                <div class="flex items-center gap-1.5" id="contractStageFilters">
-                    <span class="text-slate-400 font-bold shrink-0 min-w-[85px]">Tahap Progress:</span>
-                    <div class="flex items-center gap-1 overflow-x-auto no-scrollbar">
-                        <button onclick="filterContractsByStage('all')" id="btnStageAll" class="px-2 py-0.5 rounded bg-indigo-600 text-white font-bold transition whitespace-nowrap">Semua</button>
-                        <button onclick="filterContractsByStage('pemenuhan_dokumen')" id="btnStagePemenuhanDokumen" class="px-2 py-0.5 rounded bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition font-medium whitespace-nowrap">1. Dokumen (<span id="countStagePemenuhanDokumen">0</span>)</button>
-                        <button onclick="filterContractsByStage('pengajuan')" id="btnStagePengajuan" class="px-2 py-0.5 rounded bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition font-medium whitespace-nowrap">2. Pengajuan (<span id="countStagePengajuan">0</span>)</button>
-                        <button onclick="filterContractsByStage('review_legal_ethos')" id="btnStageReviewLegalEthos" class="px-2 py-0.5 rounded bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition font-medium whitespace-nowrap">3. Review Ethos (<span id="countStageReviewLegalEthos">0</span>)</button>
-                        <button onclick="filterContractsByStage('draft')" id="btnStageDraft" class="px-2 py-0.5 rounded bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition font-medium whitespace-nowrap">4. Draft (<span id="countStageDraft">0</span>)</button>
-                        <button onclick="filterContractsByStage('review_legal_vendor')" id="btnStageReviewLegalVendor" class="px-2 py-0.5 rounded bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition font-medium whitespace-nowrap">5. Review Vendor (<span id="countStageReviewLegalVendor">0</span>)</button>
-                        <button onclick="filterContractsByStage('paraf_vendor')" id="btnStageParafVendor" class="px-2 py-0.5 rounded bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition font-medium whitespace-nowrap">6. Paraf Vendor (<span id="countStageParafVendor">0</span>)</button>
-                        <button onclick="filterContractsByStage('paraf_ethos')" id="btnStageParafEthos" class="px-2 py-0.5 rounded bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition font-medium whitespace-nowrap">7. Paraf Ethos (<span id="countStageParafEthos">0</span>)</button>
-                        <button onclick="filterContractsByStage('revisi')" id="btnStageRevisi" class="px-2 py-0.5 rounded bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition font-medium whitespace-nowrap">8. Revisi (<span id="countStageRevisi">0</span>)</button>
-                        <button onclick="filterContractsByStage('ttd')" id="btnStageTtd" class="px-2 py-0.5 rounded bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition font-medium whitespace-nowrap">9. TTD (<span id="countStageTtd">0</span>)</button>
-                        <button onclick="filterContractsByStage('aktif')" id="btnStageAktif" class="px-2 py-0.5 rounded bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition font-medium whitespace-nowrap">10. Aktif (<span id="countStageAktif">0</span>)</button>
-                        <button onclick="filterContractsByStage('expired')" id="btnStageExpired" class="px-2 py-0.5 rounded bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition font-medium whitespace-nowrap">11. Expired (<span id="countStageExpired">0</span>)</button>
-                        <button onclick="filterContractsByStage('renvoi')" id="btnStageRenvoi" class="px-2 py-0.5 rounded bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition font-medium whitespace-nowrap">12. Renvoi (<span id="countStageRenvoi">0</span>)</button>
-                    </div>
-                </div>
             </div>
         </div>
 
@@ -715,7 +706,7 @@ tailwind.config = {
     <div class="toast-box" id="toastBox"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-    <script src="kontrak.js?v=20261114-insights"></script>
+    <script src="kontrak.js?v=20261114-dropdown"></script>
     <!-- AI Copilot Chatbot (OpenRouter) -->
     <script src="assets/ai-copilot.js" defer></script>
 </body>
