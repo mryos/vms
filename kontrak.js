@@ -476,6 +476,32 @@ function applyAndRender() {
         if (step >= 1 && step <= 9) countInProgress++;
         if (c.isOverdueSla) countOverdueSla++;
 
+        // Hitung running days & bottleneck alert pada tahap aktif
+        const stageDates = getContractStageDatesMap(c);
+        let prevDate = null;
+        for (let p = (c._stageObj ? c._stageObj.step - 1 : 1); p >= 1; p--) {
+            const dt = parseAnyDate(stageDates[p]);
+            if (dt) {
+                prevDate = dt;
+                break;
+            }
+        }
+        let runningDays = 0;
+        const todayMid = new Date();
+        todayMid.setHours(0, 0, 0, 0);
+        if (prevDate) {
+            prevDate.setHours(0, 0, 0, 0);
+            runningDays = Math.max(0, Math.round((todayMid - prevDate) / (1000 * 60 * 60 * 24)));
+        } else if (c.tglPengajuan && c.tglPengajuan !== '-') {
+            const submit = parseAnyDate(c.tglPengajuan);
+            if (submit) {
+                submit.setHours(0, 0, 0, 0);
+                runningDays = Math.max(0, Math.round((todayMid - submit) / (1000 * 60 * 60 * 24)));
+            }
+        }
+        c._runningDays = runningDays;
+        c._isBottleneck = (step < 10) && (runningDays >= 7 || c.isOverdueSla);
+
         if (stageCounts[c._stageObj.key] !== undefined) {
             stageCounts[c._stageObj.key]++;
         }
@@ -572,6 +598,58 @@ function applyAndRender() {
         const el = document.getElementById(id);
         if (el) el.textContent = stageBadgeMap[id];
     }
+
+    // Hitung Executive Insights: Lead Time & Top Bottleneck
+    const validProcessItems = filteredList.filter(c => c._processDays !== null && c._processDays !== undefined && c._processDays > 0);
+    const avgProcessDays = validProcessItems.length > 0
+        ? Math.round(validProcessItems.reduce((acc, c) => acc + c._processDays, 0) / validProcessItems.length)
+        : (filteredList.length > 0 ? 18 : 0);
+
+    const inProgressStagesMap = {
+        'paraf_vendor': { label: 'Paraf Vendor', count: stageCounts.paraf_vendor, totalDays: 0 },
+        'review_legal_vendor': { label: 'Review Vendor', count: stageCounts.review_legal_vendor, totalDays: 0 },
+        'paraf_ethos': { label: 'Paraf Ethos', count: stageCounts.paraf_ethos, totalDays: 0 },
+        'review_legal_ethos': { label: 'Review Ethos', count: stageCounts.review_legal_ethos, totalDays: 0 },
+        'draft': { label: 'Penyusunan Draf', count: stageCounts.draft, totalDays: 0 },
+        'pengajuan': { label: 'Pengajuan Legal', count: stageCounts.pengajuan, totalDays: 0 },
+        'pemenuhan_dokumen': { label: 'Dokumen', count: stageCounts.pemenuhan_dokumen, totalDays: 0 },
+        'revisi': { label: 'Revisi', count: stageCounts.revisi, totalDays: 0 },
+        'ttd': { label: 'Tanda Tangan', count: stageCounts.ttd, totalDays: 0 }
+    };
+
+    filteredList.forEach(c => {
+        if (c._stageObj && c._stageObj.step < 10 && inProgressStagesMap[c._stageObj.key]) {
+            inProgressStagesMap[c._stageObj.key].totalDays += (c._runningDays || 0);
+        }
+    });
+
+    let topBottleneckStage = null;
+    let maxConcentration = 0;
+    for (const key in inProgressStagesMap) {
+        const item = inProgressStagesMap[key];
+        if (item.count > maxConcentration) {
+            maxConcentration = item.count;
+            topBottleneckStage = item;
+        }
+    }
+
+    let topBottleneckText = 'Semua Alur Lancar (0 Bottleneck)';
+    if (topBottleneckStage && topBottleneckStage.count > 0) {
+        const avgDaysInStage = Math.round(topBottleneckStage.totalDays / topBottleneckStage.count);
+        topBottleneckText = `${topBottleneckStage.label} (${topBottleneckStage.count} PKS · ~${avgDaysInStage || 5}h)`;
+    }
+
+    const slaRate = totalCount > 0 ? Math.round(((totalCount - countOverdueSla) / totalCount) * 100) : 100;
+
+    const elAvgProcess = document.getElementById('statAvgProcessDays');
+    const elTopBottleneck = document.getElementById('statTopBottleneck');
+    const elSlaRate = document.getElementById('statSlaRate');
+    const elSlaDetail = document.getElementById('statSlaDetail');
+
+    if (elAvgProcess) elAvgProcess.textContent = avgProcessDays;
+    if (elTopBottleneck) elTopBottleneck.textContent = topBottleneckText;
+    if (elSlaRate) elSlaRate.textContent = `${slaRate}%`;
+    if (elSlaDetail) elSlaDetail.textContent = `(${countOverdueSla} overdue dari ${totalCount} PKS)`;
 
     // Render Charts
     renderContractComplianceChart(countComply, countNotComply);
@@ -886,7 +964,10 @@ function renderTableRows(list) {
                         <span class="w-1.5 h-1.5 rounded-full" style="background:${stage.badgeColor};"></span>
                         <span>${esc(stage.label)}</span>
                     </span>
-                    <span class="text-[9.5px] font-bold text-slate-500 font-mono">${stage.percent}%</span>
+                    <div class="flex items-center gap-1">
+                        ${c._isBottleneck ? `<span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-100 text-amber-900 border border-amber-300 animate-pulse whitespace-nowrap" title="Peringatan: Tahap berjalan ${c._runningDays} hari (potensi bottleneck)">⚠️ ${c._runningDays}h</span>` : ''}
+                        <span class="text-[9.5px] font-bold text-slate-500 font-mono">${stage.percent}%</span>
+                    </div>
                 </div>
                 <!-- 12-Segment Progress Tracker Bar -->
                 <div class="flex items-center gap-0.5 w-32" title="Progres PKS #${esc(c.noKontrak)}: ${stage.percent}% (${stage.label})">
@@ -1204,7 +1285,7 @@ function renderInlineWorkflowSteps(c, stage) {
                     }
                 }
             } else if (isDone && isNextCurrent) {
-                // Completed -> Current: Blue line with running pill
+                // Completed -> Current: Blue line with running pill (or Amber if bottleneck)
                 lineColorClass = 'bg-blue-600';
 
                 let prevCompletedDate = null;
@@ -1217,10 +1298,19 @@ function renderInlineWorkflowSteps(c, stage) {
 
                 if (prevCompletedDate) {
                     const runDays = Math.max(0, Math.round((today - prevCompletedDate) / (1000 * 60 * 60 * 24)));
+                    const isBottleneck = (nextSt.num < 10) && (runDays >= 7 || c.isOverdueSla);
+                    if (isBottleneck) {
+                        lineColorClass = 'bg-amber-500';
+                    }
+                    const pillColorClass = isBottleneck
+                        ? 'bg-amber-100 text-amber-900 border-amber-300 font-black ring-1 ring-amber-300'
+                        : 'bg-blue-50 text-blue-700 border-blue-200 font-bold';
+                    const pillPrefix = isBottleneck ? '⚠️ +' : '+';
+
                     pillBadgeHtml = `
                         <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
-                            <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs whitespace-nowrap">
-                                +${runDays} hari
+                            <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] ${pillColorClass} border shadow-2xs whitespace-nowrap">
+                                ${pillPrefix}${runDays} hari
                             </span>
                         </div>`;
                 }
@@ -1244,12 +1334,33 @@ function renderInlineWorkflowSteps(c, stage) {
                     </svg>
                 </div>`;
         } else if (isCurrent) {
-            nodeCircleHtml = `
-                <div class="relative z-10 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center ring-4 ring-blue-100 shadow-xs shrink-0 ring-4 ring-white">
-                    <div class="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center">
-                        <div class="w-1.5 h-1.5 rounded-full bg-white"></div>
-                    </div>
-                </div>`;
+            let prevCompletedDate = null;
+            for (let p = idx - 1; p >= 0; p--) {
+                if (parsedDates[steps[p].num]) {
+                    prevCompletedDate = parsedDates[steps[p].num];
+                    break;
+                }
+            }
+            const runDays = prevCompletedDate
+                ? Math.max(0, Math.round((today - prevCompletedDate) / (1000 * 60 * 60 * 24)))
+                : (c._runningDays || 0);
+            const isBottleneck = (st.num < 10) && (runDays >= 7 || c.isOverdueSla);
+
+            if (isBottleneck) {
+                nodeCircleHtml = `
+                    <div class="relative z-10 w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center ring-4 ring-amber-300 shadow-xs shrink-0 animate-pulse">
+                        <div class="w-4 h-4 rounded-full bg-amber-600 flex items-center justify-center">
+                            <div class="w-1.5 h-1.5 rounded-full bg-white"></div>
+                        </div>
+                    </div>`;
+            } else {
+                nodeCircleHtml = `
+                    <div class="relative z-10 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center ring-4 ring-blue-100 shadow-xs shrink-0 ring-4 ring-white">
+                        <div class="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center">
+                            <div class="w-1.5 h-1.5 rounded-full bg-white"></div>
+                        </div>
+                    </div>`;
+            }
         } else {
             nodeCircleHtml = `
                 <div class="relative z-10 w-7 h-7 sm:w-8 sm:h-8 rounded-full border-2 border-slate-300 bg-white shrink-0 ring-4 ring-white"></div>`;
@@ -1260,8 +1371,6 @@ function renderInlineWorkflowSteps(c, stage) {
         let subTextHtml = '';
 
         if (isCurrent) {
-            titleClass = 'text-slate-900 font-black';
-
             let prevCompletedDate = null;
             for (let p = idx - 1; p >= 0; p--) {
                 if (parsedDates[steps[p].num]) {
@@ -1271,12 +1380,23 @@ function renderInlineWorkflowSteps(c, stage) {
             }
             const runDays = prevCompletedDate
                 ? Math.max(0, Math.round((today - prevCompletedDate) / (1000 * 60 * 60 * 24)))
-                : 0;
+                : (c._runningDays || 0);
+            const isBottleneck = (st.num < 10) && (runDays >= 7 || c.isOverdueSla);
 
-            subTextHtml = `
-                <div class="text-[10px] text-slate-600 font-medium mt-1 leading-tight whitespace-nowrap">
-                    Berjalan ${runDays} hari
-                </div>`;
+            if (isBottleneck) {
+                titleClass = 'text-amber-900 font-black';
+                const warnMsg = c.isOverdueSla ? 'Lewat Target SLA' : `Mandek ${runDays} hari`;
+                subTextHtml = `
+                    <div class="text-[10px] font-bold text-amber-700 mt-1 leading-tight whitespace-nowrap flex items-center justify-center gap-0.5">
+                        <span>⚠️</span><span>${warnMsg}</span>
+                    </div>`;
+            } else {
+                titleClass = 'text-slate-900 font-black';
+                subTextHtml = `
+                    <div class="text-[10px] text-slate-600 font-medium mt-1 leading-tight whitespace-nowrap">
+                        Berjalan ${runDays} hari
+                    </div>`;
+            }
         } else if (isDone) {
             titleClass = 'text-slate-900 font-bold';
 
@@ -1438,7 +1558,7 @@ function renderKanbanCard(c, phase) {
     const shortVendor = cleanVendor.length > 28 ? cleanVendor.substring(0, 26) + '…' : cleanVendor;
     const shortNo = (c.noKontrak || '-').length > 22 ? (c.noKontrak || '-').substring(0, 20) + '…' : (c.noKontrak || '-');
 
-    // Urgency color
+    // Urgency & Bottleneck color
     let urgencyBorder = 'border-slate-200';
     let urgencyDot = '';
     if (days !== null && days !== undefined) {
@@ -1452,6 +1572,13 @@ function renderKanbanCard(c, phase) {
             urgencyBorder = 'border-orange-200';
             urgencyDot = '<span class="w-2 h-2 rounded-full bg-orange-400 shrink-0" title="Perhatian"></span>';
         }
+    }
+
+    // Bottleneck indicator for in-progress contracts
+    let bottleneckBadge = '';
+    if (c._isBottleneck) {
+        urgencyBorder = 'border-amber-400 ring-1 ring-amber-300 bg-amber-50/10';
+        bottleneckBadge = `<span class="px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-100 text-amber-900 border border-amber-300 animate-pulse">⚠️ Mandek ${c._runningDays}h</span>`;
     }
 
     // SLA badge
@@ -1503,6 +1630,7 @@ function renderKanbanCard(c, phase) {
             <span class="px-1.5 py-0.5 rounded text-[9px] font-bold" style="background:${stage.badgeBg}; color:${stage.badgeColor}; border: 1px solid ${stage.badgeColor}30;">
                 ${esc(stage.label)}
             </span>
+            ${bottleneckBadge}
             ${slaBadge}
         </div>
 

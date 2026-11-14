@@ -405,6 +405,50 @@ tailwind.config = {
             </div>
         </div>
 
+        <!-- ========== 3b. EXECUTIVE LEAD TIME & BOTTLENECK INSIGHTS ========== -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 mb-3.5" id="sectionLeadTimeInsights">
+            <!-- 1. Rata-Rata Waktu Proses Selesai -->
+            <div class="card-executive p-2.5 flex items-center gap-3">
+                <div class="w-9 h-9 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center text-lg shrink-0">
+                    ⏱️
+                </div>
+                <div class="min-w-0 flex-1">
+                    <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Rata-Rata Siklus PKS</span>
+                    <div class="flex items-baseline gap-1 mt-0.5">
+                        <span class="text-sm sm:text-base font-black text-slate-900" id="statAvgProcessDays">0</span>
+                        <span class="text-[11px] text-slate-500 font-medium">hari kalender</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Tahap Bottleneck Tertinggi (Paling Lama / Menumpuk) -->
+            <div class="card-executive p-2.5 flex items-center gap-3 border-amber-200 bg-amber-50/20">
+                <div class="w-9 h-9 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center text-lg shrink-0 animate-pulse">
+                    ⚠️
+                </div>
+                <div class="min-w-0 flex-1">
+                    <span class="text-[10px] uppercase font-bold text-amber-700 tracking-wider block">Top Bottleneck Alur</span>
+                    <div class="text-[11.5px] font-bold text-slate-900 truncate mt-0.5" id="statTopBottleneck" title="Tahap dengan konsentrasi pengerjaan terlama">
+                        Menganalisis alur...
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Status Efisiensi SLA -->
+            <div class="card-executive p-2.5 flex items-center gap-3 border-emerald-200 bg-emerald-50/20 sm:col-span-2 lg:col-span-1">
+                <div class="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center text-lg shrink-0">
+                    🎯
+                </div>
+                <div class="min-w-0 flex-1">
+                    <span class="text-[10px] uppercase font-bold text-emerald-700 tracking-wider block">Kepatuhan Terhadap SLA</span>
+                    <div class="flex items-baseline gap-1.5 mt-0.5">
+                        <span class="text-sm sm:text-base font-black text-emerald-900" id="statSlaRate">100%</span>
+                        <span class="text-[10.5px] text-slate-500 truncate" id="statSlaDetail">(0 overdue dari 0 PKS)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- ========== 4. COMPACT FILTER TOOLBAR ========== -->
         <div class="card-executive p-3 mb-3.5" id="sectionFilterControls">
             <div class="flex flex-wrap items-center gap-2 mb-2.5">
@@ -671,7 +715,7 @@ tailwind.config = {
     <div class="toast-box" id="toastBox"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-    <script src="kontrak.js?v=20261114-no-renvoi"></script>
+    <script src="kontrak.js?v=20261114-insights"></script>
     <!-- AI Copilot Chatbot (OpenRouter) -->
     <script src="assets/ai-copilot.js" defer></script>
 </body>
