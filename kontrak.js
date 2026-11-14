@@ -1,7 +1,7 @@
 // =====================================================
 // KONFIGURASI API & STATE DASHBOARD KONTRAK
 // =====================================================
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxJcNZ4VGYBugfucxm3eZh68r8NieCeAL4E_KuARRrDM5ycpDlfJrZ99u6Zi8I_aIG_Rg/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwZZ7OIUk-rFQC_XStWTTWZ2IufHDl1NqC6xOonLlmwX1G5ov3v9aHbLThLmKIeXtQIXA/exec';
 
 let contractDashboardData = null;
 let lastContractComplianceData = null;
