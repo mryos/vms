@@ -1094,10 +1094,22 @@ function formatStepperDate(val) {
 }
 
 function renderInlineWorkflowSteps(c, stage) {
+    const stageDates = getContractStageDatesMap(c);
+
+    // Cek apakah PKS ini memiliki data renvoi (hanya tampilkan jika ada data renvoi)
+    const hasRenvoiData = Boolean(
+        stage.isRenvoi ||
+        stage.step === 12 ||
+        (stage.key === 'renvoi') ||
+        (c.tglRenvoi && c.tglRenvoi !== '-' && c.tglRenvoi !== '---' && !c.tglRenvoi.toLowerCase().includes('belum')) ||
+        (stageDates[12] && stageDates[12] !== '-' && stageDates[12] !== '---' && !stageDates[12].toLowerCase().includes('belum')) ||
+        (c.statusRevisi && c.statusRevisi.toLowerCase().includes('renvoi'))
+    );
+
     const steps = [
-        { num: 1, key: 'pemenuhan_dokumen', title: 'Pemenuhan Dokumen' },
-        { num: 2, key: 'pengajuan', title: 'Pengajuan Legal' },
-        { num: 3, key: 'review_legal_ethos', title: 'Review Legal Ethos' },
+        { num: 1, key: 'pemenuhan_dokumen', title: 'Dokumen' },
+        { num: 2, key: 'pengajuan', title: 'Pengajuan' },
+        { num: 3, key: 'review_legal_ethos', title: 'Review Ethos' },
         { num: 4, key: 'draft', title: 'Penyusunan Draf' },
         { num: 5, key: 'review_legal_vendor', title: 'Review Vendor' },
         { num: 6, key: 'paraf_vendor', title: 'Paraf Vendor' },
@@ -1105,13 +1117,15 @@ function renderInlineWorkflowSteps(c, stage) {
         { num: 8, key: 'revisi', title: 'Revisi' },
         { num: 9, key: 'ttd', title: 'Tanda Tangan' },
         { num: 10, key: 'aktif', title: 'Aktif Sah' },
-        { num: 11, key: 'expired', title: 'Selesai / Expired' },
-        { num: 12, key: 'renvoi', title: 'Renvoi' }
+        { num: 11, key: 'expired', title: 'Expired' }
     ];
+
+    if (hasRenvoiData) {
+        steps.push({ num: 12, key: 'renvoi', title: 'Renvoi' });
+    }
 
     const currentStepNum = stage.step;
     const hasRenvoi = stage.isRenvoi;
-    const stageDates = getContractStageDatesMap(c);
 
     // Parse all dates to Date objects normalized to 00:00:00
     const parsedDates = {};
@@ -1296,7 +1310,7 @@ function renderInlineWorkflowSteps(c, stage) {
             ${lineHtml}
             ${nodeCircleHtml}
             <div class="mt-2 text-center w-full px-0.5">
-                <div class="text-[11px] leading-tight truncate ${titleClass}" title="${esc(st.title)}">
+                <div class="text-[10.5px] leading-tight font-medium ${titleClass}" title="${esc(st.title)}">
                     ${st.title}
                 </div>
                 ${subTextHtml}
@@ -1681,21 +1695,6 @@ function openContractDetailModal(noKontrak) {
             daysBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Aman (Sisa ${days}h)</span>`;
         }
     }
-
-    const workflowSteps = [
-        { num: 1, key: 'pemenuhan_dokumen', title: '1. Dokumen' },
-        { num: 2, key: 'pengajuan', title: '2. Pengajuan' },
-        { num: 3, key: 'review_legal_ethos', title: '3. Rev Ethos' },
-        { num: 4, key: 'draft', title: '4. Draft' },
-        { num: 5, key: 'review_legal_vendor', title: '5. Rev Vendor' },
-        { num: 6, key: 'paraf_vendor', title: '6. Paraf Vendor' },
-        { num: 7, key: 'paraf_ethos', title: '7. Paraf Ethos' },
-        { num: 8, key: 'revisi', title: '8. Revisi' },
-        { num: 9, key: 'ttd', title: '9. TTD' },
-        { num: 10, key: 'aktif', title: '10. Aktif Sah' },
-        { num: 11, key: 'expired', title: '11. Expired' },
-        { num: 12, key: 'renvoi', title: '12. Renvoi' }
-    ];
 
     const currentStepNum = stage.step;
     const hasRevision = stage.isRevision || (c.statusRevisi && c.statusRevisi.trim() !== '' && c.statusRevisi !== '-');
