@@ -1563,32 +1563,45 @@ function getContractProcessDays(tglPengajuan, tglRealisasi) {
 function normalizeContractStageFrontend(rawStage, rawStatus, tglSelesai) {
     const s = (rawStage || '').toString().trim().toLowerCase();
     
-    if (s.includes('pengajuan') || s.includes('masuk legal') || s.includes('ajukan')) {
-        return { step: 1, key: 'pengajuan', label: '1. Pengajuan ke Legal', percent: 15, badgeColor: '#2563eb', badgeBg: '#eff6ff', isRevision: false, isRenvoi: false, isFinal: false };
+    // 1. Persiapan Dokumen
+    if (s.includes('persiapan dokumen') || s.includes('pemenuhan') || s.includes('kelengkapan dokumen') || s.includes('syarat dokumen') || s.includes('1. persiapan')) {
+        return { step: 1, key: 'persiapan_dokumen', label: '1. Persiapan Dokumen', percent: 10, badgeColor: '#0284c7', badgeBg: '#f0f9ff', isRevision: false, isRenvoi: false, isFinal: false };
     }
-    if (s.includes('draft') || s.includes('penyusunan')) {
-        return { step: 2, key: 'draft', label: '2. Draft Keluar', percent: 35, badgeColor: '#4f46e5', badgeBg: '#eef2ff', isRevision: false, isRenvoi: false, isFinal: false };
+    // 3. Review Legal Ethos
+    if (s.includes('review legal ethos') || s.includes('review ethos') || s.includes('legal ethos') || s.includes('review internal') || s.includes('3. review')) {
+        return { step: 3, key: 'review_legal_ethos', label: '3. Review Legal Ethos', percent: 30, badgeColor: '#4f46e5', badgeBg: '#eef2ff', isRevision: false, isRenvoi: false, isFinal: false };
     }
-    if (s.includes('paraf vendor') || s.includes('review vendor')) {
-        return { step: 3, key: 'paraf_vendor', label: '3. Paraf Vendor', percent: 50, badgeColor: '#d97706', badgeBg: '#fffbeb', isRevision: false, isRenvoi: false, isFinal: false };
+    // 5. Review Vendor
+    if (s.includes('review vendor') || s.includes('review legal vendor') || s.includes('review rekanan') || s.includes('5. review')) {
+        return { step: 5, key: 'review_vendor', label: '5. Review Vendor', percent: 55, badgeColor: '#c026d3', badgeBg: '#fdf4ff', isRevision: false, isRenvoi: false, isFinal: false };
     }
-    if (s.includes('paraf ethos') || s.includes('paraf internal') || (s.includes('paraf') && !s.includes('vendor'))) {
-        return { step: 4, key: 'paraf_ethos', label: '4. Paraf Ethos', percent: 65, badgeColor: '#7c3aed', badgeBg: '#f5f3ff', isRevision: false, isRenvoi: false, isFinal: false };
+    // 2. Pengajuan Ke Legal
+    if (s.includes('pengajuan ke legal') || s.includes('pengajuan legal') || s.includes('pengajuan') || s.includes('masuk legal') || s.includes('ajukan') || s.includes('2. pengajuan')) {
+        return { step: 2, key: 'pengajuan', label: '2. Pengajuan Ke Legal', percent: 20, badgeColor: '#2563eb', badgeBg: '#eff6ff', isRevision: false, isRenvoi: false, isFinal: false };
     }
-    if (s.includes('revisi')) {
-        return { step: 5, key: 'revisi', label: '5. Revisi', percent: 60, badgeColor: '#e11d48', badgeBg: '#fff1f2', isRevision: true, isRenvoi: false, isFinal: false };
+    // 4. Draft Keluar
+    if (s.includes('draft keluar') || s.includes('draft') || s.includes('penyusunan') || s.includes('4. draft')) {
+        return { step: 4, key: 'draft', label: '4. Draft Keluar', percent: 45, badgeColor: '#7c3aed', badgeBg: '#f5f3ff', isRevision: false, isRenvoi: false, isFinal: false };
     }
-    if (s.includes('renvoi')) {
-        return { step: 6, key: 'renvoi', label: '6. Renvoi', percent: 75, badgeColor: '#ea580c', badgeBg: '#fff7ed', isRevision: false, isRenvoi: true, isFinal: false };
+    // 6. Paraf & Tanda Tangan Vendor
+    if (s.includes('paraf & tanda tangan vendor') || s.includes('paraf & ttd vendor') || s.includes('paraf vendor') || s.includes('ttd vendor') || s.includes('6. paraf')) {
+        return { step: 6, key: 'paraf_ttd_vendor', label: '6. Paraf & Tanda Tangan Vendor', percent: 70, badgeColor: '#d97706', badgeBg: '#fffbeb', isRevision: false, isRenvoi: false, isFinal: false };
     }
-    if (s.includes('tanda tangan') || s.includes('ttd') || s.includes('signing') || s.includes('e-sign')) {
-        return { step: 7, key: 'ttd', label: '7. Tanda Tangan', percent: 85, badgeColor: '#0d9488', badgeBg: '#f0fdfa', isRevision: false, isRenvoi: false, isFinal: false };
+    // 7. Paraf & Tanda Tangan Ethos
+    if (s.includes('paraf & tanda tangan ethos') || s.includes('paraf & ttd ethos') || s.includes('paraf ethos') || s.includes('paraf internal') || s.includes('ttd ethos') || s.includes('7. paraf')) {
+        return { step: 7, key: 'paraf_ttd_ethos', label: '7. Paraf & Tanda Tangan Ethos', percent: 85, badgeColor: '#9333ea', badgeBg: '#faf5ff', isRevision: false, isRenvoi: false, isFinal: false };
     }
-    if (s.includes('aktif') || s.includes('selesai') || s.includes('berlaku') || s.includes('done')) {
-        return { step: 8, key: 'aktif', label: '8. Aktif / Selesai', percent: 100, badgeColor: '#16a34a', badgeBg: '#f0fdf4', isRevision: false, isRenvoi: false, isFinal: true };
+    // 8. Kontrak Aktif
+    if (s.includes('kontrak aktif') || s.includes('aktif') || s.includes('aktif sah') || s.includes('berlaku') || s.includes('8. kontrak aktif')) {
+        return { step: 8, key: 'aktif', label: '8. Kontrak Aktif', percent: 100, badgeColor: '#16a34a', badgeBg: '#f0fdf4', isRevision: false, isRenvoi: false, isFinal: true };
     }
-    if (s.includes('expired') || s.includes('kadaluarsa') || s.includes('berakhir')) {
-        return { step: 9, key: 'expired', label: '9. Berakhir / Expired', percent: 100, badgeColor: '#64748b', badgeBg: '#f8fafc', isRevision: false, isRenvoi: false, isFinal: true };
+    // 9. Renvoi (Jika Ada)
+    if (s.includes('renvoi') || s.includes('9. renvoi')) {
+        return { step: 9, key: 'renvoi', label: '9. Renvoi (Jika Ada)', percent: 90, badgeColor: '#ea580c', badgeBg: '#fff7ed', isRevision: false, isRenvoi: true, isFinal: false };
+    }
+    // 10. Kontrak Selesai
+    if (s.includes('kontrak selesai') || s.includes('selesai') || s.includes('berakhir') || s.includes('expired') || s.includes('kadaluarsa') || s.includes('10. kontrak selesai')) {
+        return { step: 10, key: 'selesai', label: '10. Kontrak Selesai', percent: 100, badgeColor: '#64748b', badgeBg: '#f8fafc', isRevision: false, isRenvoi: false, isFinal: true };
     }
 
     if (rawStage && rawStage.toString().trim() !== '') {
@@ -1597,10 +1610,10 @@ function normalizeContractStageFrontend(rawStage, rawStatus, tglSelesai) {
 
     const isComply = (rawStatus || '').toString().toLowerCase().includes('comply');
     if (isComply) {
-        return { step: 8, key: 'aktif', label: '8. Aktif / Selesai', percent: 100, badgeColor: '#16a34a', badgeBg: '#f0fdf4', isRevision: false, isRenvoi: false, isFinal: true };
+        return { step: 8, key: 'aktif', label: '8. Kontrak Aktif', percent: 100, badgeColor: '#16a34a', badgeBg: '#f0fdf4', isRevision: false, isRenvoi: false, isFinal: true };
     }
 
-    return { step: 1, key: 'pengajuan', label: '1. Pengajuan ke Legal', percent: 15, badgeColor: '#2563eb', badgeBg: '#eff6ff', isRevision: false, isRenvoi: false, isFinal: false };
+    return { step: 1, key: 'persiapan_dokumen', label: '1. Persiapan Dokumen', percent: 10, badgeColor: '#0284c7', badgeBg: '#f0f9ff', isRevision: false, isRenvoi: false, isFinal: false };
 }
 
 function filterContractsByExpiry(filter) {

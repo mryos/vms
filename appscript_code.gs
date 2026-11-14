@@ -1800,25 +1800,27 @@ function getVendorScoreSummary(ss) {
 function normalizeContractStage(rawStage, rawStatus, tglSelesai) {
   var s = (rawStage || '').toString().trim().toLowerCase();
   
-  if (s.indexOf('pengajuan') !== -1 || s.indexOf('masuk legal') !== -1 || s.indexOf('ajukan') !== -1) {
+  // 1. Persiapan Dokumen
+  if (s.indexOf('persiapan dokumen') !== -1 || s.indexOf('pemenuhan') !== -1 || s.indexOf('kelengkapan dokumen') !== -1 || s.indexOf('1. persiapan') !== -1) {
     return {
       step: 1,
-      key: 'pengajuan',
-      label: '1. Pengajuan ke Legal',
-      percent: 15,
-      badgeColor: '#2563eb',
-      badgeBg: '#eff6ff',
+      key: 'persiapan_dokumen',
+      label: '1. Persiapan Dokumen',
+      percent: 10,
+      badgeColor: '#0284c7',
+      badgeBg: '#f0f9ff',
       isRevision: false,
       isRenvoi: false,
       isFinal: false
     };
   }
-  if (s.indexOf('draft') !== -1 || s.indexOf('penyusunan') !== -1) {
+  // 3. Review Legal Ethos
+  if (s.indexOf('review legal ethos') !== -1 || s.indexOf('review ethos') !== -1 || s.indexOf('legal ethos') !== -1 || s.indexOf('3. review') !== -1) {
     return {
-      step: 2,
-      key: 'draft',
-      label: '2. Draft Keluar',
-      percent: 35,
+      step: 3,
+      key: 'review_legal_ethos',
+      label: '3. Review Legal Ethos',
+      percent: 30,
       badgeColor: '#4f46e5',
       badgeBg: '#eef2ff',
       isRevision: false,
@@ -1826,25 +1828,41 @@ function normalizeContractStage(rawStage, rawStatus, tglSelesai) {
       isFinal: false
     };
   }
-  if (s.indexOf('paraf vendor') !== -1 || s.indexOf('review vendor') !== -1) {
+  // 5. Review Vendor
+  if (s.indexOf('review vendor') !== -1 || s.indexOf('review legal vendor') !== -1 || s.indexOf('5. review') !== -1) {
     return {
-      step: 3,
-      key: 'paraf_vendor',
-      label: '3. Paraf Vendor',
-      percent: 50,
-      badgeColor: '#d97706',
-      badgeBg: '#fffbeb',
+      step: 5,
+      key: 'review_vendor',
+      label: '5. Review Vendor',
+      percent: 55,
+      badgeColor: '#c026d3',
+      badgeBg: '#fdf4ff',
       isRevision: false,
       isRenvoi: false,
       isFinal: false
     };
   }
-  if (s.indexOf('paraf ethos') !== -1 || s.indexOf('paraf internal') !== -1 || (s.indexOf('paraf') !== -1 && s.indexOf('vendor') === -1)) {
+  // 2. Pengajuan Ke Legal
+  if (s.indexOf('pengajuan') !== -1 || s.indexOf('masuk legal') !== -1 || s.indexOf('ajukan') !== -1 || s.indexOf('2. pengajuan') !== -1) {
+    return {
+      step: 2,
+      key: 'pengajuan',
+      label: '2. Pengajuan Ke Legal',
+      percent: 20,
+      badgeColor: '#2563eb',
+      badgeBg: '#eff6ff',
+      isRevision: false,
+      isRenvoi: false,
+      isFinal: false
+    };
+  }
+  // 4. Draft Keluar
+  if (s.indexOf('draft') !== -1 || s.indexOf('penyusunan') !== -1 || s.indexOf('4. draft') !== -1) {
     return {
       step: 4,
-      key: 'paraf_ethos',
-      label: '4. Paraf Ethos',
-      percent: 65,
+      key: 'draft',
+      label: '4. Draft Keluar',
+      percent: 45,
       badgeColor: '#7c3aed',
       badgeBg: '#f5f3ff',
       isRevision: false,
@@ -1852,25 +1870,41 @@ function normalizeContractStage(rawStage, rawStatus, tglSelesai) {
       isFinal: false
     };
   }
-  if (s.indexOf('revisi') !== -1) {
+  // 6. Paraf & Tanda Tangan Vendor
+  if (s.indexOf('paraf & tanda tangan vendor') !== -1 || s.indexOf('paraf & ttd vendor') !== -1 || s.indexOf('paraf vendor') !== -1 || s.indexOf('ttd vendor') !== -1 || s.indexOf('6. paraf') !== -1) {
     return {
-      step: 5,
-      key: 'revisi',
-      label: '5. Revisi',
-      percent: 60,
-      badgeColor: '#e11d48',
-      badgeBg: '#fff1f2',
-      isRevision: true,
+      step: 6,
+      key: 'paraf_ttd_vendor',
+      label: '6. Paraf & Tanda Tangan Vendor',
+      percent: 70,
+      badgeColor: '#d97706',
+      badgeBg: '#fffbeb',
+      isRevision: false,
       isRenvoi: false,
       isFinal: false
     };
   }
-  if (s.indexOf('renvoi') !== -1) {
+  // 7. Paraf & Tanda Tangan Ethos
+  if (s.indexOf('paraf & tanda tangan ethos') !== -1 || s.indexOf('paraf & ttd ethos') !== -1 || s.indexOf('paraf ethos') !== -1 || s.indexOf('paraf internal') !== -1 || s.indexOf('ttd ethos') !== -1 || s.indexOf('7. paraf') !== -1 || s.indexOf('tanda tangan') !== -1 || s.indexOf('ttd') !== -1) {
     return {
-      step: 6,
+      step: 7,
+      key: 'paraf_ttd_ethos',
+      label: '7. Paraf & Tanda Tangan Ethos',
+      percent: 85,
+      badgeColor: '#9333ea',
+      badgeBg: '#faf5ff',
+      isRevision: false,
+      isRenvoi: false,
+      isFinal: false
+    };
+  }
+  // 9. Renvoi (Jika Ada)
+  if (s.indexOf('renvoi') !== -1 || s.indexOf('9. renvoi') !== -1) {
+    return {
+      step: 9,
       key: 'renvoi',
-      label: '6. Renvoi',
-      percent: 75,
+      label: '9. Renvoi (Jika Ada)',
+      percent: 90,
       badgeColor: '#ea580c',
       badgeBg: '#fff7ed',
       isRevision: false,
@@ -1878,40 +1912,29 @@ function normalizeContractStage(rawStage, rawStatus, tglSelesai) {
       isFinal: false
     };
   }
-  if (s.indexOf('tanda tangan') !== -1 || s.indexOf('ttd') !== -1 || s.indexOf('signing') !== -1 || s.indexOf('e-sign') !== -1) {
+  // 10. Kontrak Selesai
+  if (s.indexOf('kontrak selesai') !== -1 || s.indexOf('expired') !== -1 || s.indexOf('kadaluarsa') !== -1 || s.indexOf('berakhir') !== -1 || s.indexOf('10. kontrak') !== -1) {
     return {
-      step: 7,
-      key: 'ttd',
-      label: '7. Tanda Tangan',
-      percent: 85,
-      badgeColor: '#0d9488',
-      badgeBg: '#f0fdfa',
-      isRevision: false,
-      isRenvoi: false,
-      isFinal: false
-    };
-  }
-  if (s.indexOf('aktif') !== -1 || s.indexOf('selesai') !== -1 || s.indexOf('berlaku') !== -1 || s.indexOf('done') !== -1) {
-    return {
-      step: 8,
-      key: 'aktif',
-      label: '8. Aktif / Selesai',
+      step: 10,
+      key: 'selesai',
+      label: '10. Kontrak Selesai',
       percent: 100,
-      badgeColor: '#16a34a',
-      badgeBg: '#f0fdf4',
+      badgeColor: '#64748b',
+      badgeBg: '#f8fafc',
       isRevision: false,
       isRenvoi: false,
       isFinal: true
     };
   }
-  if (s.indexOf('expired') !== -1 || s.indexOf('kadaluarsa') !== -1 || s.indexOf('berakhir') !== -1) {
+  // 8. Kontrak Aktif
+  if (s.indexOf('kontrak aktif') !== -1 || s.indexOf('aktif') !== -1 || s.indexOf('berlaku') !== -1 || s.indexOf('selesai') !== -1 || s.indexOf('done') !== -1 || s.indexOf('8. kontrak') !== -1) {
     return {
-      step: 9,
-      key: 'expired',
-      label: '9. Berakhir / Expired',
+      step: 8,
+      key: 'aktif',
+      label: '8. Kontrak Aktif',
       percent: 100,
-      badgeColor: '#64748b',
-      badgeBg: '#f8fafc',
+      badgeColor: '#16a34a',
+      badgeBg: '#f0fdf4',
       isRevision: false,
       isRenvoi: false,
       isFinal: true
@@ -1939,7 +1962,7 @@ function normalizeContractStage(rawStage, rawStatus, tglSelesai) {
     return {
       step: 8,
       key: 'aktif',
-      label: '8. Aktif / Selesai',
+      label: '8. Kontrak Aktif',
       percent: 100,
       badgeColor: '#16a34a',
       badgeBg: '#f0fdf4',
@@ -1950,10 +1973,10 @@ function normalizeContractStage(rawStage, rawStatus, tglSelesai) {
   }
 
   return {
-    step: 1,
+    step: 2,
     key: 'pengajuan',
-    label: '1. Pengajuan ke Legal',
-    percent: 15,
+    label: '2. Pengajuan Ke Legal',
+    percent: 20,
     badgeColor: '#2563eb',
     badgeBg: '#eff6ff',
     isRevision: false,
@@ -1976,15 +1999,16 @@ function getContractCompliance(ss) {
     vendorComplianceRate: 100,
     stageCounts: {
       all: 0,
+      persiapan_dokumen: 0,
       pengajuan: 0,
+      review_legal_ethos: 0,
       draft: 0,
-      paraf_vendor: 0,
-      paraf_ethos: 0,
-      revisi: 0,
-      renvoi: 0,
-      ttd: 0,
+      review_vendor: 0,
+      paraf_ttd_vendor: 0,
+      paraf_ttd_ethos: 0,
       aktif: 0,
-      expired: 0,
+      renvoi: 0,
+      selesai: 0,
       lainnya: 0
     },
     totalActive: 0,
@@ -2028,20 +2052,21 @@ function getContractCompliance(ss) {
   var idxPekerjaan = getHeaderIndex(headers, ['jenis pekerjaan', 'pekerjaan', 'ruang lingkup', 'deskripsi', 'uraian', 'item', 'scope of work', 'scope']);
   var idxDivisi = getHeaderIndex(headers, ['pic / divisi', 'pic', 'divisi', 'dept', 'departemen', 'pemohon', 'user', 'pic pengaju', 'divisi pemohon']);
   
-  // 12 Tanggal Audit Alur Pengerjaan Kontrak
-  var idxTglDokumen = getHeaderIndex(headers, ['tanggal dokumen', 'tgl dokumen', 'tanggal pemenuhan dokumen', 'tgl pemenuhan dokumen', 'tgl berkas', 'tanggal berkas', 'dokumen lengkap', 'tgl kelengkapan']);
-  var idxTglPengajuan = getHeaderIndex(headers, ['tanggal pengajuan ke legal', 'tgl pengajuan ke legal', 'tgl pengajuan', 'tanggal pengajuan', 'tgl masuk legal', 'tanggal masuk', 'tgl ajukan', 'tgl request', 'pengajuan legal']);
-  var idxTglReviewEthos = getHeaderIndex(headers, ['tanggal review legal ethos', 'tgl review legal ethos', 'tgl review ethos', 'tanggal review ethos', 'tgl review internal', 'review legal ethos', 'review ethos']);
-  var idxTglDraft = getHeaderIndex(headers, ['tanggal draft keluar', 'tgl draft keluar', 'tgl draft', 'tanggal draft', 'tgl draf', 'draft keluar']);
-  var idxTglReviewVendor = getHeaderIndex(headers, ['tanggal review legal vendor', 'tgl review legal vendor', 'tgl review vendor', 'tanggal review vendor', 'tgl review rekanan', 'review legal vendor', 'review vendor']);
-  var idxTglParafVendor = getHeaderIndex(headers, ['tanggal paraf vendor', 'tgl paraf vendor', 'tgl paraf rekanan', 'tanggal paraf rekanan', 'paraf vendor']);
-  var idxTglParafEthos = getHeaderIndex(headers, ['tanggal paraf ethos', 'tgl paraf ethos', 'tgl paraf internal', 'tanggal paraf internal', 'paraf ethos', 'paraf internal']);
-  var idxTglRevisi = getHeaderIndex(headers, ['tanggal revisi', 'tgl revisi', 'tgl perbaikan', 'tanggal perbaikan', 'tgl catatan revisi']);
+  // 10 Tanggal Alur PKS Sesuai Standar Baru
+  var idxTglDokumen = getHeaderIndex(headers, ['1. persiapan dokumen', 'persiapan dokumen', 'tanggal persiapan dokumen', 'tgl persiapan dokumen', 'tanggal dokumen', 'tgl dokumen', 'tanggal pemenuhan dokumen', 'tgl pemenuhan dokumen', 'dokumen lengkap', 'tgl kelengkapan', 'dokumen']);
+  var idxTglPengajuan = getHeaderIndex(headers, ['2. pengajuan ke legal', 'pengajuan ke legal', 'tanggal pengajuan ke legal', 'tgl pengajuan ke legal', 'tgl pengajuan', 'tanggal pengajuan', 'tgl masuk legal', 'tanggal masuk', 'tgl ajukan', 'pengajuan legal', 'masuk legal']);
+  var idxTglReviewEthos = getHeaderIndex(headers, ['3. review legal ethos', 'review legal ethos', 'tanggal review legal ethos', 'tgl review legal ethos', 'tgl review ethos', 'tanggal review ethos', 'tgl review internal', 'review ethos']);
+  var idxTglDraft = getHeaderIndex(headers, ['4. draft keluar', 'draft keluar', 'tanggal draft keluar', 'tgl draft keluar', 'tgl draft', 'tanggal draft', 'tgl draf', 'draft']);
+  var idxTglReviewVendor = getHeaderIndex(headers, ['5. review vendor', 'review vendor', 'tanggal review vendor', 'tgl review vendor', 'tanggal review legal vendor', 'tgl review legal vendor', 'tgl review rekanan', 'review legal vendor']);
+  var idxTglParafVendor = getHeaderIndex(headers, ['6. paraf & tanda tangan vendor', 'paraf & tanda tangan vendor', 'paraf & ttd vendor', 'tanggal paraf & tanda tangan vendor', 'tanggal paraf & ttd vendor', 'tanggal paraf vendor', 'tgl paraf vendor', 'tgl paraf rekanan', 'paraf vendor']);
+  var idxTglParafEthos = getHeaderIndex(headers, ['7. paraf & tanda tangan ethos', 'paraf & tanda tangan ethos', 'paraf & ttd ethos', 'tanggal paraf & tanda tangan ethos', 'tanggal paraf & ttd ethos', 'tanggal paraf ethos', 'tgl paraf ethos', 'tgl paraf internal', 'paraf ethos']);
+  var idxMulai = getHeaderIndex(headers, ['8. kontrak aktif', 'kontrak aktif', 'tanggal kontrak aktif', 'tgl kontrak aktif', 'tanggal mulai kontrak', 'tgl mulai kontrak', 'tanggal mulai', 'tgl mulai', 'mulai', 'start date', 'periode awal', 'aktif sah']);
+  var idxTglRenvoi = getHeaderIndex(headers, ['9. renvoi (jika ada)', 'renvoi (jika ada)', 'renvoi', 'tanggal renvoi', 'tgl renvoi', 'tgl addendum', 'tanggal addendum']);
+  var idxSelesai = getHeaderIndex(headers, ['10. kontrak selesai', 'kontrak selesai', 'tanggal kontrak selesai', 'tgl kontrak selesai', 'tanggal selesai kontrak', 'tgl selesai kontrak', 'tanggal selesai', 'tanggal berakhir', 'tgl selesai', 'tgl berakhir', 'end date', 'deadline', 'masa berlaku', 'expired']);
+
   var idxTargetSla = getHeaderIndex(headers, ['target selesai sla', 'target selesai', 'target legal', 'sla target', 'sla', 'target draft', 'deadline proses']);
   var idxTglRealisasi = getHeaderIndex(headers, ['tanggal realisasi ttd', 'tgl realisasi ttd', 'tgl realisasi', 'tanggal selesai proses', 'tgl ttd', 'tanggal ttd', 'tgl sah', 'realisasi ttd']);
-  var idxMulai = getHeaderIndex(headers, ['tanggal mulai kontrak', 'tgl mulai kontrak', 'tanggal mulai', 'tgl mulai', 'mulai', 'start date', 'periode awal']);
-  var idxSelesai = getHeaderIndex(headers, ['tanggal selesai kontrak', 'tgl selesai kontrak', 'tanggal selesai', 'tanggal berakhir', 'tgl selesai', 'tgl berakhir', 'end date', 'deadline', 'masa berlaku', 'periode akhir']);
-  var idxTglRenvoi = getHeaderIndex(headers, ['tanggal renvoi', 'tgl renvoi', 'tgl addendum', 'tanggal addendum', 'renvoi']);
+  var idxTglRevisi = getHeaderIndex(headers, ['tanggal revisi', 'tgl revisi', 'tgl perbaikan', 'tanggal perbaikan', 'tgl catatan revisi']);
 
   var idxTahap = getHeaderIndex(headers, ['tahap progress pengerjaan', 'tahap progress', 'progress pengerjaan', 'progress', 'tahap', 'status progress', 'tahapan', 'current stage', 'workflow', 'status pengerjaan', 'tahap pengerjaan']);
   var idxRevisi = getHeaderIndex(headers, ['status revisi / renvoi', 'status revisi', 'revisi', 'renvoi', 'revisi / renvoi', 'catatan revisi', 'addendum', 'keterangan revisi']);
@@ -2065,7 +2090,7 @@ function getContractCompliance(ss) {
     var jenisPekerjaan = idxPekerjaan !== -1 && data[i][idxPekerjaan] ? data[i][idxPekerjaan].toString().trim() : '-';
     var picDivisi = idxDivisi !== -1 && data[i][idxDivisi] ? data[i][idxDivisi].toString().trim() : '-';
     
-    // 12 Tanggal Alur PKS
+    // 10 Tanggal Alur PKS
     var tglDokumen = idxTglDokumen !== -1 && data[i][idxTglDokumen] ? formatDate(data[i][idxTglDokumen]) : '-';
     var tglPengajuan = idxTglPengajuan !== -1 && data[i][idxTglPengajuan] ? formatDate(data[i][idxTglPengajuan]) : '-';
     var tglReviewEthos = idxTglReviewEthos !== -1 && data[i][idxTglReviewEthos] ? formatDate(data[i][idxTglReviewEthos]) : '-';
@@ -2073,12 +2098,13 @@ function getContractCompliance(ss) {
     var tglReviewVendor = idxTglReviewVendor !== -1 && data[i][idxTglReviewVendor] ? formatDate(data[i][idxTglReviewVendor]) : '-';
     var tglParafVendor = idxTglParafVendor !== -1 && data[i][idxTglParafVendor] ? formatDate(data[i][idxTglParafVendor]) : '-';
     var tglParafEthos = idxTglParafEthos !== -1 && data[i][idxTglParafEthos] ? formatDate(data[i][idxTglParafEthos]) : '-';
-    var tglRevisi = idxTglRevisi !== -1 && data[i][idxTglRevisi] ? formatDate(data[i][idxTglRevisi]) : '-';
-    var targetSelesai = idxTargetSla !== -1 && data[i][idxTargetSla] ? formatDate(data[i][idxTargetSla]) : '-';
-    var tglRealisasi = idxTglRealisasi !== -1 && data[i][idxTglRealisasi] ? formatDate(data[i][idxTglRealisasi]) : '-';
     var tglMulai = idxMulai !== -1 && data[i][idxMulai] ? formatDate(data[i][idxMulai]) : '-';
-    var tglSelesai = idxSelesai !== -1 && data[i][idxSelesai] ? formatDate(data[i][idxSelesai]) : '-';
     var tglRenvoi = idxTglRenvoi !== -1 && data[i][idxTglRenvoi] ? formatDate(data[i][idxTglRenvoi]) : '-';
+    var tglSelesai = idxSelesai !== -1 && data[i][idxSelesai] ? formatDate(data[i][idxSelesai]) : '-';
+
+    var targetSelesai = idxTargetSla !== -1 && data[i][idxTargetSla] ? formatDate(data[i][idxTargetSla]) : '-';
+    var tglRealisasi = idxTglRealisasi !== -1 && data[i][idxTglRealisasi] ? formatDate(data[i][idxTglRealisasi]) : (tglParafEthos !== '-' ? tglParafEthos : '-');
+    var tglRevisi = idxTglRevisi !== -1 && data[i][idxTglRevisi] ? formatDate(data[i][idxTglRevisi]) : '-';
 
     var rawTahap = idxTahap !== -1 && data[i][idxTahap] ? data[i][idxTahap].toString().trim() : '';
     var statusRevisi = idxRevisi !== -1 && data[i][idxRevisi] ? data[i][idxRevisi].toString().trim() : '';
@@ -2097,8 +2123,31 @@ function getContractCompliance(ss) {
     var linkDokumen = idxLink !== -1 && data[i][idxLink] ? data[i][idxLink].toString().trim() : '';
     var keterangan = idxKeterangan !== -1 && data[i][idxKeterangan] ? data[i][idxKeterangan].toString().trim() : '';
 
-    // Normalisasi Tahap Progress
+    // Normalisasi Tahap Progress (Didukung auto-detect dari tanggal alur tertinggi jika belum diisi)
     var stageObj = normalizeContractStage(rawTahap, status, tglSelesai);
+    if (!rawTahap || rawTahap === '-' || rawTahap === '---' || stageObj.step === 0 || stageObj.key === 'lainnya') {
+      if (tglSelesai && tglSelesai !== '-' && new Date(tglSelesai).getTime() <= todayZero) {
+        stageObj = { step: 10, key: 'selesai', label: '10. Kontrak Selesai', percent: 100, badgeColor: '#64748b', badgeBg: '#f8fafc', isRevision: false, isRenvoi: false, isFinal: true };
+      } else if (tglRenvoi && tglRenvoi !== '-' && !tglRenvoi.toLowerCase().includes('belum')) {
+        stageObj = { step: 9, key: 'renvoi', label: '9. Renvoi (Jika Ada)', percent: 90, badgeColor: '#ea580c', badgeBg: '#fff7ed', isRevision: false, isRenvoi: true, isFinal: false };
+      } else if (tglMulai && tglMulai !== '-') {
+        stageObj = { step: 8, key: 'aktif', label: '8. Kontrak Aktif', percent: 100, badgeColor: '#16a34a', badgeBg: '#f0fdf4', isRevision: false, isRenvoi: false, isFinal: true };
+      } else if (tglParafEthos && tglParafEthos !== '-') {
+        stageObj = { step: 7, key: 'paraf_ttd_ethos', label: '7. Paraf & Tanda Tangan Ethos', percent: 85, badgeColor: '#9333ea', badgeBg: '#faf5ff', isRevision: false, isRenvoi: false, isFinal: false };
+      } else if (tglParafVendor && tglParafVendor !== '-') {
+        stageObj = { step: 6, key: 'paraf_ttd_vendor', label: '6. Paraf & Tanda Tangan Vendor', percent: 70, badgeColor: '#d97706', badgeBg: '#fffbeb', isRevision: false, isRenvoi: false, isFinal: false };
+      } else if (tglReviewVendor && tglReviewVendor !== '-') {
+        stageObj = { step: 5, key: 'review_vendor', label: '5. Review Vendor', percent: 55, badgeColor: '#c026d3', badgeBg: '#fdf4ff', isRevision: false, isRenvoi: false, isFinal: false };
+      } else if (tglDraft && tglDraft !== '-') {
+        stageObj = { step: 4, key: 'draft', label: '4. Draft Keluar', percent: 45, badgeColor: '#7c3aed', badgeBg: '#f5f3ff', isRevision: false, isRenvoi: false, isFinal: false };
+      } else if (tglReviewEthos && tglReviewEthos !== '-') {
+        stageObj = { step: 3, key: 'review_legal_ethos', label: '3. Review Legal Ethos', percent: 30, badgeColor: '#4f46e5', badgeBg: '#eef2ff', isRevision: false, isRenvoi: false, isFinal: false };
+      } else if (tglPengajuan && tglPengajuan !== '-') {
+        stageObj = { step: 2, key: 'pengajuan', label: '2. Pengajuan Ke Legal', percent: 20, badgeColor: '#2563eb', badgeBg: '#eff6ff', isRevision: false, isRenvoi: false, isFinal: false };
+      } else if (tglDokumen && tglDokumen !== '-') {
+        stageObj = { step: 1, key: 'persiapan_dokumen', label: '1. Persiapan Dokumen', percent: 10, badgeColor: '#0284c7', badgeBg: '#f0f9ff', isRevision: false, isRenvoi: false, isFinal: false };
+      }
+    }
 
     // Hitung Selisih Hari Masa Berlaku Kontrak
     var daysRemaining = null;
@@ -2111,7 +2160,7 @@ function getContractCompliance(ss) {
         if (daysRemaining < 0) {
           expiryCategory = 'expired';
           if (stageObj.step === 8) {
-            stageObj = normalizeContractStage('expired', status, tglSelesai);
+            stageObj = { step: 10, key: 'selesai', label: '10. Kontrak Selesai', percent: 100, badgeColor: '#64748b', badgeBg: '#f8fafc', isRevision: false, isRenvoi: false, isFinal: true };
           }
         } else if (daysRemaining <= 30) {
           expiryCategory = 'critical';
@@ -2181,7 +2230,7 @@ function getContractCompliance(ss) {
 
     if (stageObj.step === 8) stats.totalActive++;
     if (stageObj.step >= 1 && stageObj.step <= 7) stats.totalInProgress++;
-    if (stageObj.isRevision || stageObj.isRenvoi) stats.totalRevisiRenvoi++;
+    if (stageObj.isRenvoi) stats.totalRevisiRenvoi++;
     if (isOverdueSla) stats.totalOverdueSla++;
 
     stats.list.push({
@@ -2209,11 +2258,9 @@ function getContractCompliance(ss) {
         5: tglReviewVendor,
         6: tglParafVendor,
         7: tglParafEthos,
-        8: tglRevisi,
-        9: tglRealisasi,
-        10: tglMulai,
-        11: tglSelesai,
-        12: tglRenvoi
+        8: tglMulai,
+        9: tglRenvoi,
+        10: tglSelesai
       },
       tahapProgress: stageObj.label,
       stageKey: stageObj.key,
@@ -2381,19 +2428,17 @@ function setupSheetKontrakVendor(ss) {
     'Ruang Lingkup / Jenis Pekerjaan',
     'PIC / Divisi',
     'Tahap Progress Pengerjaan',
-    'Tanggal Dokumen',
-    'Tanggal Pengajuan ke Legal',
-    'Tanggal Review Legal Ethos',
-    'Tanggal Draft Keluar',
-    'Tanggal Review Legal Vendor',
-    'Tanggal Paraf Vendor',
-    'Tanggal Paraf Ethos',
-    'Tanggal Revisi',
+    '1. Persiapan Dokumen',
+    '2. Pengajuan Ke Legal',
+    '3. Review Legal Ethos',
+    '4. Draft Keluar',
+    '5. Review Vendor',
+    '6. Paraf & Tanda Tangan Vendor',
+    '7. Paraf & Tanda Tangan Ethos',
+    '8. Kontrak Aktif',
+    '9. Renvoi (Jika Ada)',
+    '10. Kontrak Selesai',
     'Target Selesai SLA',
-    'Tanggal Realisasi TTD',
-    'Tanggal Mulai Kontrak',
-    'Tanggal Selesai Kontrak',
-    'Tanggal Renvoi',
     'Status Revisi / Renvoi',
     'Kelengkapan Dokumen',
     'Nilai Kontrak (Rp)',
@@ -2415,64 +2460,81 @@ function setupSheetKontrakVendor(ss) {
     var sampleRows = [
       [
         'KTR/ETHOS/2026/001', 'PT BIZNET GIO NUSANTARA', 'Cloud Server Infrastructure & Maintenance',
-        'IT & Software', offsetDate(-45), offsetDate(-30), offsetDate(335),
-        '8. Aktif / Selesai', offsetDate(-32), offsetDate(-30),
+        'IT & Software', '8. Kontrak Aktif',
+        offsetDate(-45), offsetDate(-40), offsetDate(-38), offsetDate(-35), offsetDate(-33), offsetDate(-31), offsetDate(-30),
+        offsetDate(-30), '', offsetDate(335), offsetDate(-25),
         'Tidak Ada Revisi', 'Lengkap (KTP, NPWP, Akta, Rekening)', 125000000,
         'Comply', 'https://drive.google.com/', 'Kontrak aktif tahunan, performa SLA stabil'
       ],
       [
         'KTR/ETHOS/2026/002', 'CHIPSET COMPUTER - EKI', 'Pengadaan Perangkat Hardware & Laptop Kantor',
-        'Procurement', offsetDate(-14), offsetDate(-2), offsetDate(180),
-        '7. Tanda Tangan', offsetDate(-1), '',
+        'Procurement', '7. Paraf & Tanda Tangan Ethos',
+        offsetDate(-14), offsetDate(-12), offsetDate(-10), offsetDate(-8), offsetDate(-6), offsetDate(-3), offsetDate(-1),
+        '', '', offsetDate(180), offsetDate(0),
         'Final Draft Disetujui', 'Lengkap', 85000000,
-        'Comply', 'https://drive.google.com/', 'Menunggu penandatanganan basah Direksi'
+        'Comply', 'https://drive.google.com/', 'Menunggu penandatanganan Direksi'
       ],
       [
         'KTR/ETHOS/2026/003', 'MULTINDO MEDIA KREASI UTAMA, PT (Kreasi)', 'Jasa Produksi Konten Video & Creative Campaign Q3-Q4',
-        'Branding & Marketing', offsetDate(-10), offsetDate(5), offsetDate(120),
-        '6. Renvoi', offsetDate(2), '',
+        'Branding & Marketing', '9. Renvoi (Jika Ada)',
+        offsetDate(-20), offsetDate(-18), offsetDate(-15), offsetDate(-12), offsetDate(-10), offsetDate(-7), offsetDate(-5),
+        offsetDate(-4), offsetDate(2), offsetDate(120), offsetDate(5),
         'Renvoi Pasal 7 Hak Cipta & Output Video', 'Lengkap (NPWP, NIB)', 65000000,
         'Comply', 'https://drive.google.com/', 'Proses penyesuaian klausul hak cipta'
       ],
       [
         'KTR/ETHOS/2026/004', 'PT.GLOBAL JET EXPRESS', 'Ekspedisi & Distribusi Logistik Nasional',
-        'Operasional / Logistik', offsetDate(-8), offsetDate(7), offsetDate(365),
-        '5. Revisi', offsetDate(0), '',
+        'Operasional / Logistik', '6. Paraf & Tanda Tangan Vendor',
+        offsetDate(-10), offsetDate(-8), offsetDate(-6), offsetDate(-4), offsetDate(-2), offsetDate(0), '',
+        '', '', offsetDate(365), offsetDate(7),
         'Revisi SLA Pengiriman & Klausul Asuransi', 'Lengkap', 150000000,
-        'Comply', 'https://drive.google.com/', 'Vendor meminta klausul klaim asuransi direvisi'
+        'Comply', 'https://drive.google.com/', 'Vendor memeriksa klausul asuransi'
       ],
       [
         'KTR/ETHOS/2026/005', 'Toko HERO', 'Pengadaan ATK & Perlengkapan Operasional Kantor',
-        'General Affairs', offsetDate(-5), offsetDate(10), offsetDate(90),
-        '4. Paraf Ethos', offsetDate(3), '',
+        'General Affairs', '5. Review Vendor',
+        offsetDate(-8), offsetDate(-6), offsetDate(-4), offsetDate(-2), offsetDate(0), '', '',
+        '', '', offsetDate(90), offsetDate(10),
         'Belum Ada Revisi', 'Lengkap', 28000000,
-        'Comply', 'https://drive.google.com/', 'Draft disetujui vendor, sedang paraf internal Ethos'
+        'Comply', 'https://drive.google.com/', 'Draft disetujui internal, sedang dikaji vendor'
       ],
       [
         'KTR/ETHOS/2026/006', 'CV MANDIRI JAYA KREASI', 'Jasa Desain Booth & Event Exhibition Launching',
-        'Event Organizer', offsetDate(-4), offsetDate(15), offsetDate(45),
-        '3. Paraf Vendor', offsetDate(4), '',
+        'Event Organizer', '4. Draft Keluar',
+        offsetDate(-5), offsetDate(-4), offsetDate(-2), offsetDate(0), '', '', '',
+        '', '', offsetDate(45), offsetDate(15),
         'Draft Dikirim ke Vendor', 'Menunggu NPWP Baru', 45000000,
-        'Comply', 'https://drive.google.com/', 'Draft kontrak sedang diteliti oleh Legal Vendor'
+        'Comply', 'https://drive.google.com/', 'Draft kontrak sudah diterbitkan Legal'
       ],
       [
         'KTR/ETHOS/2026/007', 'PT SOLUSI DIGITAL MEDIA', 'Jasa Social Media Management & Influencer Campaign',
-        'Digital Marketing', offsetDate(-2), offsetDate(20), offsetDate(180),
-        '2. Draft Keluar', offsetDate(5), '',
+        'Digital Marketing', '3. Review Legal Ethos',
+        offsetDate(-3), offsetDate(-2), offsetDate(0), '', '', '', '',
+        '', '', offsetDate(180), offsetDate(20),
         'Draft Awal Legal', 'Lengkap', 90000000,
-        'Comply', 'https://drive.google.com/', 'Draft dari Legal Ethos sudah keluar, review internal'
+        'Comply', 'https://drive.google.com/', 'Sedang diteliti Legal Internal Ethos'
       ],
       [
         'KTR/ETHOS/2026/008', 'KOL MANAGEMENT NUSANTARA', 'Jasa Endorsement Brand Ambassador Q3',
-        'Branding', offsetDate(-1), offsetDate(25), offsetDate(90),
-        '1. Pengajuan ke Legal', offsetDate(6), '',
+        'Branding', '2. Pengajuan Ke Legal',
+        offsetDate(-2), offsetDate(0), '', '', '', '', '',
+        '', '', offsetDate(90), offsetDate(25),
         'Tahap Awal', 'Menunggu Draft Perjanjian', 50000000,
         'Comply', 'https://drive.google.com/', 'Dokumen penawaran dan draft ToR baru masuk ke Legal'
       ],
       [
+        'KTR/ETHOS/2026/009', 'PT ADHI KARYA TEKNIK', 'Maintenance Fasilitas & Genset Gedung',
+        'General Affairs', '1. Persiapan Dokumen',
+        offsetDate(0), '', '', '', '', '', '',
+        '', '', offsetDate(180), offsetDate(14),
+        'Tahap Pengumpulan Dokumen', 'Kurang NIB', 35000000,
+        'Comply', 'https://drive.google.com/', 'Menunggu kelengkapan legalitas dari vendor'
+      ],
+      [
         'KTR/ETHOS/2025/088', 'PT SUMBER MAKMUR LOGISTIK', 'Penyewaan Armada Truk Pengiriman Luar Kota',
-        'Operasional', offsetDate(-380), offsetDate(-365), offsetDate(-15),
-        '9. Berakhir / Expired', offsetDate(-370), offsetDate(-365),
+        'Operasional', '10. Kontrak Selesai',
+        offsetDate(-395), offsetDate(-390), offsetDate(-385), offsetDate(-380), offsetDate(-375), offsetDate(-370), offsetDate(-365),
+        offsetDate(-365), '', offsetDate(-15), offsetDate(-365),
         'Kontrak Selesai', 'Lengkap', 110000000,
         'Comply', 'https://drive.google.com/', 'Masa berlaku kontrak habis, dalam evaluasi perpanjangan'
       ]
@@ -2483,22 +2545,21 @@ function setupSheetKontrakVendor(ss) {
     }
     
     styleHeaders(sheet, standardHeaders.length);
-    sheet.setColumnWidth(1, 160);
-    sheet.setColumnWidth(2, 220);
-    sheet.setColumnWidth(3, 260);
-    sheet.setColumnWidth(4, 140);
-    sheet.setColumnWidth(5, 120);
-    sheet.setColumnWidth(6, 110);
-    sheet.setColumnWidth(7, 110);
-    sheet.setColumnWidth(8, 160);
-    sheet.setColumnWidth(9, 120);
-    sheet.setColumnWidth(10, 120);
-    sheet.setColumnWidth(11, 180);
-    sheet.setColumnWidth(12, 160);
-    sheet.setColumnWidth(13, 130);
-    sheet.setColumnWidth(14, 120);
-    sheet.setColumnWidth(15, 160);
-    sheet.setColumnWidth(16, 220);
+    sheet.setColumnWidth(1, 160); // No Kontrak
+    sheet.setColumnWidth(2, 220); // Nama Vendor
+    sheet.setColumnWidth(3, 260); // Ruang Lingkup
+    sheet.setColumnWidth(4, 140); // PIC/Divisi
+    sheet.setColumnWidth(5, 180); // Tahap Progress
+    for (var colIdx = 6; colIdx <= 15; colIdx++) {
+      sheet.setColumnWidth(colIdx, 130); // 10 Tanggal Alur
+    }
+    sheet.setColumnWidth(16, 130); // Target SLA
+    sheet.setColumnWidth(17, 160); // Status Revisi / Renvoi
+    sheet.setColumnWidth(18, 160); // Kelengkapan Dokumen
+    sheet.setColumnWidth(19, 130); // Nilai Kontrak
+    sheet.setColumnWidth(20, 120); // Status Kepatuhan
+    sheet.setColumnWidth(21, 160); // Link Dokumen
+    sheet.setColumnWidth(22, 220); // Keterangan
   } else {
     // Sheet sudah ada: periksa kolom yang belum ada dan tambahkan di baris header tanpa merusak data!
     var lastCol = sheet.getLastColumn();
@@ -2510,17 +2571,17 @@ function setupSheetKontrakVendor(ss) {
       var checkHeaders = [
         { key: 'pic / divisi', label: 'PIC / Divisi' },
         { key: 'tahap progress', label: 'Tahap Progress Pengerjaan' },
-        { key: 'tanggal dokumen', label: 'Tanggal Dokumen' },
-        { key: 'tanggal pengajuan', label: 'Tanggal Pengajuan ke Legal' },
-        { key: 'tanggal review legal ethos', label: 'Tanggal Review Legal Ethos' },
-        { key: 'tanggal draft', label: 'Tanggal Draft Keluar' },
-        { key: 'tanggal review legal vendor', label: 'Tanggal Review Legal Vendor' },
-        { key: 'tanggal paraf vendor', label: 'Tanggal Paraf Vendor' },
-        { key: 'tanggal paraf ethos', label: 'Tanggal Paraf Ethos' },
-        { key: 'tanggal revisi', label: 'Tanggal Revisi' },
+        { key: '1. persiapan', label: '1. Persiapan Dokumen' },
+        { key: '2. pengajuan', label: '2. Pengajuan Ke Legal' },
+        { key: '3. review legal ethos', label: '3. Review Legal Ethos' },
+        { key: '4. draft', label: '4. Draft Keluar' },
+        { key: '5. review vendor', label: '5. Review Vendor' },
+        { key: '6. paraf & tanda tangan vendor', label: '6. Paraf & Tanda Tangan Vendor' },
+        { key: '7. paraf & tanda tangan ethos', label: '7. Paraf & Tanda Tangan Ethos' },
+        { key: '8. kontrak aktif', label: '8. Kontrak Aktif' },
+        { key: '9. renvoi', label: '9. Renvoi (Jika Ada)' },
+        { key: '10. kontrak selesai', label: '10. Kontrak Selesai' },
         { key: 'target selesai sla', label: 'Target Selesai SLA' },
-        { key: 'tanggal realisasi', label: 'Tanggal Realisasi TTD' },
-        { key: 'tanggal renvoi', label: 'Tanggal Renvoi' },
         { key: 'status revisi', label: 'Status Revisi / Renvoi' },
         { key: 'link dokumen', label: 'Link Dokumen Kontrak' }
       ];
@@ -2550,7 +2611,7 @@ function setupSheetKontrakVendor(ss) {
   }
 
   try {
-    SpreadsheetApp.getUi().alert('Berhasil! Struktur kolom sheet "Kontrak Vendor" telah disiapkan & diperbarui dengan 16 kolom standar (termasuk Tahap Progress, SLA, Revisi/Renvoi, dll).');
+    SpreadsheetApp.getUi().alert('Berhasil! Struktur kolom sheet "Kontrak Vendor" telah disiapkan & diperbarui dengan 22 kolom standar (termasuk 10 Alur PKS & Tanggal Otomatis).');
   } catch (e) {
     Logger.log('setupSheetKontrakVendor complete');
   }

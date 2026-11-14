@@ -316,53 +316,45 @@ function getContractProcessDays(tglPengajuan, tglRealisasi) {
 function normalizeContractStageFrontend(rawStage, rawStatus, tglSelesai) {
     const s = (rawStage || '').toString().trim().toLowerCase();
     
-    // 1. Pemenuhan Dokumen
-    if (s.includes('pemenuhan') || s.includes('kelengkapan dokumen') || s.includes('syarat dokumen') || s.includes('pemenuhan dokumen')) {
-        return { step: 1, key: 'pemenuhan_dokumen', label: '1. Pemenuhan Dokumen', percent: 10, badgeColor: '#0284c7', badgeBg: '#f0f9ff', isRevision: false, isRenvoi: false, isFinal: false };
+    // 1. Persiapan Dokumen
+    if (s.includes('persiapan dokumen') || s.includes('pemenuhan') || s.includes('kelengkapan dokumen') || s.includes('syarat dokumen') || s.includes('1. persiapan')) {
+        return { step: 1, key: 'persiapan_dokumen', label: '1. Persiapan Dokumen', percent: 10, badgeColor: '#0284c7', badgeBg: '#f0f9ff', isRevision: false, isRenvoi: false, isFinal: false };
     }
     // 3. Review Legal Ethos (sebelum generic ethos/legal)
-    if (s.includes('review legal ethos') || s.includes('review ethos') || s.includes('legal ethos') || s.includes('review internal')) {
+    if (s.includes('review legal ethos') || s.includes('review ethos') || s.includes('legal ethos') || s.includes('review internal') || s.includes('3. review')) {
         return { step: 3, key: 'review_legal_ethos', label: '3. Review Legal Ethos', percent: 30, badgeColor: '#4f46e5', badgeBg: '#eef2ff', isRevision: false, isRenvoi: false, isFinal: false };
     }
-    // 5. Review Legal Vendor (sebelum generic vendor)
-    if (s.includes('review legal vendor') || s.includes('review legal rekanan') || s.includes('review legal pihak ke')) {
-        return { step: 5, key: 'review_legal_vendor', label: '5. Review Legal Vendor', percent: 50, badgeColor: '#c026d3', badgeBg: '#fdf4ff', isRevision: false, isRenvoi: false, isFinal: false };
+    // 5. Review Vendor
+    if (s.includes('review vendor') || s.includes('review legal vendor') || s.includes('review rekanan') || s.includes('5. review')) {
+        return { step: 5, key: 'review_vendor', label: '5. Review Vendor', percent: 55, badgeColor: '#c026d3', badgeBg: '#fdf4ff', isRevision: false, isRenvoi: false, isFinal: false };
     }
-    // 2. Pengajuan Legal
-    if (s.includes('pengajuan') || s.includes('masuk legal') || s.includes('ajukan')) {
-        return { step: 2, key: 'pengajuan', label: '2. Pengajuan Legal', percent: 20, badgeColor: '#2563eb', badgeBg: '#eff6ff', isRevision: false, isRenvoi: false, isFinal: false };
+    // 2. Pengajuan Ke Legal
+    if (s.includes('pengajuan ke legal') || s.includes('pengajuan legal') || s.includes('pengajuan') || s.includes('masuk legal') || s.includes('ajukan') || s.includes('2. pengajuan')) {
+        return { step: 2, key: 'pengajuan', label: '2. Pengajuan Ke Legal', percent: 20, badgeColor: '#2563eb', badgeBg: '#eff6ff', isRevision: false, isRenvoi: false, isFinal: false };
     }
     // 4. Draft Keluar
-    if (s.includes('draft') || s.includes('penyusunan')) {
-        return { step: 4, key: 'draft', label: '4. Draft Keluar', percent: 40, badgeColor: '#7c3aed', badgeBg: '#f5f3ff', isRevision: false, isRenvoi: false, isFinal: false };
+    if (s.includes('draft keluar') || s.includes('draft') || s.includes('penyusunan') || s.includes('4. draft')) {
+        return { step: 4, key: 'draft', label: '4. Draft Keluar', percent: 45, badgeColor: '#7c3aed', badgeBg: '#f5f3ff', isRevision: false, isRenvoi: false, isFinal: false };
     }
-    // 6. Paraf Vendor
-    if (s.includes('paraf vendor') || s.includes('review vendor') || s.includes('paraf rekanan')) {
-        return { step: 6, key: 'paraf_vendor', label: '6. Paraf Vendor', percent: 60, badgeColor: '#d97706', badgeBg: '#fffbeb', isRevision: false, isRenvoi: false, isFinal: false };
+    // 6. Paraf & Tanda Tangan Vendor
+    if (s.includes('paraf & tanda tangan vendor') || s.includes('paraf & ttd vendor') || s.includes('paraf vendor') || s.includes('ttd vendor') || s.includes('6. paraf')) {
+        return { step: 6, key: 'paraf_ttd_vendor', label: '6. Paraf & Tanda Tangan Vendor', percent: 70, badgeColor: '#d97706', badgeBg: '#fffbeb', isRevision: false, isRenvoi: false, isFinal: false };
     }
-    // 7. Paraf Ethos
-    if (s.includes('paraf ethos') || s.includes('paraf internal') || (s.includes('paraf') && !s.includes('vendor'))) {
-        return { step: 7, key: 'paraf_ethos', label: '7. Paraf Ethos', percent: 70, badgeColor: '#9333ea', badgeBg: '#faf5ff', isRevision: false, isRenvoi: false, isFinal: false };
+    // 7. Paraf & Tanda Tangan Ethos
+    if (s.includes('paraf & tanda tangan ethos') || s.includes('paraf & ttd ethos') || s.includes('paraf ethos') || s.includes('paraf internal') || s.includes('ttd ethos') || s.includes('7. paraf') || s.includes('tanda tangan') || s.includes('ttd')) {
+        return { step: 7, key: 'paraf_ttd_ethos', label: '7. Paraf & Tanda Tangan Ethos', percent: 85, badgeColor: '#9333ea', badgeBg: '#faf5ff', isRevision: false, isRenvoi: false, isFinal: false };
     }
-    // 8. Revisi
-    if (s.includes('revisi')) {
-        return { step: 8, key: 'revisi', label: '8. Revisi', percent: 65, badgeColor: '#e11d48', badgeBg: '#fff1f2', isRevision: true, isRenvoi: false, isFinal: false };
-    }
-    // 9. Tanda Tangan
-    if (s.includes('tanda tangan') || s.includes('ttd') || s.includes('signing') || s.includes('e-sign')) {
-        return { step: 9, key: 'ttd', label: '9. Tanda Tangan', percent: 85, badgeColor: '#0d9488', badgeBg: '#f0fdfa', isRevision: false, isRenvoi: false, isFinal: false };
-    }
-    // 10. Aktif Sah
-    if (s.includes('aktif') || s.includes('selesai') || s.includes('berlaku') || s.includes('done')) {
-        return { step: 10, key: 'aktif', label: '10. Aktif Sah', percent: 100, badgeColor: '#16a34a', badgeBg: '#f0fdf4', isRevision: false, isRenvoi: false, isFinal: true };
-    }
-    // 11. Expired
-    if (s.includes('expired') || s.includes('kadaluarsa') || s.includes('berakhir')) {
-        return { step: 11, key: 'expired', label: '11. Berakhir / Expired', percent: 100, badgeColor: '#64748b', badgeBg: '#f8fafc', isRevision: false, isRenvoi: false, isFinal: true };
-    }
-    // 12. Renvoi (paling bawah sendiri)
+    // 9. Renvoi (Jika Ada)
     if (s.includes('renvoi')) {
-        return { step: 12, key: 'renvoi', label: '12. Renvoi', percent: 75, badgeColor: '#ea580c', badgeBg: '#fff7ed', isRevision: false, isRenvoi: true, isFinal: false };
+        return { step: 9, key: 'renvoi', label: '9. Renvoi (Jika Ada)', percent: 90, badgeColor: '#ea580c', badgeBg: '#fff7ed', isRevision: false, isRenvoi: true, isFinal: false };
+    }
+    // 10. Kontrak Selesai
+    if (s.includes('kontrak selesai') || s.includes('expired') || s.includes('kadaluarsa') || s.includes('berakhir') || s.includes('10. kontrak') || s.includes('11. berakhir')) {
+        return { step: 10, key: 'selesai', label: '10. Kontrak Selesai', percent: 100, badgeColor: '#64748b', badgeBg: '#f8fafc', isRevision: false, isRenvoi: false, isFinal: true };
+    }
+    // 8. Kontrak Aktif
+    if (s.includes('kontrak aktif') || s.includes('aktif') || s.includes('berlaku') || s.includes('selesai') || s.includes('done') || s.includes('8. kontrak') || s.includes('10. aktif')) {
+        return { step: 8, key: 'aktif', label: '8. Kontrak Aktif', percent: 100, badgeColor: '#16a34a', badgeBg: '#f0fdf4', isRevision: false, isRenvoi: false, isFinal: true };
     }
 
     if (rawStage && rawStage.toString().trim() !== '') {
@@ -371,10 +363,61 @@ function normalizeContractStageFrontend(rawStage, rawStatus, tglSelesai) {
 
     const isComply = (rawStatus || '').toString().toLowerCase().includes('comply');
     if (isComply) {
-        return { step: 10, key: 'aktif', label: '10. Aktif Sah', percent: 100, badgeColor: '#16a34a', badgeBg: '#f0fdf4', isRevision: false, isRenvoi: false, isFinal: true };
+        return { step: 8, key: 'aktif', label: '8. Kontrak Aktif', percent: 100, badgeColor: '#16a34a', badgeBg: '#f0fdf4', isRevision: false, isRenvoi: false, isFinal: true };
     }
 
-    return { step: 2, key: 'pengajuan', label: '2. Pengajuan Legal', percent: 20, badgeColor: '#2563eb', badgeBg: '#eff6ff', isRevision: false, isRenvoi: false, isFinal: false };
+    return { step: 2, key: 'pengajuan', label: '2. Pengajuan Ke Legal', percent: 20, badgeColor: '#2563eb', badgeBg: '#eff6ff', isRevision: false, isRenvoi: false, isFinal: false };
+}
+
+function inferStageFromDates(c, currentStageObj) {
+    const s = (c && c.tahapProgress || '').toString().trim().toLowerCase();
+    // Jika tahap diisi spesifik dan bukan strip/kosong/fallback lainnya, gunakan tahap tersebut
+    if (s && s !== '-' && s !== '---' && !s.includes('lainnya') && currentStageObj && currentStageObj.step > 0) {
+        return currentStageObj;
+    }
+    const dates = getContractStageDatesMap(c);
+    const todayMid = new Date();
+    todayMid.setHours(0, 0, 0, 0);
+
+    // Cek apakah kontrak sudah berakhir / selesai
+    if (dates[10] && dates[10] !== '-') {
+        const dt10 = parseAnyDate(dates[10]);
+        if (dt10) {
+            dt10.setHours(0, 0, 0, 0);
+            if (dt10 < todayMid) {
+                return { step: 10, key: 'selesai', label: '10. Kontrak Selesai', percent: 100, badgeColor: '#64748b', badgeBg: '#f8fafc', isRevision: false, isRenvoi: false, isFinal: true };
+            }
+        }
+    }
+    // Cek dari tanggal tertinggi yang sudah diisi
+    if (dates[9] && dates[9] !== '-' && !dates[9].toLowerCase().includes('belum')) {
+        return { step: 9, key: 'renvoi', label: '9. Renvoi (Jika Ada)', percent: 90, badgeColor: '#ea580c', badgeBg: '#fff7ed', isRevision: false, isRenvoi: true, isFinal: false };
+    }
+    if (dates[8] && dates[8] !== '-') {
+        return { step: 8, key: 'aktif', label: '8. Kontrak Aktif', percent: 100, badgeColor: '#16a34a', badgeBg: '#f0fdf4', isRevision: false, isRenvoi: false, isFinal: true };
+    }
+    if (dates[7] && dates[7] !== '-') {
+        return { step: 7, key: 'paraf_ttd_ethos', label: '7. Paraf & Tanda Tangan Ethos', percent: 85, badgeColor: '#9333ea', badgeBg: '#faf5ff', isRevision: false, isRenvoi: false, isFinal: false };
+    }
+    if (dates[6] && dates[6] !== '-') {
+        return { step: 6, key: 'paraf_ttd_vendor', label: '6. Paraf & Tanda Tangan Vendor', percent: 70, badgeColor: '#d97706', badgeBg: '#fffbeb', isRevision: false, isRenvoi: false, isFinal: false };
+    }
+    if (dates[5] && dates[5] !== '-') {
+        return { step: 5, key: 'review_vendor', label: '5. Review Vendor', percent: 55, badgeColor: '#c026d3', badgeBg: '#fdf4ff', isRevision: false, isRenvoi: false, isFinal: false };
+    }
+    if (dates[4] && dates[4] !== '-') {
+        return { step: 4, key: 'draft', label: '4. Draft Keluar', percent: 45, badgeColor: '#7c3aed', badgeBg: '#f5f3ff', isRevision: false, isRenvoi: false, isFinal: false };
+    }
+    if (dates[3] && dates[3] !== '-') {
+        return { step: 3, key: 'review_legal_ethos', label: '3. Review Legal Ethos', percent: 30, badgeColor: '#4f46e5', badgeBg: '#eef2ff', isRevision: false, isRenvoi: false, isFinal: false };
+    }
+    if (dates[2] && dates[2] !== '-') {
+        return { step: 2, key: 'pengajuan', label: '2. Pengajuan Ke Legal', percent: 20, badgeColor: '#2563eb', badgeBg: '#eff6ff', isRevision: false, isRenvoi: false, isFinal: false };
+    }
+    if (dates[1] && dates[1] !== '-') {
+        return { step: 1, key: 'persiapan_dokumen', label: '1. Persiapan Dokumen', percent: 10, badgeColor: '#0284c7', badgeBg: '#f0f9ff', isRevision: false, isRenvoi: false, isFinal: false };
+    }
+    return currentStageObj;
 }
 
 // =====================================================
@@ -412,9 +455,10 @@ function applyAndRender() {
         c._cleanLingkup = cleanLingkup;
         c._cleanDiv = cleanDiv;
 
-        c._stageObj = normalizeContractStageFrontend(c.tahapProgress, c.status, c._cleanSelesai);
+        let stageObj = normalizeContractStageFrontend(c.tahapProgress, c.status, c._cleanSelesai);
+        c._stageObj = inferStageFromDates(c, stageObj);
         c._daysRemaining = getContractDaysRemaining(c._cleanSelesai);
-        c._processDays = getContractProcessDays(c.tglPengajuan, c.tglRealisasi);
+        c._processDays = getContractProcessDays(c.tglPengajuan, c.tglRealisasi || c._cleanSelesai);
     });
 
     // 1. Filter Category jika dipilih
@@ -452,18 +496,16 @@ function applyAndRender() {
     let countSafe = 0;
 
     const stageCounts = {
-        pemenuhan_dokumen: 0,
+        persiapan_dokumen: 0,
         pengajuan: 0,
         review_legal_ethos: 0,
         draft: 0,
-        review_legal_vendor: 0,
-        paraf_vendor: 0,
-        paraf_ethos: 0,
-        revisi: 0,
-        ttd: 0,
+        review_vendor: 0,
+        paraf_ttd_vendor: 0,
+        paraf_ttd_ethos: 0,
         aktif: 0,
         renvoi: 0,
-        expired: 0
+        selesai: 0
     };
 
     filteredList.forEach(c => {
@@ -472,8 +514,8 @@ function applyAndRender() {
         if (isComply) countComply++; else countNotComply++;
 
         const step = c._stageObj.step;
-        if (step === 10) countActive++;
-        if (step >= 1 && step <= 9) countInProgress++;
+        if (step === 8) countActive++;
+        if (step >= 1 && step <= 7) countInProgress++;
         if (c.isOverdueSla) countOverdueSla++;
 
         // Hitung running days & bottleneck alert pada tahap aktif
@@ -500,7 +542,7 @@ function applyAndRender() {
             }
         }
         c._runningDays = runningDays;
-        c._isBottleneck = (step < 10) && (runningDays >= 7 || c.isOverdueSla);
+        c._isBottleneck = (step < 8) && (runningDays >= 7 || c.isOverdueSla);
 
         if (stageCounts[c._stageObj.key] !== undefined) {
             stageCounts[c._stageObj.key]++;
@@ -563,10 +605,10 @@ function applyAndRender() {
     if (elSumTot) elSumTot.textContent = totalCount;
     if (elSumAct) elSumAct.textContent = `${countActive} aktif`;
     if (elSumVal) elSumVal.textContent = totalValue > 0 ? formatRupiah(totalValue) : 'Rp 0';
-    if (elSumLegal) elSumLegal.textContent = stageCounts.pemenuhan_dokumen + stageCounts.pengajuan + stageCounts.review_legal_ethos + stageCounts.draft;
-    if (elSumParaf) elSumParaf.textContent = stageCounts.review_legal_vendor + stageCounts.paraf_vendor + stageCounts.paraf_ethos;
-    if (elSumRev) elSumRev.textContent = stageCounts.revisi + stageCounts.renvoi;
-    if (elSumTtd) elSumTtd.textContent = stageCounts.ttd + stageCounts.aktif;
+    if (elSumLegal) elSumLegal.textContent = (stageCounts.persiapan_dokumen || 0) + (stageCounts.pengajuan || 0) + (stageCounts.review_legal_ethos || 0) + (stageCounts.draft || 0);
+    if (elSumParaf) elSumParaf.textContent = (stageCounts.review_vendor || 0) + (stageCounts.paraf_ttd_vendor || 0) + (stageCounts.paraf_ttd_ethos || 0);
+    if (elSumRev) elSumRev.textContent = stageCounts.renvoi || 0;
+    if (elSumTtd) elSumTtd.textContent = (stageCounts.paraf_ttd_ethos || 0) + (stageCounts.aktif || 0);
     if (elSumExp) elSumExp.textContent = countExpiring;
 
     // Update Expiry Dropdown Options with counts
@@ -586,18 +628,16 @@ function applyAndRender() {
     const stageSelect = document.getElementById('slicerStageSelect');
     if (stageSelect) {
         const stageOptMap = {
-            'pemenuhan_dokumen': `1. Dokumen (${stageCounts.pemenuhan_dokumen})`,
-            'pengajuan': `2. Pengajuan (${stageCounts.pengajuan})`,
-            'review_legal_ethos': `3. Review Ethos (${stageCounts.review_legal_ethos})`,
-            'draft': `4. Draft (${stageCounts.draft})`,
-            'review_legal_vendor': `5. Review Vendor (${stageCounts.review_legal_vendor})`,
-            'paraf_vendor': `6. Paraf Vendor (${stageCounts.paraf_vendor})`,
-            'paraf_ethos': `7. Paraf Ethos (${stageCounts.paraf_ethos})`,
-            'revisi': `8. Revisi (${stageCounts.revisi})`,
-            'ttd': `9. TTD (${stageCounts.ttd})`,
-            'aktif': `10. Aktif (${stageCounts.aktif})`,
-            'expired': `11. Expired (${stageCounts.expired})`,
-            'renvoi': `12. Renvoi (${stageCounts.renvoi})`
+            'persiapan_dokumen': `1. Persiapan Dokumen (${stageCounts.persiapan_dokumen || 0})`,
+            'pengajuan': `2. Pengajuan Ke Legal (${stageCounts.pengajuan || 0})`,
+            'review_legal_ethos': `3. Review Legal Ethos (${stageCounts.review_legal_ethos || 0})`,
+            'draft': `4. Draft Keluar (${stageCounts.draft || 0})`,
+            'review_vendor': `5. Review Vendor (${stageCounts.review_vendor || 0})`,
+            'paraf_ttd_vendor': `6. Paraf & TTD Vendor (${stageCounts.paraf_ttd_vendor || 0})`,
+            'paraf_ttd_ethos': `7. Paraf & TTD Ethos (${stageCounts.paraf_ttd_ethos || 0})`,
+            'aktif': `8. Kontrak Aktif (${stageCounts.aktif || 0})`,
+            'renvoi': `9. Renvoi (Jika Ada) (${stageCounts.renvoi || 0})`,
+            'selesai': `10. Kontrak Selesai (${stageCounts.selesai || 0})`
         };
         const stageOpts = stageSelect.options;
         for (let i = 0; i < stageOpts.length; i++) {
@@ -614,19 +654,17 @@ function applyAndRender() {
         : (filteredList.length > 0 ? 18 : 0);
 
     const inProgressStagesMap = {
-        'paraf_vendor': { label: 'Paraf Vendor', count: stageCounts.paraf_vendor, totalDays: 0 },
-        'review_legal_vendor': { label: 'Review Vendor', count: stageCounts.review_legal_vendor, totalDays: 0 },
-        'paraf_ethos': { label: 'Paraf Ethos', count: stageCounts.paraf_ethos, totalDays: 0 },
-        'review_legal_ethos': { label: 'Review Ethos', count: stageCounts.review_legal_ethos, totalDays: 0 },
-        'draft': { label: 'Penyusunan Draf', count: stageCounts.draft, totalDays: 0 },
-        'pengajuan': { label: 'Pengajuan Legal', count: stageCounts.pengajuan, totalDays: 0 },
-        'pemenuhan_dokumen': { label: 'Dokumen', count: stageCounts.pemenuhan_dokumen, totalDays: 0 },
-        'revisi': { label: 'Revisi', count: stageCounts.revisi, totalDays: 0 },
-        'ttd': { label: 'Tanda Tangan', count: stageCounts.ttd, totalDays: 0 }
+        'persiapan_dokumen': { label: 'Persiapan Dokumen', count: stageCounts.persiapan_dokumen || 0, totalDays: 0 },
+        'pengajuan': { label: 'Pengajuan Ke Legal', count: stageCounts.pengajuan || 0, totalDays: 0 },
+        'review_legal_ethos': { label: 'Review Legal Ethos', count: stageCounts.review_legal_ethos || 0, totalDays: 0 },
+        'draft': { label: 'Draft Keluar', count: stageCounts.draft || 0, totalDays: 0 },
+        'review_vendor': { label: 'Review Vendor', count: stageCounts.review_vendor || 0, totalDays: 0 },
+        'paraf_ttd_vendor': { label: 'Paraf & TTD Vendor', count: stageCounts.paraf_ttd_vendor || 0, totalDays: 0 },
+        'paraf_ttd_ethos': { label: 'Paraf & TTD Ethos', count: stageCounts.paraf_ttd_ethos || 0, totalDays: 0 }
     };
 
     filteredList.forEach(c => {
-        if (c._stageObj && c._stageObj.step < 10 && inProgressStagesMap[c._stageObj.key]) {
+        if (c._stageObj && c._stageObj.step < 8 && inProgressStagesMap[c._stageObj.key]) {
             inProgressStagesMap[c._stageObj.key].totalDays += (c._runningDays || 0);
         }
     });
@@ -759,48 +797,42 @@ function renderContractWorkflowChart(stages) {
     if (!canvas) return;
 
     const labels = [
-        '1. Pemenuhan Dokumen',
-        '2. Pengajuan Legal',
+        '1. Persiapan Dokumen',
+        '2. Pengajuan Ke Legal',
         '3. Review Legal Ethos',
         '4. Draft Keluar',
-        '5. Review Legal Vendor',
-        '6. Paraf Vendor',
-        '7. Paraf Ethos',
-        '8. Revisi',
-        '9. Tanda Tangan',
-        '10. Aktif Sah',
-        '11. Berakhir / Expired',
-        '12. Renvoi'
+        '5. Review Vendor',
+        '6. Paraf & TTD Vendor',
+        '7. Paraf & TTD Ethos',
+        '8. Kontrak Aktif',
+        '9. Renvoi (Jika Ada)',
+        '10. Kontrak Selesai'
     ];
 
     const dataValues = [
-        stages.pemenuhan_dokumen || 0,
+        stages.persiapan_dokumen || 0,
         stages.pengajuan || 0,
         stages.review_legal_ethos || 0,
         stages.draft || 0,
-        stages.review_legal_vendor || 0,
-        stages.paraf_vendor || 0,
-        stages.paraf_ethos || 0,
-        stages.revisi || 0,
-        stages.ttd || 0,
+        stages.review_vendor || 0,
+        stages.paraf_ttd_vendor || 0,
+        stages.paraf_ttd_ethos || 0,
         stages.aktif || 0,
-        stages.expired || 0,
-        stages.renvoi || 0
+        stages.renvoi || 0,
+        stages.selesai || 0
     ];
 
     const colors = [
-        '#0284c7', // 1. Pemenuhan Dokumen (sky-600)
-        '#3b82f6', // 2. Pengajuan Legal (blue-500)
-        '#6366f1', // 3. Review Legal Ethos (indigo-500)
-        '#8b5cf6', // 4. Draft Keluar (violet-500)
-        '#d946ef', // 5. Review Legal Vendor (fuchsia-500)
-        '#f59e0b', // 6. Paraf Vendor (amber-500)
-        '#7c3aed', // 7. Paraf Ethos (purple-600)
-        '#e11d48', // 8. Revisi (rose-600)
-        '#0d9488', // 9. Tanda Tangan (teal-600)
-        '#059669', // 10. Aktif Sah (emerald-600)
-        '#64748b', // 11. Berakhir / Expired (slate-500)
-        '#ea580c'  // 12. Renvoi (orange-600 - paling bawah)
+        '#0284c7', // 1. Persiapan Dokumen (sky-600)
+        '#2563eb', // 2. Pengajuan Ke Legal (blue-600)
+        '#4f46e5', // 3. Review Legal Ethos (indigo-600)
+        '#7c3aed', // 4. Draft Keluar (violet-600)
+        '#c026d3', // 5. Review Vendor (fuchsia-600)
+        '#d97706', // 6. Paraf & TTD Vendor (amber-600)
+        '#9333ea', // 7. Paraf & TTD Ethos (purple-600)
+        '#16a34a', // 8. Kontrak Aktif (emerald-600)
+        '#ea580c', // 9. Renvoi (orange-600)
+        '#64748b'  // 10. Kontrak Selesai (slate-500)
     ];
 
     const elRatio = document.getElementById('pipelineActiveRatio');
@@ -834,18 +866,16 @@ function renderContractWorkflowChart(stages) {
                 if (elements && elements.length > 0) {
                     const idx = elements[0].index;
                     const stageKeys = [
-                        'pemenuhan_dokumen',
+                        'persiapan_dokumen',
                         'pengajuan',
                         'review_legal_ethos',
                         'draft',
-                        'review_legal_vendor',
-                        'paraf_vendor',
-                        'paraf_ethos',
-                        'revisi',
-                        'ttd',
+                        'review_vendor',
+                        'paraf_ttd_vendor',
+                        'paraf_ttd_ethos',
                         'aktif',
-                        'expired',
-                        'renvoi'
+                        'renvoi',
+                        'selesai'
                     ];
                     const selectedStage = stageKeys[idx];
                     if (selectedStage) {
@@ -1141,10 +1171,10 @@ function changeContractPageSize(newSize) {
 // =====================================================
 function renderMiniStepSegments(currentStep, color) {
     let html = '';
-    for (let i = 1; i <= 12; i++) {
+    for (let i = 1; i <= 10; i++) {
         let bg = '#e2e8f0';
         let op = '0.45';
-        if (i < currentStep || (currentStep >= 10 && i <= 10)) {
+        if (i < currentStep || (currentStep >= 8 && i <= 8)) {
             bg = '#10b981'; // completed green
             op = '1';
         } else if (i === currentStep) {
@@ -1158,19 +1188,18 @@ function renderMiniStepSegments(currentStep, color) {
 
 function getContractStageDatesMap(c) {
     const raw = (c && c.stageDates && typeof c.stageDates === 'object') ? c.stageDates : {};
+    const hasOldKeys = Boolean(raw[11] || raw[12]);
     return {
         1: raw[1] || c.tglDokumen || '-',
         2: raw[2] || c.tglPengajuan || '-',
         3: raw[3] || c.tglReviewEthos || '-',
         4: raw[4] || c.tglDraft || '-',
         5: raw[5] || c.tglReviewVendor || '-',
-        6: raw[6] || c.tglParafVendor || '-',
-        7: raw[7] || c.tglParafEthos || '-',
-        8: raw[8] || c.tglRevisi || '-',
-        9: raw[9] || c.tglRealisasi || '-',
-        10: raw[10] || c._cleanMulai || c.tglMulai || '-',
-        11: raw[11] || c._cleanSelesai || c.tglSelesai || '-',
-        12: raw[12] || c.tglRenvoi || '-'
+        6: raw[6] || c.tglParafVendor || c.tglParafTtdVendor || '-',
+        7: raw[7] || c.tglParafEthos || c.tglParafTtdEthos || '-',
+        8: (hasOldKeys ? raw[10] : raw[8]) || c._cleanMulai || c.tglMulai || c.tglAktif || '-',
+        9: (hasOldKeys ? raw[12] : raw[9]) || c.tglRenvoi || '-',
+        10: (hasOldKeys ? raw[11] : raw[10]) || c._cleanSelesai || c.tglSelesai || '-'
     };
 }
 
@@ -1188,37 +1217,36 @@ function renderInlineWorkflowSteps(c, stage) {
     // Cek apakah PKS ini memiliki data renvoi (hanya tampilkan jika ada data renvoi)
     const hasRenvoiData = Boolean(
         stage.isRenvoi ||
-        stage.step === 12 ||
+        stage.step === 9 ||
         (stage.key === 'renvoi') ||
         (c.tglRenvoi && c.tglRenvoi !== '-' && c.tglRenvoi !== '---' && !c.tglRenvoi.toLowerCase().includes('belum')) ||
-        (stageDates[12] && stageDates[12] !== '-' && stageDates[12] !== '---' && !stageDates[12].toLowerCase().includes('belum')) ||
+        (stageDates[9] && stageDates[9] !== '-' && stageDates[9] !== '---' && !stageDates[9].toLowerCase().includes('belum')) ||
         (c.statusRevisi && c.statusRevisi.toLowerCase().includes('renvoi'))
     );
 
     const steps = [
-        { num: 1, key: 'pemenuhan_dokumen', title: 'Dokumen' },
-        { num: 2, key: 'pengajuan', title: 'Pengajuan' },
-        { num: 3, key: 'review_legal_ethos', title: 'Review Ethos' },
-        { num: 4, key: 'draft', title: 'Penyusunan Draf' },
-        { num: 5, key: 'review_legal_vendor', title: 'Review Vendor' },
-        { num: 6, key: 'paraf_vendor', title: 'Paraf Vendor' },
-        { num: 7, key: 'paraf_ethos', title: 'Paraf Ethos' },
-        { num: 8, key: 'revisi', title: 'Revisi' },
-        { num: 9, key: 'ttd', title: 'Tanda Tangan' },
-        { num: 10, key: 'aktif', title: 'Aktif Sah' },
-        { num: 11, key: 'expired', title: 'Expired' }
+        { num: 1, key: 'persiapan_dokumen', title: 'Persiapan Dokumen' },
+        { num: 2, key: 'pengajuan', title: 'Pengajuan Ke Legal' },
+        { num: 3, key: 'review_legal_ethos', title: 'Review Legal Ethos' },
+        { num: 4, key: 'draft', title: 'Draft Keluar' },
+        { num: 5, key: 'review_vendor', title: 'Review Vendor' },
+        { num: 6, key: 'paraf_ttd_vendor', title: 'Paraf & TTD Vendor' },
+        { num: 7, key: 'paraf_ttd_ethos', title: 'Paraf & TTD Ethos' },
+        { num: 8, key: 'aktif', title: 'Kontrak Aktif' }
     ];
 
     if (hasRenvoiData) {
-        steps.push({ num: 12, key: 'renvoi', title: 'Renvoi' });
+        steps.push({ num: 9, key: 'renvoi', title: 'Renvoi' });
     }
+
+    steps.push({ num: 10, key: 'selesai', title: 'Kontrak Selesai' });
 
     const currentStepNum = stage.step;
     const hasRenvoi = stage.isRenvoi;
 
     // Parse all dates to Date objects normalized to 00:00:00
     const parsedDates = {};
-    for (let i = 1; i <= 12; i++) {
+    for (let i = 1; i <= 10; i++) {
         const raw = stageDates[i];
         const dt = parseAnyDate(raw);
         if (dt) {
@@ -1236,17 +1264,17 @@ function renderInlineWorkflowSteps(c, stage) {
         let isDone = false;
         let isCurrent = false;
 
-        if (st.num < 10) {
-            if (currentStepNum > st.num || currentStepNum >= 10) isDone = true;
+        if (st.num < 8) {
+            if (currentStepNum > st.num || currentStepNum >= 8) isDone = true;
             else if (currentStepNum === st.num) isCurrent = true;
+        } else if (st.num === 8) {
+            if (currentStepNum === 8) isCurrent = true;
+            else if (currentStepNum > 8) isDone = true;
+        } else if (st.num === 9) {
+            if (currentStepNum === 9) isCurrent = true;
+            else if (hasRenvoi || (parsedDates[9] !== null)) isDone = true;
         } else if (st.num === 10) {
             if (currentStepNum === 10) isCurrent = true;
-            else if (currentStepNum > 10) isDone = true;
-        } else if (st.num === 11) {
-            if (currentStepNum === 11) isCurrent = true;
-        } else if (st.num === 12) {
-            if (currentStepNum === 12) isCurrent = true;
-            else if (hasRenvoi || (parsedDates[12] !== null)) isDone = true;
         }
 
         const rawDate = stageDates[st.num];
@@ -1260,17 +1288,17 @@ function renderInlineWorkflowSteps(c, stage) {
             let isNextDone = false;
             let isNextCurrent = false;
 
-            if (nextSt.num < 10) {
-                if (currentStepNum > nextSt.num || currentStepNum >= 10) isNextDone = true;
+            if (nextSt.num < 8) {
+                if (currentStepNum > nextSt.num || currentStepNum >= 8) isNextDone = true;
                 else if (currentStepNum === nextSt.num) isNextCurrent = true;
+            } else if (nextSt.num === 8) {
+                if (currentStepNum === 8) isNextCurrent = true;
+                else if (currentStepNum > 8) isNextDone = true;
+            } else if (nextSt.num === 9) {
+                if (currentStepNum === 9) isNextCurrent = true;
+                else if (hasRenvoi || (parsedDates[9] !== null)) isNextDone = true;
             } else if (nextSt.num === 10) {
                 if (currentStepNum === 10) isNextCurrent = true;
-                else if (currentStepNum > 10) isNextDone = true;
-            } else if (nextSt.num === 11) {
-                if (currentStepNum === 11) isNextCurrent = true;
-            } else if (nextSt.num === 12) {
-                if (currentStepNum === 12) isNextCurrent = true;
-                else if (hasRenvoi || (parsedDates[12] !== null)) isNextDone = true;
             }
 
             let lineColorClass = 'bg-slate-200';
@@ -1306,7 +1334,7 @@ function renderInlineWorkflowSteps(c, stage) {
 
                 if (prevCompletedDate) {
                     const runDays = Math.max(0, Math.round((today - prevCompletedDate) / (1000 * 60 * 60 * 24)));
-                    const isBottleneck = (nextSt.num < 10) && (runDays >= 7 || c.isOverdueSla);
+                    const isBottleneck = (nextSt.num < 8) && (runDays >= 7 || c.isOverdueSla);
                     if (isBottleneck) {
                         lineColorClass = 'bg-amber-500';
                     }
@@ -1352,7 +1380,7 @@ function renderInlineWorkflowSteps(c, stage) {
             const runDays = prevCompletedDate
                 ? Math.max(0, Math.round((today - prevCompletedDate) / (1000 * 60 * 60 * 24)))
                 : (c._runningDays || 0);
-            const isBottleneck = (st.num < 10) && (runDays >= 7 || c.isOverdueSla);
+            const isBottleneck = (st.num < 8) && (runDays >= 7 || c.isOverdueSla);
 
             if (isBottleneck) {
                 nodeCircleHtml = `
@@ -1389,7 +1417,7 @@ function renderInlineWorkflowSteps(c, stage) {
             const runDays = prevCompletedDate
                 ? Math.max(0, Math.round((today - prevCompletedDate) / (1000 * 60 * 60 * 24)))
                 : (c._runningDays || 0);
-            const isBottleneck = (st.num < 10) && (runDays >= 7 || c.isOverdueSla);
+            const isBottleneck = (st.num < 8) && (runDays >= 7 || c.isOverdueSla);
 
             if (isBottleneck) {
                 titleClass = 'text-amber-900 font-black';
@@ -1422,8 +1450,8 @@ function renderInlineWorkflowSteps(c, stage) {
         } else {
             titleClass = 'text-slate-500 font-medium';
 
-            if (st.num === 11) {
-                const tglSelesaiFormatted = formatStepperDate(c._cleanSelesai || c.tglSelesai);
+            if (st.num === 10) {
+                const tglSelesaiFormatted = formatStepperDate(c._cleanSelesai || c.tglSelesai || stageDates[10]);
                 if (tglSelesaiFormatted) {
                     subTextHtml = `
                         <div class="text-[9.5px] text-slate-400 mt-1 leading-tight whitespace-nowrap">
@@ -1455,31 +1483,25 @@ const KANBAN_PHASES = [
         id: 'pra_kontrak', title: '📥 Pra-Kontrak & Legal',
         color: 'sky', borderColor: '#0284c7', bgColor: '#f0f9ff',
         steps: [1, 2, 3, 4],
-        stepLabels: { 1: 'Dokumen', 2: 'Pengajuan', 3: 'Rev Ethos', 4: 'Draft' }
+        stepLabels: { 1: 'Persiapan Dokumen', 2: 'Pengajuan', 3: 'Rev Ethos', 4: 'Draft Keluar' }
     },
     {
-        id: 'negosiasi', title: '🤝 Negosiasi & Review',
-        color: 'amber', borderColor: '#d97706', bgColor: '#fffbeb',
-        steps: [5, 8],
-        stepLabels: { 5: 'Rev Vendor', 8: 'Revisi' }
-    },
-    {
-        id: 'paraf_ttd', title: '✍️ Paraf & TTD',
+        id: 'review_paraf', title: '✍️ Review & Paraf/TTD',
         color: 'violet', borderColor: '#7c3aed', bgColor: '#f5f3ff',
-        steps: [6, 7, 9],
-        stepLabels: { 6: 'Paraf Vendor', 7: 'Paraf Ethos', 9: 'TTD' }
+        steps: [5, 6, 7],
+        stepLabels: { 5: 'Review Vendor', 6: 'Paraf & TTD Vendor', 7: 'Paraf & TTD Ethos' }
     },
     {
         id: 'aktif', title: '🟢 Kontrak Aktif',
         color: 'emerald', borderColor: '#059669', bgColor: '#ecfdf5',
-        steps: [10],
-        stepLabels: { 10: 'Aktif Sah' }
+        steps: [8],
+        stepLabels: { 8: 'Kontrak Aktif' }
     },
     {
-        id: 'pasca', title: '📑 Pasca Kontrak',
+        id: 'pasca', title: '📑 Pasca Kontrak & Selesai',
         color: 'rose', borderColor: '#e11d48', bgColor: '#fff1f2',
-        steps: [11, 12],
-        stepLabels: { 11: 'Expired', 12: 'Renvoi' }
+        steps: [9, 10],
+        stepLabels: { 9: 'Renvoi', 10: 'Kontrak Selesai' }
     }
 ];
 
@@ -1942,19 +1964,17 @@ function copyContractHeadersToClipboard() {
         'Ruang Lingkup / Jenis Pekerjaan',
         'PIC / Divisi',
         'Tahap Progress Pengerjaan',
-        'Tanggal Dokumen',
-        'Tanggal Pengajuan ke Legal',
-        'Tanggal Review Legal Ethos',
-        'Tanggal Draft Keluar',
-        'Tanggal Review Legal Vendor',
-        'Tanggal Paraf Vendor',
-        'Tanggal Paraf Ethos',
-        'Tanggal Revisi',
+        '1. Persiapan Dokumen',
+        '2. Pengajuan Ke Legal',
+        '3. Review Legal Ethos',
+        '4. Draft Keluar',
+        '5. Review Vendor',
+        '6. Paraf & Tanda Tangan Vendor',
+        '7. Paraf & Tanda Tangan Ethos',
+        '8. Kontrak Aktif',
+        '9. Renvoi (Jika Ada)',
+        '10. Kontrak Selesai',
         'Target Selesai SLA',
-        'Tanggal Realisasi TTD',
-        'Tanggal Mulai Kontrak',
-        'Tanggal Selesai Kontrak',
-        'Tanggal Renvoi',
         'Status Revisi / Renvoi',
         'Kelengkapan Dokumen',
         'Nilai Kontrak (Rp)',
@@ -1966,41 +1986,39 @@ function copyContractHeadersToClipboard() {
     
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(textToCopy).then(() => {
-            showToast('24 Header Lengkap (termasuk 12 Tanggal Alur) berhasil disalin ke Clipboard! Tinggal paste di Baris 1 Sheet.', 'success');
+            showToast('22 Header Lengkap (termasuk 10 Tanggal Alur PKS) berhasil disalin ke Clipboard! Tinggal paste di Baris 1 Sheet.', 'success');
         }).catch(() => {
-            fallbackCopyText(textToCopy, '24 Header Lengkap berhasil disalin ke Clipboard!');
+            fallbackCopyText(textToCopy, '22 Header Lengkap berhasil disalin ke Clipboard!');
         });
     } else {
-        fallbackCopyText(textToCopy, '24 Header Lengkap berhasil disalin ke Clipboard!');
+        fallbackCopyText(textToCopy, '22 Header Lengkap berhasil disalin ke Clipboard!');
     }
 }
 
 function copyAuditDateHeadersToClipboard() {
     const headers = [
-        'Tanggal Dokumen',
-        'Tanggal Pengajuan ke Legal',
-        'Tanggal Review Legal Ethos',
-        'Tanggal Draft Keluar',
-        'Tanggal Review Legal Vendor',
-        'Tanggal Paraf Vendor',
-        'Tanggal Paraf Ethos',
-        'Tanggal Revisi',
-        'Target Selesai SLA',
-        'Tanggal Realisasi TTD',
-        'Tanggal Mulai Kontrak',
-        'Tanggal Selesai Kontrak',
-        'Tanggal Renvoi'
+        '1. Persiapan Dokumen',
+        '2. Pengajuan Ke Legal',
+        '3. Review Legal Ethos',
+        '4. Draft Keluar',
+        '5. Review Vendor',
+        '6. Paraf & Tanda Tangan Vendor',
+        '7. Paraf & Tanda Tangan Ethos',
+        '8. Kontrak Aktif',
+        '9. Renvoi (Jika Ada)',
+        '10. Kontrak Selesai',
+        'Target Selesai SLA'
     ];
     const textToCopy = headers.join('\t');
     
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(textToCopy).then(() => {
-            showToast('13 Kolom Tanggal Audit & SLA disalin! Tempel langsung di baris 1 di sebelah kolom terakhir spreadsheet Anda.', 'success');
+            showToast('10 Kolom Tanggal Alur & SLA disalin! Tempel langsung di baris 1 spreadsheet Anda.', 'success');
         }).catch(() => {
-            fallbackCopyText(textToCopy, '13 Kolom Tanggal Audit & SLA berhasil disalin!');
+            fallbackCopyText(textToCopy, '10 Kolom Tanggal Alur & SLA berhasil disalin!');
         });
     } else {
-        fallbackCopyText(textToCopy, '13 Kolom Tanggal Audit & SLA berhasil disalin!');
+        fallbackCopyText(textToCopy, '10 Kolom Tanggal Alur & SLA berhasil disalin!');
     }
 }
 
@@ -2029,14 +2047,14 @@ function exportContractCsv() {
         return;
     }
     const list = contractDashboardData.contractCompliance.list;
-    let csv = 'No Kontrak,Vendor,Ruang Lingkup,Divisi/PIC,Tahap Progress,Tgl Dokumen,Tgl Pengajuan Legal,Tgl Review Ethos,Tgl Draft Keluar,Tgl Review Vendor,Tgl Paraf Vendor,Tgl Paraf Ethos,Tgl Revisi,Target SLA,Tgl Realisasi TTD,Tgl Mulai Kontrak,Tgl Selesai Kontrak,Tgl Renvoi,Status Revisi/Renvoi,Sisa Hari Masa Berlaku,Durasi Pengerjaan (Hari),Status SLA,Kelengkapan Dokumen,Nilai Kontrak,Status Kepatuhan,Link Dokumen,Keterangan\n';
+    let csv = 'No Kontrak,Vendor,Ruang Lingkup,Divisi/PIC,Tahap Progress,1. Persiapan Dokumen,2. Pengajuan Ke Legal,3. Review Legal Ethos,4. Draft Keluar,5. Review Vendor,6. Paraf & TTD Vendor,7. Paraf & TTD Ethos,8. Kontrak Aktif,9. Renvoi (Jika Ada),10. Kontrak Selesai,Target SLA,Status Revisi/Renvoi,Sisa Hari Masa Berlaku,Durasi Pengerjaan (Hari),Status SLA,Kelengkapan Dokumen,Nilai Kontrak,Status Kepatuhan,Link Dokumen,Keterangan\n';
     list.forEach(c => {
         const stage = c._stageObj || normalizeContractStageFrontend(c.tahapProgress, c.status, c.tglSelesai);
         const daysRemaining = c._daysRemaining !== undefined ? c._daysRemaining : getContractDaysRemaining(c.tglSelesai);
-        const processDays = c._processDays !== undefined ? c._processDays : getContractProcessDays(c.tglPengajuan, c.tglRealisasi);
+        const processDays = c._processDays !== undefined ? c._processDays : getContractProcessDays(c.tglPengajuan, c.tglRealisasi || c.tglSelesai);
         const slaStatus = c.slaStatus || '-';
         const stageDates = getContractStageDatesMap(c);
-        csv += `"${escCsv(c.noKontrak)}","${escCsv(c.vendor)}","${escCsv(c.jenisPekerjaan || '-')}","${escCsv(c.picDivisi || '-')}","${escCsv(stage.label)}","${escCsv(stageDates[1])}","${escCsv(stageDates[2])}","${escCsv(stageDates[3])}","${escCsv(stageDates[4])}","${escCsv(stageDates[5])}","${escCsv(stageDates[6])}","${escCsv(stageDates[7])}","${escCsv(stageDates[8])}","${escCsv(c.targetSelesai || '-')}","${escCsv(stageDates[9])}","${escCsv(stageDates[10])}","${escCsv(stageDates[11])}","${escCsv(stageDates[12])}","${escCsv(c.statusRevisi || '-')}","${daysRemaining !== null ? daysRemaining : '-'}","${processDays !== null ? processDays : '-'}","${escCsv(slaStatus)}","${escCsv(c.kelengkapan || '-')}","${c.nilai || 0}","${escCsv(c.status || 'Comply')}","${escCsv(c.linkDokumen || '-')}","${escCsv(c.keterangan || '-')}"\n`;
+        csv += `"${escCsv(c.noKontrak)}","${escCsv(c.vendor)}","${escCsv(c.jenisPekerjaan || '-')}","${escCsv(c.picDivisi || '-')}","${escCsv(stage.label)}","${escCsv(stageDates[1])}","${escCsv(stageDates[2])}","${escCsv(stageDates[3])}","${escCsv(stageDates[4])}","${escCsv(stageDates[5])}","${escCsv(stageDates[6])}","${escCsv(stageDates[7])}","${escCsv(stageDates[8])}","${escCsv(stageDates[9])}","${escCsv(stageDates[10])}","${escCsv(c.targetSelesai || '-')}","${escCsv(c.statusRevisi || '-')}","${daysRemaining !== null ? daysRemaining : '-'}","${processDays !== null ? processDays : '-'}","${escCsv(slaStatus)}","${escCsv(c.kelengkapan || '-')}","${c.nilai || 0}","${escCsv(c.status || 'Comply')}","${escCsv(c.linkDokumen || '-')}","${escCsv(c.keterangan || '-')}"\n`;
     });
     const nowStr = new Date().toISOString().slice(0, 10);
     downloadCsv(csv, `Laporan_Contract_Repository_Compliance_${nowStr}.csv`);

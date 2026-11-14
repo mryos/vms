@@ -477,18 +477,16 @@ tailwind.config = {
 
                 <select id="slicerStageSelect" class="select-modern text-xs" title="Filter Tahap Progress" onchange="filterContractsByStage(this.value)">
                     <option value="all">Semua Tahap</option>
-                    <option value="pemenuhan_dokumen">1. Dokumen (0)</option>
-                    <option value="pengajuan">2. Pengajuan (0)</option>
-                    <option value="review_legal_ethos">3. Review Ethos (0)</option>
-                    <option value="draft">4. Draft (0)</option>
-                    <option value="review_legal_vendor">5. Review Vendor (0)</option>
-                    <option value="paraf_vendor">6. Paraf Vendor (0)</option>
-                    <option value="paraf_ethos">7. Paraf Ethos (0)</option>
-                    <option value="revisi">8. Revisi (0)</option>
-                    <option value="ttd">9. TTD (0)</option>
-                    <option value="aktif">10. Aktif (0)</option>
-                    <option value="expired">11. Expired (0)</option>
-                    <option value="renvoi">12. Renvoi (0)</option>
+                    <option value="persiapan_dokumen">1. Persiapan Dokumen (0)</option>
+                    <option value="pengajuan">2. Pengajuan Ke Legal (0)</option>
+                    <option value="review_legal_ethos">3. Review Legal Ethos (0)</option>
+                    <option value="draft">4. Draft Keluar (0)</option>
+                    <option value="review_vendor">5. Review Vendor (0)</option>
+                    <option value="paraf_ttd_vendor">6. Paraf & TTD Vendor (0)</option>
+                    <option value="paraf_ttd_ethos">7. Paraf & TTD Ethos (0)</option>
+                    <option value="aktif">8. Kontrak Aktif (0)</option>
+                    <option value="renvoi">9. Renvoi (Jika Ada) (0)</option>
+                    <option value="selesai">10. Kontrak Selesai (0)</option>
                 </select>
 
                 <button id="slicerResetBtn" onclick="resetAllContractFilters()" class="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-600 shadow-2xs hover:bg-slate-50 transition cursor-pointer whitespace-nowrap">
@@ -644,11 +642,11 @@ tailwind.config = {
                         <div class="text-[11px] text-sky-800 mt-0.5">Buka spreadsheet, klik menu: <strong>⚡ Evaluasi Vendor &gt; Setup / Perbarui Kolom Sheet Kontrak Vendor</strong> untuk menambahkan kolom audit otomatis tanpa merusak data!</div>
                     </div>
                     <div class="flex items-center gap-1.5 shrink-0">
-                        <button onclick="copyAuditDateHeadersToClipboard()" class="px-2.5 py-1.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] transition cursor-pointer" title="Salin 13 kolom tanggal audit & SLA">
-                            Salin 13 Tgl Audit
+                        <button onclick="copyAuditDateHeadersToClipboard()" class="px-2.5 py-1.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] transition cursor-pointer" title="Salin 10 kolom tanggal alur & SLA">
+                            Salin 10 Tgl Alur
                         </button>
-                        <button onclick="copyContractHeadersToClipboard()" class="px-2.5 py-1.5 rounded bg-sky-600 hover:bg-sky-700 text-white font-bold text-[11px] transition cursor-pointer" title="Salin 24 header lengkap">
-                            Salin 24 Header
+                        <button onclick="copyContractHeadersToClipboard()" class="px-2.5 py-1.5 rounded bg-sky-600 hover:bg-sky-700 text-white font-bold text-[11px] transition cursor-pointer" title="Salin 22 header lengkap">
+                            Salin 22 Header
                         </button>
                     </div>
                 </div>
@@ -658,7 +656,7 @@ tailwind.config = {
                         <thead class="bg-slate-100 text-slate-800 font-bold border-b border-slate-200">
                             <tr>
                                 <th class="p-2 w-8 text-center">No</th>
-                                <th class="p-2 w-48">Nama Kolom</th>
+                                <th class="p-2 w-52">Nama Kolom</th>
                                 <th class="p-2 w-28">Kategori</th>
                                 <th class="p-2">Keterangan &amp; Audit Alur</th>
                             </tr>
@@ -668,26 +666,24 @@ tailwind.config = {
                             <tr><td class="p-1.5 text-center font-bold">2</td><td class="p-1.5 font-semibold">Nama Vendor</td><td class="p-1.5 text-slate-500">Wajib</td><td class="p-1.5 text-slate-500">Nama rekanan/vendor</td></tr>
                             <tr><td class="p-1.5 text-center font-bold">3</td><td class="p-1.5">Ruang Lingkup / Jenis Pekerjaan</td><td class="p-1.5 text-slate-500">Info</td><td class="p-1.5 text-slate-500">Deskripsi singkat pekerjaan</td></tr>
                             <tr><td class="p-1.5 text-center font-bold">4</td><td class="p-1.5">PIC / Divisi</td><td class="p-1.5 text-slate-500">Info</td><td class="p-1.5 text-slate-500">Divisi pemohon (Procurement, IT, Marketing, dll)</td></tr>
-                            <tr><td class="p-1.5 text-center font-bold">5</td><td class="p-1.5 text-indigo-700 font-mono">Tahap Progress Pengerjaan</td><td class="p-1.5 text-indigo-700 font-bold">Workflow</td><td class="p-1.5 text-slate-600">Tahap aktif saat ini (1. Dokumen s/d 12. Renvoi)</td></tr>
-                            <tr class="bg-emerald-50/40"><td class="p-1.5 text-center font-bold text-emerald-800">6</td><td class="p-1.5 font-mono text-emerald-800">Tanggal Dokumen</td><td class="p-1.5 text-emerald-700 font-semibold">Audit Step 1</td><td class="p-1.5 text-slate-600">Tanggal kelengkapan berkas/dokumen</td></tr>
-                            <tr class="bg-emerald-50/40"><td class="p-1.5 text-center font-bold text-emerald-800">7</td><td class="p-1.5 font-mono text-emerald-800">Tanggal Pengajuan ke Legal</td><td class="p-1.5 text-emerald-700 font-semibold">Audit Step 2</td><td class="p-1.5 text-slate-600">Tanggal permohonan masuk ke legal</td></tr>
-                            <tr class="bg-emerald-50/40"><td class="p-1.5 text-center font-bold text-emerald-800">8</td><td class="p-1.5 font-mono text-emerald-800">Tanggal Review Legal Ethos</td><td class="p-1.5 text-emerald-700 font-semibold">Audit Step 3</td><td class="p-1.5 text-slate-600">Tanggal selesai review internal legal Ethos</td></tr>
-                            <tr class="bg-emerald-50/40"><td class="p-1.5 text-center font-bold text-emerald-800">9</td><td class="p-1.5 font-mono text-emerald-800">Tanggal Draft Keluar</td><td class="p-1.5 text-emerald-700 font-semibold">Audit Step 4</td><td class="p-1.5 text-slate-600">Tanggal penerbitan draf kontrak</td></tr>
-                            <tr class="bg-emerald-50/40"><td class="p-1.5 text-center font-bold text-emerald-800">10</td><td class="p-1.5 font-mono text-emerald-800">Tanggal Review Legal Vendor</td><td class="p-1.5 text-emerald-700 font-semibold">Audit Step 5</td><td class="p-1.5 text-slate-600">Tanggal selesai review tim hukum vendor</td></tr>
-                            <tr class="bg-emerald-50/40"><td class="p-1.5 text-center font-bold text-emerald-800">11</td><td class="p-1.5 font-mono text-emerald-800">Tanggal Paraf Vendor</td><td class="p-1.5 text-emerald-700 font-semibold">Audit Step 6</td><td class="p-1.5 text-slate-600">Tanggal penandatanganan paraf pihak vendor</td></tr>
-                            <tr class="bg-emerald-50/40"><td class="p-1.5 text-center font-bold text-emerald-800">12</td><td class="p-1.5 font-mono text-emerald-800">Tanggal Paraf Ethos</td><td class="p-1.5 text-emerald-700 font-semibold">Audit Step 7</td><td class="p-1.5 text-slate-600">Tanggal paraf internal pimpinan Ethos</td></tr>
-                            <tr class="bg-emerald-50/40"><td class="p-1.5 text-center font-bold text-emerald-800">13</td><td class="p-1.5 font-mono text-emerald-800">Tanggal Revisi</td><td class="p-1.5 text-emerald-700 font-semibold">Audit Step 8</td><td class="p-1.5 text-slate-600">Tanggal pengembalian catatan koreksi/perbaikan</td></tr>
-                            <tr><td class="p-1.5 text-center font-bold">14</td><td class="p-1.5 font-mono text-amber-700">Target Selesai SLA</td><td class="p-1.5 text-amber-700 font-semibold">SLA SLA</td><td class="p-1.5 text-slate-600">Target deadline pengerjaan legalitas</td></tr>
-                            <tr class="bg-emerald-50/40"><td class="p-1.5 text-center font-bold text-emerald-800">15</td><td class="p-1.5 font-mono text-emerald-800">Tanggal Realisasi TTD</td><td class="p-1.5 text-emerald-700 font-semibold">Audit Step 9</td><td class="p-1.5 text-slate-600">Tanggal sah penandatanganan Direksi (TTD)</td></tr>
-                            <tr class="bg-emerald-50/40"><td class="p-1.5 text-center font-bold text-emerald-800">16</td><td class="p-1.5 font-mono text-emerald-800">Tanggal Mulai Kontrak</td><td class="p-1.5 text-emerald-700 font-semibold">Audit Step 10</td><td class="p-1.5 text-slate-600">Awal masa aktif pelaksanaan kontrak</td></tr>
-                            <tr class="bg-emerald-50/40"><td class="p-1.5 text-center font-bold text-emerald-800">17</td><td class="p-1.5 font-mono text-emerald-800">Tanggal Selesai Kontrak</td><td class="p-1.5 text-emerald-700 font-semibold">Audit Step 11</td><td class="p-1.5 text-slate-600">Akhir masa berlaku (penentu sisa hari / expired)</td></tr>
-                            <tr class="bg-emerald-50/40"><td class="p-1.5 text-center font-bold text-emerald-800">18</td><td class="p-1.5 font-mono text-emerald-800">Tanggal Renvoi</td><td class="p-1.5 text-emerald-700 font-semibold">Audit Step 12</td><td class="p-1.5 text-slate-600">Tanggal adendum / klausul renvoi disepakati</td></tr>
-                            <tr><td class="p-1.5 text-center font-bold">19</td><td class="p-1.5 text-rose-600">Status Revisi / Renvoi</td><td class="p-1.5 text-slate-500">Catatan</td><td class="p-1.5 text-slate-500">Uraian klausul yang mengalami revisi/renvoi</td></tr>
-                            <tr><td class="p-1.5 text-center font-bold">20</td><td class="p-1.5">Kelengkapan Dokumen</td><td class="p-1.5 text-slate-500">Status</td><td class="p-1.5 text-slate-500">Lengkap / Belum Lengkap (KTP, NPWP, NIB, dll)</td></tr>
-                            <tr><td class="p-1.5 text-center font-bold">21</td><td class="p-1.5">Nilai Kontrak (Rp)</td><td class="p-1.5 text-slate-500">Keuangan</td><td class="p-1.5 text-slate-500">Nominal kontrak angka murni (contoh: 50000000)</td></tr>
-                            <tr><td class="p-1.5 text-center font-bold">22</td><td class="p-1.5 text-emerald-700">Status Kepatuhan</td><td class="p-1.5 text-slate-500">Kepatuhan</td><td class="p-1.5 text-slate-500">Comply / Not Comply</td></tr>
-                            <tr><td class="p-1.5 text-center font-bold">23</td><td class="p-1.5 text-sky-600 font-mono">Link Dokumen Kontrak</td><td class="p-1.5 text-slate-500">Arsip</td><td class="p-1.5 text-slate-500">URL link Google Drive file kontrak PDF/Docx</td></tr>
-                            <tr><td class="p-1.5 text-center font-bold">24</td><td class="p-1.5">Keterangan</td><td class="p-1.5 text-slate-500">Catatan</td><td class="p-1.5 text-slate-500">Catatan tambahan dari legal atau user</td></tr>
+                            <tr><td class="p-1.5 text-center font-bold">5</td><td class="p-1.5 text-indigo-700 font-mono">Tahap Progress Pengerjaan</td><td class="p-1.5 text-indigo-700 font-bold">Workflow</td><td class="p-1.5 text-slate-600">Opsional / Otomatis dideteksi dari tanggal alur tertinggi yang diisi</td></tr>
+                            <tr class="bg-emerald-50/40"><td class="p-1.5 text-center font-bold text-emerald-800">6</td><td class="p-1.5 font-mono text-emerald-800">1. Persiapan Dokumen</td><td class="p-1.5 text-emerald-700 font-semibold">Alur Step 1</td><td class="p-1.5 text-slate-600">Tanggal persiapan dan kelengkapan dokumen</td></tr>
+                            <tr class="bg-emerald-50/40"><td class="p-1.5 text-center font-bold text-emerald-800">7</td><td class="p-1.5 font-mono text-emerald-800">2. Pengajuan Ke Legal</td><td class="p-1.5 text-emerald-700 font-semibold">Alur Step 2</td><td class="p-1.5 text-slate-600">Tanggal pengajuan berkas masuk ke legal</td></tr>
+                            <tr class="bg-emerald-50/40"><td class="p-1.5 text-center font-bold text-emerald-800">8</td><td class="p-1.5 font-mono text-emerald-800">3. Review Legal Ethos</td><td class="p-1.5 text-emerald-700 font-semibold">Alur Step 3</td><td class="p-1.5 text-slate-600">Tanggal review internal tim legal Ethos</td></tr>
+                            <tr class="bg-emerald-50/40"><td class="p-1.5 text-center font-bold text-emerald-800">9</td><td class="p-1.5 font-mono text-emerald-800">4. Draft Keluar</td><td class="p-1.5 text-emerald-700 font-semibold">Alur Step 4</td><td class="p-1.5 text-slate-600">Tanggal draf perjanjian resmi keluar</td></tr>
+                            <tr class="bg-emerald-50/40"><td class="p-1.5 text-center font-bold text-emerald-800">10</td><td class="p-1.5 font-mono text-emerald-800">5. Review Vendor</td><td class="p-1.5 text-emerald-700 font-semibold">Alur Step 5</td><td class="p-1.5 text-slate-600">Tanggal penelaahan/review oleh pihak vendor</td></tr>
+                            <tr class="bg-emerald-50/40"><td class="p-1.5 text-center font-bold text-emerald-800">11</td><td class="p-1.5 font-mono text-emerald-800">6. Paraf &amp; Tanda Tangan Vendor</td><td class="p-1.5 text-emerald-700 font-semibold">Alur Step 6</td><td class="p-1.5 text-slate-600">Tanggal paraf dan tanda tangan dari vendor</td></tr>
+                            <tr class="bg-emerald-50/40"><td class="p-1.5 text-center font-bold text-emerald-800">12</td><td class="p-1.5 font-mono text-emerald-800">7. Paraf &amp; Tanda Tangan Ethos</td><td class="p-1.5 text-emerald-700 font-semibold">Alur Step 7</td><td class="p-1.5 text-slate-600">Tanggal paraf dan tanda tangan dari Ethos</td></tr>
+                            <tr class="bg-emerald-50/40"><td class="p-1.5 text-center font-bold text-emerald-800">13</td><td class="p-1.5 font-mono text-emerald-800">8. Kontrak Aktif</td><td class="p-1.5 text-emerald-700 font-semibold">Alur Step 8</td><td class="p-1.5 text-slate-600">Tanggal mulai berlakunya kontrak aktif</td></tr>
+                            <tr class="bg-emerald-50/40"><td class="p-1.5 text-center font-bold text-emerald-800">14</td><td class="p-1.5 font-mono text-emerald-800">9. Renvoi (Jika Ada)</td><td class="p-1.5 text-emerald-700 font-semibold">Alur Step 9</td><td class="p-1.5 text-slate-600">Tanggal adendum / klausul renvoi (hanya tampil jika ada data)</td></tr>
+                            <tr class="bg-emerald-50/40"><td class="p-1.5 text-center font-bold text-emerald-800">15</td><td class="p-1.5 font-mono text-emerald-800">10. Kontrak Selesai</td><td class="p-1.5 text-emerald-700 font-semibold">Alur Step 10</td><td class="p-1.5 text-slate-600">Tanggal berakhirnya masa kontrak / selesai</td></tr>
+                            <tr><td class="p-1.5 text-center font-bold">16</td><td class="p-1.5 font-mono text-amber-700">Target Selesai SLA</td><td class="p-1.5 text-amber-700 font-semibold">Target SLA</td><td class="p-1.5 text-slate-600">Target batas waktu penyelesaian proses legal</td></tr>
+                            <tr><td class="p-1.5 text-center font-bold">17</td><td class="p-1.5 text-rose-600">Status Revisi / Renvoi</td><td class="p-1.5 text-slate-500">Catatan</td><td class="p-1.5 text-slate-500">Keterangan catatan revisi atau renvoi</td></tr>
+                            <tr><td class="p-1.5 text-center font-bold">18</td><td class="p-1.5">Kelengkapan Dokumen</td><td class="p-1.5 text-slate-500">Status</td><td class="p-1.5 text-slate-500">Lengkap / Belum Lengkap (KTP, NPWP, NIB, dll)</td></tr>
+                            <tr><td class="p-1.5 text-center font-bold">19</td><td class="p-1.5">Nilai Kontrak (Rp)</td><td class="p-1.5 text-slate-500">Keuangan</td><td class="p-1.5 text-slate-500">Nominal kontrak murni (contoh: 50000000)</td></tr>
+                            <tr><td class="p-1.5 text-center font-bold">20</td><td class="p-1.5 text-emerald-700">Status Kepatuhan</td><td class="p-1.5 text-slate-500">Kepatuhan</td><td class="p-1.5 text-slate-500">Comply / Not Comply</td></tr>
+                            <tr><td class="p-1.5 text-center font-bold">21</td><td class="p-1.5 text-sky-600 font-mono">Link Dokumen Kontrak</td><td class="p-1.5 text-slate-500">Arsip</td><td class="p-1.5 text-slate-500">URL link Google Drive file kontrak PDF/Docx</td></tr>
+                            <tr><td class="p-1.5 text-center font-bold">22</td><td class="p-1.5">Keterangan</td><td class="p-1.5 text-slate-500">Catatan</td><td class="p-1.5 text-slate-500">Catatan tambahan dari legal atau user</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -706,7 +702,7 @@ tailwind.config = {
     <div class="toast-box" id="toastBox"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-    <script src="kontrak.js?v=20261114-dropdown"></script>
+    <script src="kontrak.js?v=20261114-10steps"></script>
     <!-- AI Copilot Chatbot (OpenRouter) -->
     <script src="assets/ai-copilot.js" defer></script>
 </body>
