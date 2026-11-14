@@ -349,11 +349,11 @@ function normalizeContractStageFrontend(rawStage, rawStatus, tglSelesai) {
         return { step: 9, key: 'renvoi', label: '9. Renvoi (Jika Ada)', percent: 90, badgeColor: '#ea580c', badgeBg: '#fff7ed', isRevision: false, isRenvoi: true, isFinal: false };
     }
     // 10. Kontrak Selesai
-    if (s.includes('kontrak selesai') || s.includes('expired') || s.includes('kadaluarsa') || s.includes('berakhir') || s.includes('10. kontrak') || s.includes('11. berakhir')) {
+    if (s.includes('kontrak selesai') || s.includes('selesai') || s.includes('expired') || s.includes('kadaluarsa') || s.includes('berakhir') || s.includes('10. kontrak') || s.includes('11. berakhir')) {
         return { step: 10, key: 'selesai', label: '10. Kontrak Selesai', percent: 100, badgeColor: '#64748b', badgeBg: '#f8fafc', isRevision: false, isRenvoi: false, isFinal: true };
     }
     // 8. Kontrak Aktif
-    if (s.includes('kontrak aktif') || s.includes('aktif') || s.includes('berlaku') || s.includes('selesai') || s.includes('done') || s.includes('8. kontrak') || s.includes('10. aktif')) {
+    if (s.includes('kontrak aktif') || s.includes('aktif') || s.includes('berlaku') || s.includes('done') || s.includes('8. kontrak') || s.includes('10. aktif')) {
         return { step: 8, key: 'aktif', label: '8. Kontrak Aktif', percent: 100, badgeColor: '#16a34a', badgeBg: '#f0fdf4', isRevision: false, isRenvoi: false, isFinal: true };
     }
 
@@ -370,26 +370,29 @@ function normalizeContractStageFrontend(rawStage, rawStatus, tglSelesai) {
 }
 
 function inferStageFromDates(c, currentStageObj) {
+    const dates = getContractStageDatesMap(c);
+    const todayMid = new Date();
+    todayMid.setHours(0, 0, 0, 0);
+
+    // 1. Cek apakah kontrak sudah berakhir / selesai (berlaku baik jika tahap diisi aktif maupun kosong)
+    const endDateStr = (dates[10] && dates[10] !== '-') ? dates[10] : (c.tglSelesai && c.tglSelesai !== '-' ? c.tglSelesai : (c.targetSelesai && c.targetSelesai !== '-' && !c.targetSelesai.toLowerCase().includes('belum') ? c.targetSelesai : null));
+    if (endDateStr) {
+        const dtEnd = parseAnyDate(endDateStr);
+        if (dtEnd) {
+            dtEnd.setHours(0, 0, 0, 0);
+            if (dtEnd < todayMid) {
+                return { step: 10, key: 'selesai', label: '10. Kontrak Selesai', percent: 100, badgeColor: '#64748b', badgeBg: '#f8fafc', isRevision: false, isRenvoi: false, isFinal: true };
+            }
+        }
+    }
+
     const s = (c && c.tahapProgress || '').toString().trim().toLowerCase();
     // Jika tahap diisi spesifik dan bukan strip/kosong/fallback lainnya, gunakan tahap tersebut
     if (s && s !== '-' && s !== '---' && !s.includes('lainnya') && currentStageObj && currentStageObj.step > 0) {
         return currentStageObj;
     }
-    const dates = getContractStageDatesMap(c);
-    const todayMid = new Date();
-    todayMid.setHours(0, 0, 0, 0);
 
-    // Cek apakah kontrak sudah berakhir / selesai
-    if (dates[10] && dates[10] !== '-') {
-        const dt10 = parseAnyDate(dates[10]);
-        if (dt10) {
-            dt10.setHours(0, 0, 0, 0);
-            if (dt10 < todayMid) {
-                return { step: 10, key: 'selesai', label: '10. Kontrak Selesai', percent: 100, badgeColor: '#64748b', badgeBg: '#f8fafc', isRevision: false, isRenvoi: false, isFinal: true };
-            }
-        }
-    }
-    // Cek dari tanggal tertinggi yang sudah diisi
+    // 2. Cek dari tanggal tertinggi yang sudah diisi
     if (dates[9] && dates[9] !== '-' && !dates[9].toLowerCase().includes('belum')) {
         return { step: 9, key: 'renvoi', label: '9. Renvoi (Jika Ada)', percent: 90, badgeColor: '#ea580c', badgeBg: '#fff7ed', isRevision: false, isRenvoi: true, isFinal: false };
     }
@@ -457,6 +460,34 @@ function applyAndRender() {
 
         let stageObj = normalizeContractStageFrontend(c.tahapProgress, c.status, c._cleanSelesai);
         c._stageObj = inferStageFromDates(c, stageObj);
+
+        // Tentukan tanggal akhir masa berlaku: prioritas tglSelesai (stageDates[10]), lalu targetSelesai
+        const stageDates0 = getContractStageDatesMap(c);
+        let effectiveEndDate = null;
+        let effectiveEndStr = '-';
+        if (stageDates0[10] && stageDates0[10] !== '-') {
+            effectiveEndStr = stageDates0[10];
+            effectiveEndDate = parseAnyDate(stageDates0[10]);
+        } else if (c.targetSelesai && c.targetSelesai !== '-' && !c.targetSelesai.toLowerCase().includes('belum')) {
+            effectiveEndStr = c.targetSelesai;
+            effectiveEndDate = parseAnyDate(c.targetSelesai);
+        }
+
+        // Jika ada tanggal akhir efektif dan sudah lewat hari ini, ubah stage ke "10. Kontrak Selesai"
+        if (effectiveEndDate && c._stageObj.step === 8) {
+            const todayCheck = new Date();
+            todayCheck.setHours(0, 0, 0, 0);
+            effectiveEndDate.setHours(0, 0, 0, 0);
+            if (effectiveEndDate < todayCheck) {
+                c._stageObj = { step: 10, key: 'selesai', label: '10. Kontrak Selesai', percent: 100, badgeColor: '#64748b', badgeBg: '#f8fafc', isRevision: false, isRenvoi: false, isFinal: true };
+            }
+        }
+
+        // Gunakan effectiveEndStr untuk menghitung daysRemaining (jika tglSelesai kosong, pakai targetSelesai)
+        if (effectiveEndStr !== '-') {
+            c._cleanSelesai = formatPrettyDate(effectiveEndStr);
+        }
+
         c._daysRemaining = getContractDaysRemaining(c._cleanSelesai);
         c._processDays = getContractProcessDays(c.tglPengajuan, c.tglRealisasi || c._cleanSelesai);
     });
@@ -1199,7 +1230,7 @@ function getContractStageDatesMap(c) {
         7: raw[7] || c.tglParafEthos || c.tglParafTtdEthos || '-',
         8: (hasOldKeys ? raw[10] : raw[8]) || c._cleanMulai || c.tglMulai || c.tglAktif || '-',
         9: (hasOldKeys ? raw[12] : raw[9]) || c.tglRenvoi || '-',
-        10: (hasOldKeys ? raw[11] : raw[10]) || c._cleanSelesai || c.tglSelesai || '-'
+        10: (hasOldKeys ? raw[11] : raw[10]) || c._cleanSelesai || (c.tglSelesai && c.tglSelesai !== '-' ? c.tglSelesai : (c.targetSelesai && c.targetSelesai !== '-' && !c.targetSelesai.toLowerCase().includes('belum') ? c.targetSelesai : '-')) || '-'
     };
 }
 

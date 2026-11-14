@@ -1913,7 +1913,7 @@ function normalizeContractStage(rawStage, rawStatus, tglSelesai) {
     };
   }
   // 10. Kontrak Selesai
-  if (s.indexOf('kontrak selesai') !== -1 || s.indexOf('expired') !== -1 || s.indexOf('kadaluarsa') !== -1 || s.indexOf('berakhir') !== -1 || s.indexOf('10. kontrak') !== -1) {
+  if (s.indexOf('kontrak selesai') !== -1 || s.indexOf('selesai') !== -1 || s.indexOf('expired') !== -1 || s.indexOf('kadaluarsa') !== -1 || s.indexOf('berakhir') !== -1 || s.indexOf('10. kontrak') !== -1 || s.indexOf('11. berakhir') !== -1) {
     return {
       step: 10,
       key: 'selesai',
@@ -1927,7 +1927,7 @@ function normalizeContractStage(rawStage, rawStatus, tglSelesai) {
     };
   }
   // 8. Kontrak Aktif
-  if (s.indexOf('kontrak aktif') !== -1 || s.indexOf('aktif') !== -1 || s.indexOf('berlaku') !== -1 || s.indexOf('selesai') !== -1 || s.indexOf('done') !== -1 || s.indexOf('8. kontrak') !== -1) {
+  if (s.indexOf('kontrak aktif') !== -1 || s.indexOf('aktif') !== -1 || s.indexOf('berlaku') !== -1 || s.indexOf('done') !== -1 || s.indexOf('8. kontrak') !== -1 || s.indexOf('10. aktif') !== -1) {
     return {
       step: 8,
       key: 'aktif',
@@ -2052,7 +2052,7 @@ function getContractCompliance(ss) {
   var idxPekerjaan = getHeaderIndex(headers, ['jenis pekerjaan', 'pekerjaan', 'ruang lingkup', 'deskripsi', 'uraian', 'item', 'scope of work', 'scope']);
   var idxDivisi = getHeaderIndex(headers, ['pic / divisi', 'pic', 'divisi', 'dept', 'departemen', 'pemohon', 'user', 'pic pengaju', 'divisi pemohon']);
   
-  // 10 Tanggal Alur PKS Sesuai Standar Baru
+  // 10 Tanggal Alur PKS Sesuai Standar Baru & Tanggal Tanggal Eksisting
   var idxTglDokumen = getHeaderIndex(headers, ['1. persiapan dokumen', 'persiapan dokumen', 'tanggal persiapan dokumen', 'tgl persiapan dokumen', 'tanggal dokumen', 'tgl dokumen', 'tanggal pemenuhan dokumen', 'tgl pemenuhan dokumen', 'dokumen lengkap', 'tgl kelengkapan', 'dokumen']);
   var idxTglPengajuan = getHeaderIndex(headers, ['2. pengajuan ke legal', 'pengajuan ke legal', 'tanggal pengajuan ke legal', 'tgl pengajuan ke legal', 'tgl pengajuan', 'tanggal pengajuan', 'tgl masuk legal', 'tanggal masuk', 'tgl ajukan', 'pengajuan legal', 'masuk legal']);
   var idxTglReviewEthos = getHeaderIndex(headers, ['3. review legal ethos', 'review legal ethos', 'tanggal review legal ethos', 'tgl review legal ethos', 'tgl review ethos', 'tanggal review ethos', 'tgl review internal', 'review ethos']);
@@ -2060,9 +2060,19 @@ function getContractCompliance(ss) {
   var idxTglReviewVendor = getHeaderIndex(headers, ['5. review vendor', 'review vendor', 'tanggal review vendor', 'tgl review vendor', 'tanggal review legal vendor', 'tgl review legal vendor', 'tgl review rekanan', 'review legal vendor']);
   var idxTglParafVendor = getHeaderIndex(headers, ['6. paraf & tanda tangan vendor', 'paraf & tanda tangan vendor', 'paraf & ttd vendor', 'tanggal paraf & tanda tangan vendor', 'tanggal paraf & ttd vendor', 'tanggal paraf vendor', 'tgl paraf vendor', 'tgl paraf rekanan', 'paraf vendor']);
   var idxTglParafEthos = getHeaderIndex(headers, ['7. paraf & tanda tangan ethos', 'paraf & tanda tangan ethos', 'paraf & ttd ethos', 'tanggal paraf & tanda tangan ethos', 'tanggal paraf & ttd ethos', 'tanggal paraf ethos', 'tgl paraf ethos', 'tgl paraf internal', 'paraf ethos']);
-  var idxMulai = getHeaderIndex(headers, ['8. kontrak aktif', 'kontrak aktif', 'tanggal kontrak aktif', 'tgl kontrak aktif', 'tanggal mulai kontrak', 'tgl mulai kontrak', 'tanggal mulai', 'tgl mulai', 'mulai', 'start date', 'periode awal', 'aktif sah']);
-  var idxTglRenvoi = getHeaderIndex(headers, ['9. renvoi (jika ada)', 'renvoi (jika ada)', 'renvoi', 'tanggal renvoi', 'tgl renvoi', 'tgl addendum', 'tanggal addendum']);
-  var idxSelesai = getHeaderIndex(headers, ['10. kontrak selesai', 'kontrak selesai', 'tanggal kontrak selesai', 'tgl kontrak selesai', 'tanggal selesai kontrak', 'tgl selesai kontrak', 'tanggal selesai', 'tanggal berakhir', 'tgl selesai', 'tgl berakhir', 'end date', 'deadline', 'masa berlaku', 'expired']);
+  
+  // Alur 8: Kontrak Aktif / Tanggal Mulai Kontrak (dukung kolom Alur maupun kolom lama)
+  var idxStep8 = getHeaderIndex(headers, ['8. kontrak aktif', '8. aktif', 'kontrak aktif', 'aktif sah', 'tanggal kontrak aktif', 'tgl kontrak aktif']);
+  var idxTglMulaiKontrak = getHeaderIndex(headers, ['tanggal mulai kontrak', 'tgl mulai kontrak', 'tanggal mulai', 'tgl mulai', 'mulai', 'start date', 'periode awal']);
+  var idxMulai = idxStep8 !== -1 ? idxStep8 : idxTglMulaiKontrak;
+
+  // Alur 9: Renvoi
+  var idxTglRenvoi = getHeaderIndex(headers, ['9. renvoi (jika ada)', '9. renvoi', 'renvoi (jika ada)', 'renvoi', 'tanggal renvoi', 'tgl renvoi', 'tgl addendum', 'tanggal addendum']);
+
+  // Alur 10: Kontrak Selesai / Tanggal Selesai Kontrak / Masa Berlaku
+  var idxStep10 = getHeaderIndex(headers, ['10. kontrak selesai', '10. selesai', 'kontrak selesai (step 10)']);
+  var idxTglSelesaiKontrak = getHeaderIndex(headers, ['tanggal selesai kontrak', 'tgl selesai kontrak', 'tanggal selesai', 'tgl selesai', 'tanggal berakhir', 'tgl berakhir', 'masa berlaku', 'expired', 'end date', 'deadline', 'periode akhir']);
+  var idxSelesai = idxStep10 !== -1 ? idxStep10 : idxTglSelesaiKontrak;
 
   var idxTargetSla = getHeaderIndex(headers, ['target selesai sla', 'target selesai', 'target legal', 'sla target', 'sla', 'target draft', 'deadline proses']);
   var idxTglRealisasi = getHeaderIndex(headers, ['tanggal realisasi ttd', 'tgl realisasi ttd', 'tgl realisasi', 'tanggal selesai proses', 'tgl ttd', 'tanggal ttd', 'tgl sah', 'realisasi ttd']);
@@ -2098,11 +2108,24 @@ function getContractCompliance(ss) {
     var tglReviewVendor = idxTglReviewVendor !== -1 && data[i][idxTglReviewVendor] ? formatDate(data[i][idxTglReviewVendor]) : '-';
     var tglParafVendor = idxTglParafVendor !== -1 && data[i][idxTglParafVendor] ? formatDate(data[i][idxTglParafVendor]) : '-';
     var tglParafEthos = idxTglParafEthos !== -1 && data[i][idxTglParafEthos] ? formatDate(data[i][idxTglParafEthos]) : '-';
-    var tglMulai = idxMulai !== -1 && data[i][idxMulai] ? formatDate(data[i][idxMulai]) : '-';
+    
+    // 8. Kontrak Aktif / Mulai
+    var valStep8 = idxStep8 !== -1 && data[i][idxStep8] ? formatDate(data[i][idxStep8]) : '-';
+    var valMulai = idxTglMulaiKontrak !== -1 && data[i][idxTglMulaiKontrak] ? formatDate(data[i][idxTglMulaiKontrak]) : '-';
+    var tglMulai = valStep8 !== '-' ? valStep8 : (valMulai !== '-' ? valMulai : '-');
+
     var tglRenvoi = idxTglRenvoi !== -1 && data[i][idxTglRenvoi] ? formatDate(data[i][idxTglRenvoi]) : '-';
-    var tglSelesai = idxSelesai !== -1 && data[i][idxSelesai] ? formatDate(data[i][idxSelesai]) : '-';
+
+    // 10. Kontrak Selesai / Tanggal Selesai Kontrak
+    var valStep10 = idxStep10 !== -1 && data[i][idxStep10] ? formatDate(data[i][idxStep10]) : '-';
+    var valSelesai = idxTglSelesaiKontrak !== -1 && data[i][idxTglSelesaiKontrak] ? formatDate(data[i][idxTglSelesaiKontrak]) : '-';
+    var tglSelesai = valStep10 !== '-' ? valStep10 : (valSelesai !== '-' ? valSelesai : '-');
 
     var targetSelesai = idxTargetSla !== -1 && data[i][idxTargetSla] ? formatDate(data[i][idxTargetSla]) : '-';
+    if (tglSelesai === '-' && targetSelesai !== '-' && !targetSelesai.toLowerCase().includes('belum')) {
+      tglSelesai = targetSelesai;
+    }
+
     var tglRealisasi = idxTglRealisasi !== -1 && data[i][idxTglRealisasi] ? formatDate(data[i][idxTglRealisasi]) : (tglParafEthos !== '-' ? tglParafEthos : '-');
     var tglRevisi = idxTglRevisi !== -1 && data[i][idxTglRevisi] ? formatDate(data[i][idxTglRevisi]) : '-';
 
@@ -2159,7 +2182,8 @@ function getContractCompliance(ss) {
         daysRemaining = Math.ceil((endZero - todayZero) / 86400000);
         if (daysRemaining < 0) {
           expiryCategory = 'expired';
-          if (stageObj.step === 8) {
+          // Kontrak yang masa berlakunya sudah berakhir otomatis tampil sebagai Kontrak Selesai
+          if (stageObj.step === 8 || stageObj.step === 0 || stageObj.key === 'aktif') {
             stageObj = { step: 10, key: 'selesai', label: '10. Kontrak Selesai', percent: 100, badgeColor: '#64748b', badgeBg: '#f8fafc', isRevision: false, isRenvoi: false, isFinal: true };
           }
         } else if (daysRemaining <= 30) {

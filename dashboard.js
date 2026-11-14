@@ -1591,17 +1591,17 @@ function normalizeContractStageFrontend(rawStage, rawStatus, tglSelesai) {
     if (s.includes('paraf & tanda tangan ethos') || s.includes('paraf & ttd ethos') || s.includes('paraf ethos') || s.includes('paraf internal') || s.includes('ttd ethos') || s.includes('7. paraf')) {
         return { step: 7, key: 'paraf_ttd_ethos', label: '7. Paraf & Tanda Tangan Ethos', percent: 85, badgeColor: '#9333ea', badgeBg: '#faf5ff', isRevision: false, isRenvoi: false, isFinal: false };
     }
-    // 8. Kontrak Aktif
-    if (s.includes('kontrak aktif') || s.includes('aktif') || s.includes('aktif sah') || s.includes('berlaku') || s.includes('8. kontrak aktif')) {
-        return { step: 8, key: 'aktif', label: '8. Kontrak Aktif', percent: 100, badgeColor: '#16a34a', badgeBg: '#f0fdf4', isRevision: false, isRenvoi: false, isFinal: true };
-    }
     // 9. Renvoi (Jika Ada)
     if (s.includes('renvoi') || s.includes('9. renvoi')) {
         return { step: 9, key: 'renvoi', label: '9. Renvoi (Jika Ada)', percent: 90, badgeColor: '#ea580c', badgeBg: '#fff7ed', isRevision: false, isRenvoi: true, isFinal: false };
     }
     // 10. Kontrak Selesai
-    if (s.includes('kontrak selesai') || s.includes('selesai') || s.includes('berakhir') || s.includes('expired') || s.includes('kadaluarsa') || s.includes('10. kontrak selesai')) {
+    if (s.includes('kontrak selesai') || s.includes('selesai') || s.includes('berakhir') || s.includes('expired') || s.includes('kadaluarsa') || s.includes('10. kontrak')) {
         return { step: 10, key: 'selesai', label: '10. Kontrak Selesai', percent: 100, badgeColor: '#64748b', badgeBg: '#f8fafc', isRevision: false, isRenvoi: false, isFinal: true };
+    }
+    // 8. Kontrak Aktif
+    if (s.includes('kontrak aktif') || s.includes('aktif') || s.includes('aktif sah') || s.includes('berlaku') || s.includes('8. kontrak aktif')) {
+        return { step: 8, key: 'aktif', label: '8. Kontrak Aktif', percent: 100, badgeColor: '#16a34a', badgeBg: '#f0fdf4', isRevision: false, isRenvoi: false, isFinal: true };
     }
 
     if (rawStage && rawStage.toString().trim() !== '') {
@@ -1720,27 +1720,30 @@ function renderContractTable(cc) {
     let totalValue = 0;
 
     cc.list.forEach(c => {
-        const stage = normalizeContractStageFrontend(c.tahapProgress, c.status, c.tglSelesai);
-        c._stageObj = stage;
+        let stage = normalizeContractStageFrontend(c.tahapProgress, c.status, c.tglSelesai);
 
         const days = getContractDaysRemaining(c.tglSelesai);
         c._daysRemaining = days;
         if (days !== null) {
-            if (days < 0) countExpired++;
-            else if (days <= 30) countCritical++;
+            if (days < 0) {
+                countExpired++;
+                if (stage.step === 8) {
+                    stage = { step: 10, key: 'selesai', label: '10. Kontrak Selesai', percent: 100, badgeColor: '#64748b', badgeBg: '#f8fafc', isRevision: false, isRenvoi: false, isFinal: true };
+                }
+            } else if (days <= 30) countCritical++;
             else if (days <= 90) countWarning++;
             else countSafe++;
         } else {
             countSafe++;
         }
+        c._stageObj = stage;
 
-        if (stage.key === 'pengajuan') countPengajuan++;
-        else if (stage.key === 'draft') countDraft++;
-        else if (stage.key === 'paraf_vendor') countParafVendor++;
-        else if (stage.key === 'paraf_ethos') countParafEthos++;
+        if (stage.key === 'persiapan_dokumen' || stage.key === 'pengajuan') countPengajuan++;
+        else if (stage.key === 'review_legal_ethos' || stage.key === 'draft') countDraft++;
+        else if (stage.key === 'review_vendor' || stage.key === 'paraf_ttd_vendor') countParafVendor++;
+        else if (stage.key === 'paraf_ttd_ethos') countParafEthos++;
         else if (stage.key === 'revisi') countRevisi++;
         else if (stage.key === 'renvoi') countRenvoi++;
-        else if (stage.key === 'ttd') countTtd++;
         else if (stage.key === 'aktif') countAktif++;
 
         if (c.nilai) totalValue += Number(c.nilai) || 0;
