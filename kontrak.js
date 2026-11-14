@@ -945,9 +945,11 @@ function renderTableRows(list) {
                         </div>
                     </div>
 
-                    <!-- 12-Step Horizontal Milestone Tracker -->
-                    <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-1.5 text-[10px] mb-2.5">
-                        ${renderInlineWorkflowSteps(c, stage)}
+                    <!-- 12-Step Horizontal Connected Stepper Tracker -->
+                    <div class="w-full overflow-x-auto pb-4 pt-3 px-3 mb-2.5 custom-scrollbar bg-slate-50/60 rounded-xl border border-slate-100 shadow-2xs">
+                        <div class="flex items-start justify-between min-w-[960px] relative px-3">
+                            ${renderInlineWorkflowSteps(c, stage)}
+                        </div>
                     </div>
 
                     <!-- Ringkasan Info Tambahan (Ruang Lingkup, PIC, Keterangan, Revisi) -->
@@ -1083,28 +1085,28 @@ function getContractStageDatesMap(c) {
     };
 }
 
-function formatCompactStageDate(val) {
+function formatStepperDate(val) {
+    if (!val) return '';
     const d = parseAnyDate(val);
-    if (!d) return (typeof val === 'string' && val.length > 0 && val !== '-' && val !== '---' && !val.toLowerCase().includes('belum')) ? val : '-';
+    if (!d) return (typeof val === 'string' && val.length > 0 && val !== '-' && val !== '---' && !val.toLowerCase().includes('belum')) ? val : '';
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-    const yy = String(d.getFullYear()).slice(-2);
-    return `${d.getDate()} ${months[d.getMonth()]} '${yy}`;
+    return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
 }
 
 function renderInlineWorkflowSteps(c, stage) {
     const steps = [
-        { num: 1, key: 'pemenuhan_dokumen', title: '1. Dokumen' },
-        { num: 2, key: 'pengajuan', title: '2. Pengajuan' },
-        { num: 3, key: 'review_legal_ethos', title: '3. Rev Ethos' },
-        { num: 4, key: 'draft', title: '4. Draft' },
-        { num: 5, key: 'review_legal_vendor', title: '5. Rev Vendor' },
-        { num: 6, key: 'paraf_vendor', title: '6. Paraf Vendor' },
-        { num: 7, key: 'paraf_ethos', title: '7. Paraf Ethos' },
-        { num: 8, key: 'revisi', title: '8. Revisi' },
-        { num: 9, key: 'ttd', title: '9. TTD' },
-        { num: 10, key: 'aktif', title: '10. Aktif Sah' },
-        { num: 11, key: 'expired', title: '11. Expired' },
-        { num: 12, key: 'renvoi', title: '12. Renvoi' }
+        { num: 1, key: 'pemenuhan_dokumen', title: 'Pemenuhan Dokumen' },
+        { num: 2, key: 'pengajuan', title: 'Pengajuan Legal' },
+        { num: 3, key: 'review_legal_ethos', title: 'Review Legal Ethos' },
+        { num: 4, key: 'draft', title: 'Penyusunan Draf' },
+        { num: 5, key: 'review_legal_vendor', title: 'Review Vendor' },
+        { num: 6, key: 'paraf_vendor', title: 'Paraf Vendor' },
+        { num: 7, key: 'paraf_ethos', title: 'Paraf Ethos' },
+        { num: 8, key: 'revisi', title: 'Revisi' },
+        { num: 9, key: 'ttd', title: 'Tanda Tangan' },
+        { num: 10, key: 'aktif', title: 'Aktif Sah' },
+        { num: 11, key: 'expired', title: 'Selesai / Expired' },
+        { num: 12, key: 'renvoi', title: 'Renvoi' }
     ];
 
     const currentStepNum = stage.step;
@@ -1127,7 +1129,7 @@ function renderInlineWorkflowSteps(c, stage) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    return steps.map(st => {
+    return steps.map((st, idx) => {
         let isDone = false;
         let isCurrent = false;
 
@@ -1146,116 +1148,159 @@ function renderInlineWorkflowSteps(c, stage) {
 
         const rawDate = stageDates[st.num];
         const thisDate = parsedDates[st.num];
-        const dateDisplay = formatCompactStageDate(rawDate);
-        const hasDate = Boolean(thisDate);
+        const dateFormatted = formatStepperDate(thisDate || rawDate);
 
-        let cardClass = 'bg-slate-50/60 border-slate-200 text-slate-400';
-        let headerHtml = '';
-        let bodyHtml = '';
+        // --- 1. Connecting Line to Next Step ---
+        let lineHtml = '';
+        if (idx < steps.length - 1) {
+            const nextSt = steps[idx + 1];
+            let isNextDone = false;
+            let isNextCurrent = false;
 
-        if (isCurrent) {
-            // TAHAP AKTIF (IN PROGRESS)
-            cardClass = 'bg-white border-sky-400 ring-2 ring-sky-200 shadow-xs';
-            headerHtml = `
-                <div class="flex items-center justify-between gap-1 text-[10px] font-black text-sky-950">
-                    <span class="truncate">${st.title}</span>
-                    <span class="w-2 h-2 rounded-full bg-sky-500 animate-ping shrink-0" title="Sedang berjalan"></span>
-                </div>`;
+            if (nextSt.num < 10) {
+                if (currentStepNum > nextSt.num || currentStepNum >= 10) isNextDone = true;
+                else if (currentStepNum === nextSt.num) isNextCurrent = true;
+            } else if (nextSt.num === 10) {
+                if (currentStepNum === 10) isNextCurrent = true;
+                else if (currentStepNum > 10) isNextDone = true;
+            } else if (nextSt.num === 11) {
+                if (currentStepNum === 11) isNextCurrent = true;
+            } else if (nextSt.num === 12) {
+                if (currentStepNum === 12) isNextCurrent = true;
+                else if (hasRenvoi || (parsedDates[12] !== null)) isNextDone = true;
+            }
 
-            let prevDate = null;
-            let prevNum = null;
-            for (let p = st.num - 1; p >= 1; p--) {
-                if (parsedDates[p]) {
-                    prevNum = p;
-                    prevDate = parsedDates[p];
-                    break;
+            let lineColorClass = 'bg-slate-200';
+            let pillBadgeHtml = '';
+
+            if (isDone && isNextDone) {
+                // Completed -> Completed: Green line
+                lineColorClass = 'bg-emerald-500';
+
+                const dateNext = parsedDates[nextSt.num];
+                if (thisDate && dateNext) {
+                    const diffDays = Math.round((dateNext - thisDate) / (1000 * 60 * 60 * 24));
+                    if (diffDays >= 0) {
+                        pillBadgeHtml = `
+                            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
+                                <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs whitespace-nowrap">
+                                    +${diffDays} hari
+                                </span>
+                            </div>`;
+                    }
                 }
-            }
+            } else if (isDone && isNextCurrent) {
+                // Completed -> Current: Blue line with running pill
+                lineColorClass = 'bg-blue-600';
 
-            let runText = '⏳ Proses';
-            if (prevDate) {
-                const runDays = Math.max(0, Math.round((today - prevDate) / (1000 * 60 * 60 * 24)));
-                runText = `⏳ Hari ke-${runDays}`;
-            }
-
-            bodyHtml = `
-                <div class="mt-1">
-                    <span class="inline-block px-1.5 py-0.5 rounded text-[9.5px] font-bold font-mono bg-amber-100 text-amber-900 border border-amber-300">
-                        ${runText}
-                    </span>
-                </div>`;
-        } else if (isDone) {
-            // TAHAP SUDAH SELESAI
-            cardClass = 'bg-emerald-50/40 border-emerald-200 text-emerald-900';
-            headerHtml = `
-                <div class="flex items-center justify-between gap-1 text-[10px] font-bold text-emerald-900">
-                    <span class="truncate">${st.title}</span>
-                    <span class="w-3.5 h-3.5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[9px] font-black shrink-0">✓</span>
-                </div>`;
-
-            if (hasDate) {
-                let prevDate = null;
-                for (let p = st.num - 1; p >= 1; p--) {
-                    if (parsedDates[p]) {
-                        prevDate = parsedDates[p];
+                let prevCompletedDate = null;
+                for (let p = idx; p >= 0; p--) {
+                    if (parsedDates[steps[p].num]) {
+                        prevCompletedDate = parsedDates[steps[p].num];
                         break;
                     }
                 }
 
-                let diffText = '';
-                if (prevDate) {
-                    const diffDays = Math.round((thisDate - prevDate) / (1000 * 60 * 60 * 24));
-                    if (diffDays >= 0) diffText = `<span class="text-[8.5px] font-bold text-emerald-700 font-mono ml-0.5">(+${diffDays}h)</span>`;
-                } else {
-                    diffText = `<span class="text-[8px] font-semibold text-slate-500 ml-0.5">Start</span>`;
+                if (prevCompletedDate) {
+                    const runDays = Math.max(0, Math.round((today - prevCompletedDate) / (1000 * 60 * 60 * 24)));
+                    pillBadgeHtml = `
+                        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
+                            <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs whitespace-nowrap">
+                                +${runDays} hari
+                            </span>
+                        </div>`;
                 }
+            } else {
+                lineColorClass = 'bg-slate-200';
+            }
 
-                bodyHtml = `
-                    <div class="text-[9.5px] font-mono text-slate-700 mt-1 truncate" title="${esc(rawDate)}">
-                        ${esc(dateDisplay)} ${diffText}
+            lineHtml = `
+                <div class="absolute top-[14px] left-1/2 w-full h-[2.5px] ${lineColorClass} z-0 pointer-events-none">
+                    ${pillBadgeHtml}
+                </div>`;
+        }
+
+        // --- 2. Node Circle ---
+        let nodeCircleHtml = '';
+        if (isDone) {
+            nodeCircleHtml = `
+                <div class="relative z-10 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-xs shrink-0 ring-4 ring-white">
+                    <svg class="w-4 h-4 stroke-[2.5]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                </div>`;
+        } else if (isCurrent) {
+            nodeCircleHtml = `
+                <div class="relative z-10 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center ring-4 ring-blue-100 shadow-xs shrink-0 ring-4 ring-white">
+                    <div class="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center">
+                        <div class="w-1.5 h-1.5 rounded-full bg-white"></div>
+                    </div>
+                </div>`;
+        } else {
+            nodeCircleHtml = `
+                <div class="relative z-10 w-7 h-7 sm:w-8 sm:h-8 rounded-full border-2 border-slate-300 bg-white shrink-0 ring-4 ring-white"></div>`;
+        }
+
+        // --- 3. Text Below Node ---
+        let titleClass = 'text-slate-400 font-medium';
+        let subTextHtml = '';
+
+        if (isCurrent) {
+            titleClass = 'text-slate-900 font-black';
+
+            let prevCompletedDate = null;
+            for (let p = idx - 1; p >= 0; p--) {
+                if (parsedDates[steps[p].num]) {
+                    prevCompletedDate = parsedDates[steps[p].num];
+                    break;
+                }
+            }
+            const runDays = prevCompletedDate
+                ? Math.max(0, Math.round((today - prevCompletedDate) / (1000 * 60 * 60 * 24)))
+                : 0;
+
+            subTextHtml = `
+                <div class="text-[10px] text-slate-600 font-medium mt-1 leading-tight whitespace-nowrap">
+                    Berjalan ${runDays} hari
+                </div>`;
+        } else if (isDone) {
+            titleClass = 'text-slate-900 font-bold';
+
+            if (dateFormatted) {
+                subTextHtml = `
+                    <div class="text-[10px] text-slate-500 font-medium mt-1 leading-tight whitespace-nowrap">
+                        ${esc(dateFormatted)}
                     </div>`;
             } else {
-                bodyHtml = `
-                    <div class="text-[9.5px] font-medium text-emerald-700/80 mt-1">
+                subTextHtml = `
+                    <div class="text-[9.5px] text-emerald-600 font-medium mt-1 leading-tight">
                         Selesai
                     </div>`;
             }
         } else {
-            // TAHAP MENDATANG (BELUM TERCAPAI)
-            headerHtml = `
-                <div class="flex items-center justify-between gap-1 text-[10px] font-medium text-slate-500">
-                    <span class="truncate">${st.title}</span>
-                    <span class="text-slate-300 text-[9px] shrink-0">○</span>
-                </div>`;
+            titleClass = 'text-slate-500 font-medium';
 
             if (st.num === 11) {
-                // Step 11 (Expired / Batas Berlaku)
-                const rem = c._daysRemaining !== undefined ? c._daysRemaining : getContractDaysRemaining(c.tglSelesai);
-                if (rem !== null) {
-                    let remBadge = '';
-                    if (rem < 0) {
-                        remBadge = `<span class="text-rose-700 font-bold">Lewat ${Math.abs(rem)}h</span>`;
-                    } else if (rem <= 30) {
-                        remBadge = `<span class="text-amber-800 font-bold">Sisa ${rem}h</span>`;
-                    } else {
-                        remBadge = `<span class="text-emerald-700 font-medium">Sisa ${rem}h</span>`;
-                    }
-                    bodyHtml = `
-                        <div class="text-[9px] font-mono text-slate-600 mt-0.5 truncate" title="${esc(rawDate || '')}">
-                            ${esc(dateDisplay !== '-' ? dateDisplay : '')} <span class="text-[8.5px]">${remBadge}</span>
+                const tglSelesaiFormatted = formatStepperDate(c._cleanSelesai || c.tglSelesai);
+                if (tglSelesaiFormatted) {
+                    subTextHtml = `
+                        <div class="text-[9.5px] text-slate-400 mt-1 leading-tight whitespace-nowrap">
+                            ${esc(tglSelesaiFormatted)}
                         </div>`;
-                } else {
-                    bodyHtml = `<div class="text-[9.5px] text-slate-300 mt-1 font-light">Menunggu</div>`;
                 }
-            } else {
-                bodyHtml = `<div class="text-[9.5px] text-slate-300 mt-1 font-light">Menunggu</div>`;
             }
         }
 
         return `
-        <div class="p-2 rounded-lg border transition-all flex flex-col justify-between min-h-[52px] ${cardClass}">
-            ${headerHtml}
-            ${bodyHtml}
+        <div class="flex-1 flex flex-col items-center relative text-center min-w-[76px] px-0.5">
+            ${lineHtml}
+            ${nodeCircleHtml}
+            <div class="mt-2 text-center w-full px-0.5">
+                <div class="text-[11px] leading-tight truncate ${titleClass}" title="${esc(st.title)}">
+                    ${st.title}
+                </div>
+                ${subTextHtml}
+            </div>
         </div>`;
     }).join('');
 }
@@ -1673,44 +1718,10 @@ function openContractDetailModal(noKontrak) {
             <div class="h-1.5 rounded-full transition-all duration-500" style="width:${stage.percent}%; background:${stage.badgeColor};"></div>
         </div>
 
-        <div class="flex items-center justify-between text-[10px] gap-1 overflow-x-auto no-scrollbar pt-0.5">
-    `;
-
-    workflowSteps.forEach(st => {
-        let isDone = false;
-        let isCurrent = false;
-
-        if (st.num < 10) {
-            if (currentStepNum > st.num || currentStepNum >= 10) isDone = true;
-            else if (currentStepNum === st.num) isCurrent = true;
-        } else if (st.num === 10) {
-            if (currentStepNum === 10) isCurrent = true;
-            else if (currentStepNum > 10) isDone = true;
-        } else if (st.num === 11) {
-            if (currentStepNum === 11) isCurrent = true;
-        } else if (st.num === 12) {
-            if (currentStepNum === 12) isCurrent = true;
-            else if (hasRenvoi) isDone = true;
-        }
-
-        let badgeClass = 'text-slate-400 bg-white border-slate-200';
-        let iconPrefix = '';
-        if (isDone) {
-            badgeClass = 'text-emerald-700 bg-emerald-50 border-emerald-300 font-bold';
-            iconPrefix = '✓ ';
-        } else if (isCurrent) {
-            badgeClass = 'text-sky-800 bg-sky-100 border-sky-400 font-black shadow-2xs ring-1 ring-sky-200';
-            iconPrefix = '▶ ';
-        }
-
-        stepperHtml += `
-            <span class="inline-flex items-center px-1.5 py-0.5 rounded border text-[9.5px] whitespace-nowrap ${badgeClass}">
-                ${iconPrefix}${st.title}
-            </span>
-        `;
-    });
-
-    stepperHtml += `
+        <div class="w-full overflow-x-auto pb-3 pt-2 px-2 custom-scrollbar bg-white rounded-lg border border-slate-100 mt-2">
+            <div class="flex items-start justify-between min-w-[920px] relative px-2">
+                ${renderInlineWorkflowSteps(c, stage)}
+            </div>
         </div>
     </div>
     `;
