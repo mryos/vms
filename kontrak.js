@@ -387,39 +387,40 @@ function inferStageFromDates(c, currentStageObj) {
     }
 
     const s = (c && c.tahapProgress || '').toString().trim().toLowerCase();
-    // Jika tahap diisi spesifik dan bukan strip/kosong/fallback lainnya, gunakan tahap tersebut
+
+    // 2. Hitung tahap minimum dari tanggal-tanggal alur yang sudah terisi di sheet
+    let minStageFromDates = null;
+    if (dates[9] && dates[9] !== '-' && !dates[9].toLowerCase().includes('belum')) {
+        minStageFromDates = { step: 9, key: 'renvoi', label: '9. Renvoi (Jika Ada)', percent: 90, badgeColor: '#ea580c', badgeBg: '#fff7ed', isRevision: false, isRenvoi: true, isFinal: false };
+    } else if (dates[7] && dates[7] !== '-') {
+        minStageFromDates = { step: 7, key: 'paraf_ttd_ethos', label: '7. Paraf & Tanda Tangan Ethos', percent: 85, badgeColor: '#9333ea', badgeBg: '#faf5ff', isRevision: false, isRenvoi: false, isFinal: false };
+    } else if (dates[6] && dates[6] !== '-') {
+        minStageFromDates = { step: 6, key: 'paraf_ttd_vendor', label: '6. Paraf & Tanda Tangan Vendor', percent: 70, badgeColor: '#d97706', badgeBg: '#fffbeb', isRevision: false, isRenvoi: false, isFinal: false };
+    } else if (dates[5] && dates[5] !== '-') {
+        minStageFromDates = { step: 5, key: 'review_vendor', label: '5. Review Vendor', percent: 55, badgeColor: '#c026d3', badgeBg: '#fdf4ff', isRevision: false, isRenvoi: false, isFinal: false };
+    } else if (dates[4] && dates[4] !== '-') {
+        minStageFromDates = { step: 4, key: 'draft', label: '4. Draft Keluar', percent: 45, badgeColor: '#7c3aed', badgeBg: '#f5f3ff', isRevision: false, isRenvoi: false, isFinal: false };
+    } else if (dates[3] && dates[3] !== '-') {
+        minStageFromDates = { step: 3, key: 'review_legal_ethos', label: '3. Review Legal Ethos', percent: 30, badgeColor: '#4f46e5', badgeBg: '#eef2ff', isRevision: false, isRenvoi: false, isFinal: false };
+    } else if (dates[2] && dates[2] !== '-') {
+        minStageFromDates = { step: 2, key: 'pengajuan', label: '2. Pengajuan Ke Legal', percent: 20, badgeColor: '#2563eb', badgeBg: '#eff6ff', isRevision: false, isRenvoi: false, isFinal: false };
+    } else if (dates[1] && dates[1] !== '-') {
+        minStageFromDates = { step: 1, key: 'persiapan_dokumen', label: '1. Persiapan Dokumen', percent: 10, badgeColor: '#0284c7', badgeBg: '#f0f9ff', isRevision: false, isRenvoi: false, isFinal: false };
+    }
+
+    // Jika tahap di sheet masih di tahap yang lebih rendah daripada tanggal yang sudah diisi, otomatis maju!
+    if (minStageFromDates) {
+        if (!currentStageObj || currentStageObj.step === 0 || currentStageObj.step < minStageFromDates.step) {
+            return minStageFromDates;
+        }
+    }
+
+    // Jika tahap diisi spesifik dan lebih tinggi atau sama dengan minStageFromDates, gunakan tahap tersebut
     if (s && s !== '-' && s !== '---' && !s.includes('lainnya') && currentStageObj && currentStageObj.step > 0) {
         return currentStageObj;
     }
 
-    // 2. Cek dari tanggal tertinggi yang sudah diisi
-    if (dates[9] && dates[9] !== '-' && !dates[9].toLowerCase().includes('belum')) {
-        return { step: 9, key: 'renvoi', label: '9. Renvoi (Jika Ada)', percent: 90, badgeColor: '#ea580c', badgeBg: '#fff7ed', isRevision: false, isRenvoi: true, isFinal: false };
-    }
-    if (dates[8] && dates[8] !== '-') {
-        return { step: 8, key: 'aktif', label: '8. Kontrak Aktif', percent: 100, badgeColor: '#16a34a', badgeBg: '#f0fdf4', isRevision: false, isRenvoi: false, isFinal: true };
-    }
-    if (dates[7] && dates[7] !== '-') {
-        return { step: 7, key: 'paraf_ttd_ethos', label: '7. Paraf & Tanda Tangan Ethos', percent: 85, badgeColor: '#9333ea', badgeBg: '#faf5ff', isRevision: false, isRenvoi: false, isFinal: false };
-    }
-    if (dates[6] && dates[6] !== '-') {
-        return { step: 6, key: 'paraf_ttd_vendor', label: '6. Paraf & Tanda Tangan Vendor', percent: 70, badgeColor: '#d97706', badgeBg: '#fffbeb', isRevision: false, isRenvoi: false, isFinal: false };
-    }
-    if (dates[5] && dates[5] !== '-') {
-        return { step: 5, key: 'review_vendor', label: '5. Review Vendor', percent: 55, badgeColor: '#c026d3', badgeBg: '#fdf4ff', isRevision: false, isRenvoi: false, isFinal: false };
-    }
-    if (dates[4] && dates[4] !== '-') {
-        return { step: 4, key: 'draft', label: '4. Draft Keluar', percent: 45, badgeColor: '#7c3aed', badgeBg: '#f5f3ff', isRevision: false, isRenvoi: false, isFinal: false };
-    }
-    if (dates[3] && dates[3] !== '-') {
-        return { step: 3, key: 'review_legal_ethos', label: '3. Review Legal Ethos', percent: 30, badgeColor: '#4f46e5', badgeBg: '#eef2ff', isRevision: false, isRenvoi: false, isFinal: false };
-    }
-    if (dates[2] && dates[2] !== '-') {
-        return { step: 2, key: 'pengajuan', label: '2. Pengajuan Ke Legal', percent: 20, badgeColor: '#2563eb', badgeBg: '#eff6ff', isRevision: false, isRenvoi: false, isFinal: false };
-    }
-    if (dates[1] && dates[1] !== '-') {
-        return { step: 1, key: 'persiapan_dokumen', label: '1. Persiapan Dokumen', percent: 10, badgeColor: '#0284c7', badgeBg: '#f0f9ff', isRevision: false, isRenvoi: false, isFinal: false };
-    }
+    if (minStageFromDates) return minStageFromDates;
     return currentStageObj;
 }
 
@@ -1291,22 +1292,44 @@ function renderInlineWorkflowSteps(c, stage) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    return steps.map((st, idx) => {
+    function getStepStatus(stepNum) {
+        const thisDate = parsedDates[stepNum];
+        const hasDate = thisDate !== null;
         let isDone = false;
         let isCurrent = false;
 
-        if (st.num < 8) {
-            if (currentStepNum > st.num || currentStepNum >= 8) isDone = true;
-            else if (currentStepNum === st.num) isCurrent = true;
-        } else if (st.num === 8) {
-            if (currentStepNum === 8) isCurrent = true;
-            else if (currentStepNum > 8) isDone = true;
-        } else if (st.num === 9) {
-            if (currentStepNum === 9) isCurrent = true;
-            else if (hasRenvoi || (parsedDates[9] !== null)) isDone = true;
-        } else if (st.num === 10) {
-            if (currentStepNum === 10) isCurrent = true;
+        if (stepNum < 8) {
+            if (hasDate || currentStepNum > stepNum || currentStepNum >= 8) {
+                isDone = true;
+            } else if (currentStepNum === stepNum) {
+                isCurrent = true;
+            }
+        } else if (stepNum === 8) {
+            if (currentStepNum === 8) {
+                isCurrent = true;
+            } else if (currentStepNum > 8 || (hasDate && currentStepNum >= 8)) {
+                isDone = true;
+            }
+        } else if (stepNum === 9) {
+            if (currentStepNum === 9) {
+                isCurrent = true;
+            } else if (hasRenvoi || hasDate) {
+                isDone = true;
+            }
+        } else if (stepNum === 10) {
+            if (currentStepNum === 10) {
+                isCurrent = true;
+            } else if (hasDate && thisDate <= today) {
+                isDone = true;
+            }
         }
+        return { isDone, isCurrent };
+    }
+
+    return steps.map((st, idx) => {
+        const curStatus = getStepStatus(st.num);
+        let isDone = curStatus.isDone;
+        let isCurrent = curStatus.isCurrent;
 
         const rawDate = stageDates[st.num];
         const thisDate = parsedDates[st.num];
@@ -1316,21 +1339,9 @@ function renderInlineWorkflowSteps(c, stage) {
         let lineHtml = '';
         if (idx < steps.length - 1) {
             const nextSt = steps[idx + 1];
-            let isNextDone = false;
-            let isNextCurrent = false;
-
-            if (nextSt.num < 8) {
-                if (currentStepNum > nextSt.num || currentStepNum >= 8) isNextDone = true;
-                else if (currentStepNum === nextSt.num) isNextCurrent = true;
-            } else if (nextSt.num === 8) {
-                if (currentStepNum === 8) isNextCurrent = true;
-                else if (currentStepNum > 8) isNextDone = true;
-            } else if (nextSt.num === 9) {
-                if (currentStepNum === 9) isNextCurrent = true;
-                else if (hasRenvoi || (parsedDates[9] !== null)) isNextDone = true;
-            } else if (nextSt.num === 10) {
-                if (currentStepNum === 10) isNextCurrent = true;
-            }
+            const nextStatus = getStepStatus(nextSt.num);
+            let isNextDone = nextStatus.isDone;
+            let isNextCurrent = nextStatus.isCurrent;
 
             let lineColorClass = 'bg-slate-200';
             let pillBadgeHtml = '';

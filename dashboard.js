@@ -1722,12 +1722,19 @@ function renderContractTable(cc) {
     cc.list.forEach(c => {
         let stage = normalizeContractStageFrontend(c.tahapProgress, c.status, c.tglSelesai);
 
+        // Jika tanggal alur yang lebih tinggi sudah terisi, otomatis sesuaikan tahapnya
+        if (c.tglParafEthos && c.tglParafEthos !== '-' && stage.step < 7) {
+            stage = { step: 7, key: 'paraf_ttd_ethos', label: '7. Paraf & Tanda Tangan Ethos', percent: 85, badgeColor: '#9333ea', badgeBg: '#faf5ff', isRevision: false, isRenvoi: false, isFinal: false };
+        } else if (c.tglParafVendor && c.tglParafVendor !== '-' && stage.step < 6) {
+            stage = { step: 6, key: 'paraf_ttd_vendor', label: '6. Paraf & Tanda Tangan Vendor', percent: 70, badgeColor: '#d97706', badgeBg: '#fffbeb', isRevision: false, isRenvoi: false, isFinal: false };
+        }
+
         const days = getContractDaysRemaining(c.tglSelesai);
         c._daysRemaining = days;
         if (days !== null) {
             if (days < 0) {
                 countExpired++;
-                if (stage.step === 8) {
+                if (stage.step === 8 || stage.step === 0 || stage.key === 'aktif') {
                     stage = { step: 10, key: 'selesai', label: '10. Kontrak Selesai', percent: 100, badgeColor: '#64748b', badgeBg: '#f8fafc', isRevision: false, isRenvoi: false, isFinal: true };
                 }
             } else if (days <= 30) countCritical++;

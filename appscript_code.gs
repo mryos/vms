@@ -2058,8 +2058,15 @@ function getContractCompliance(ss) {
   var idxTglReviewEthos = getHeaderIndex(headers, ['3. review legal ethos', 'review legal ethos', 'tanggal review legal ethos', 'tgl review legal ethos', 'tgl review ethos', 'tanggal review ethos', 'tgl review internal', 'review ethos']);
   var idxTglDraft = getHeaderIndex(headers, ['4. draft keluar', 'draft keluar', 'tanggal draft keluar', 'tgl draft keluar', 'tgl draft', 'tanggal draft', 'tgl draf', 'draft']);
   var idxTglReviewVendor = getHeaderIndex(headers, ['5. review vendor', 'review vendor', 'tanggal review vendor', 'tgl review vendor', 'tanggal review legal vendor', 'tgl review legal vendor', 'tgl review rekanan', 'review legal vendor']);
-  var idxTglParafVendor = getHeaderIndex(headers, ['6. paraf & tanda tangan vendor', 'paraf & tanda tangan vendor', 'paraf & ttd vendor', 'tanggal paraf & tanda tangan vendor', 'tanggal paraf & ttd vendor', 'tanggal paraf vendor', 'tgl paraf vendor', 'tgl paraf rekanan', 'paraf vendor']);
-  var idxTglParafEthos = getHeaderIndex(headers, ['7. paraf & tanda tangan ethos', 'paraf & tanda tangan ethos', 'paraf & ttd ethos', 'tanggal paraf & tanda tangan ethos', 'tanggal paraf & ttd ethos', 'tanggal paraf ethos', 'tgl paraf ethos', 'tgl paraf internal', 'paraf ethos']);
+  // Alur 6: Paraf Vendor
+  var idxStep6 = getHeaderIndex(headers, ['6. paraf & tanda tangan vendor', '6. paraf & ttd vendor', 'paraf & tanda tangan vendor', 'paraf & ttd vendor', '6. paraf vendor']);
+  var idxTglParafVendorAlt = getHeaderIndex(headers, ['tanggal paraf vendor', 'tgl paraf vendor', 'tanggal paraf rekanan', 'tgl paraf rekanan', 'paraf vendor', 'tanggal paraf & tanda tangan vendor', 'tanggal paraf & ttd vendor']);
+  var idxTglParafVendor = idxStep6 !== -1 ? idxStep6 : idxTglParafVendorAlt;
+
+  // Alur 7: Paraf Ethos
+  var idxStep7 = getHeaderIndex(headers, ['7. paraf & tanda tangan ethos', '7. paraf & ttd ethos', 'paraf & tanda tangan ethos', 'paraf & ttd ethos', '7. paraf ethos']);
+  var idxTglParafEthosAlt = getHeaderIndex(headers, ['tanggal paraf ethos', 'tgl paraf ethos', 'tanggal paraf internal', 'tgl paraf internal', 'paraf ethos', 'tanggal paraf & tanda tangan ethos', 'tanggal paraf & ttd ethos']);
+  var idxTglParafEthos = idxStep7 !== -1 ? idxStep7 : idxTglParafEthosAlt;
   
   // Alur 8: Kontrak Aktif / Tanggal Mulai Kontrak (dukung kolom Alur maupun kolom lama)
   var idxStep8 = getHeaderIndex(headers, ['8. kontrak aktif', '8. aktif', 'kontrak aktif', 'aktif sah', 'tanggal kontrak aktif', 'tgl kontrak aktif']);
@@ -2106,8 +2113,13 @@ function getContractCompliance(ss) {
     var tglReviewEthos = idxTglReviewEthos !== -1 && data[i][idxTglReviewEthos] ? formatDate(data[i][idxTglReviewEthos]) : '-';
     var tglDraft = idxTglDraft !== -1 && data[i][idxTglDraft] ? formatDate(data[i][idxTglDraft]) : '-';
     var tglReviewVendor = idxTglReviewVendor !== -1 && data[i][idxTglReviewVendor] ? formatDate(data[i][idxTglReviewVendor]) : '-';
-    var tglParafVendor = idxTglParafVendor !== -1 && data[i][idxTglParafVendor] ? formatDate(data[i][idxTglParafVendor]) : '-';
-    var tglParafEthos = idxTglParafEthos !== -1 && data[i][idxTglParafEthos] ? formatDate(data[i][idxTglParafEthos]) : '-';
+    var valStep6 = idxStep6 !== -1 && data[i][idxStep6] ? formatDate(data[i][idxStep6]) : '-';
+    var valVendorAlt = idxTglParafVendorAlt !== -1 && data[i][idxTglParafVendorAlt] ? formatDate(data[i][idxTglParafVendorAlt]) : '-';
+    var tglParafVendor = valStep6 !== '-' ? valStep6 : (valVendorAlt !== '-' ? valVendorAlt : '-');
+
+    var valStep7 = idxStep7 !== -1 && data[i][idxStep7] ? formatDate(data[i][idxStep7]) : '-';
+    var valEthosAlt = idxTglParafEthosAlt !== -1 && data[i][idxTglParafEthosAlt] ? formatDate(data[i][idxTglParafEthosAlt]) : '-';
+    var tglParafEthos = valStep7 !== '-' ? valStep7 : (valEthosAlt !== '-' ? valEthosAlt : '-');
     
     // 8. Kontrak Aktif / Mulai
     var valStep8 = idxStep8 !== -1 && data[i][idxStep8] ? formatDate(data[i][idxStep8]) : '-';
@@ -2146,30 +2158,36 @@ function getContractCompliance(ss) {
     var linkDokumen = idxLink !== -1 && data[i][idxLink] ? data[i][idxLink].toString().trim() : '';
     var keterangan = idxKeterangan !== -1 && data[i][idxKeterangan] ? data[i][idxKeterangan].toString().trim() : '';
 
-    // Normalisasi Tahap Progress (Didukung auto-detect dari tanggal alur tertinggi jika belum diisi)
+    // Normalisasi Tahap Progress (Didukung auto-detect dari tanggal alur tertinggi jika belum diisi atau tertinggal)
     var stageObj = normalizeContractStage(rawTahap, status, tglSelesai);
+
+    // Tentukan tahap minimum berdasarkan tanggal-tanggal alur yang sudah terisi
+    var minStage = null;
+    if (tglSelesai && tglSelesai !== '-' && new Date(tglSelesai).getTime() <= todayZero) {
+      minStage = { step: 10, key: 'selesai', label: '10. Kontrak Selesai', percent: 100, badgeColor: '#64748b', badgeBg: '#f8fafc', isRevision: false, isRenvoi: false, isFinal: true };
+    } else if (tglRenvoi && tglRenvoi !== '-' && !tglRenvoi.toLowerCase().includes('belum')) {
+      minStage = { step: 9, key: 'renvoi', label: '9. Renvoi (Jika Ada)', percent: 90, badgeColor: '#ea580c', badgeBg: '#fff7ed', isRevision: false, isRenvoi: true, isFinal: false };
+    } else if (tglParafEthos && tglParafEthos !== '-') {
+      minStage = { step: 7, key: 'paraf_ttd_ethos', label: '7. Paraf & Tanda Tangan Ethos', percent: 85, badgeColor: '#9333ea', badgeBg: '#faf5ff', isRevision: false, isRenvoi: false, isFinal: false };
+    } else if (tglParafVendor && tglParafVendor !== '-') {
+      minStage = { step: 6, key: 'paraf_ttd_vendor', label: '6. Paraf & Tanda Tangan Vendor', percent: 70, badgeColor: '#d97706', badgeBg: '#fffbeb', isRevision: false, isRenvoi: false, isFinal: false };
+    } else if (tglReviewVendor && tglReviewVendor !== '-') {
+      minStage = { step: 5, key: 'review_vendor', label: '5. Review Vendor', percent: 55, badgeColor: '#c026d3', badgeBg: '#fdf4ff', isRevision: false, isRenvoi: false, isFinal: false };
+    } else if (tglDraft && tglDraft !== '-') {
+      minStage = { step: 4, key: 'draft', label: '4. Draft Keluar', percent: 45, badgeColor: '#7c3aed', badgeBg: '#f5f3ff', isRevision: false, isRenvoi: false, isFinal: false };
+    } else if (tglReviewEthos && tglReviewEthos !== '-') {
+      minStage = { step: 3, key: 'review_legal_ethos', label: '3. Review Legal Ethos', percent: 30, badgeColor: '#4f46e5', badgeBg: '#eef2ff', isRevision: false, isRenvoi: false, isFinal: false };
+    } else if (tglPengajuan && tglPengajuan !== '-') {
+      minStage = { step: 2, key: 'pengajuan', label: '2. Pengajuan Ke Legal', percent: 20, badgeColor: '#2563eb', badgeBg: '#eff6ff', isRevision: false, isRenvoi: false, isFinal: false };
+    } else if (tglDokumen && tglDokumen !== '-') {
+      minStage = { step: 1, key: 'persiapan_dokumen', label: '1. Persiapan Dokumen', percent: 10, badgeColor: '#0284c7', badgeBg: '#f0f9ff', isRevision: false, isRenvoi: false, isFinal: false };
+    }
+
     if (!rawTahap || rawTahap === '-' || rawTahap === '---' || stageObj.step === 0 || stageObj.key === 'lainnya') {
-      if (tglSelesai && tglSelesai !== '-' && new Date(tglSelesai).getTime() <= todayZero) {
-        stageObj = { step: 10, key: 'selesai', label: '10. Kontrak Selesai', percent: 100, badgeColor: '#64748b', badgeBg: '#f8fafc', isRevision: false, isRenvoi: false, isFinal: true };
-      } else if (tglRenvoi && tglRenvoi !== '-' && !tglRenvoi.toLowerCase().includes('belum')) {
-        stageObj = { step: 9, key: 'renvoi', label: '9. Renvoi (Jika Ada)', percent: 90, badgeColor: '#ea580c', badgeBg: '#fff7ed', isRevision: false, isRenvoi: true, isFinal: false };
-      } else if (tglMulai && tglMulai !== '-') {
-        stageObj = { step: 8, key: 'aktif', label: '8. Kontrak Aktif', percent: 100, badgeColor: '#16a34a', badgeBg: '#f0fdf4', isRevision: false, isRenvoi: false, isFinal: true };
-      } else if (tglParafEthos && tglParafEthos !== '-') {
-        stageObj = { step: 7, key: 'paraf_ttd_ethos', label: '7. Paraf & Tanda Tangan Ethos', percent: 85, badgeColor: '#9333ea', badgeBg: '#faf5ff', isRevision: false, isRenvoi: false, isFinal: false };
-      } else if (tglParafVendor && tglParafVendor !== '-') {
-        stageObj = { step: 6, key: 'paraf_ttd_vendor', label: '6. Paraf & Tanda Tangan Vendor', percent: 70, badgeColor: '#d97706', badgeBg: '#fffbeb', isRevision: false, isRenvoi: false, isFinal: false };
-      } else if (tglReviewVendor && tglReviewVendor !== '-') {
-        stageObj = { step: 5, key: 'review_vendor', label: '5. Review Vendor', percent: 55, badgeColor: '#c026d3', badgeBg: '#fdf4ff', isRevision: false, isRenvoi: false, isFinal: false };
-      } else if (tglDraft && tglDraft !== '-') {
-        stageObj = { step: 4, key: 'draft', label: '4. Draft Keluar', percent: 45, badgeColor: '#7c3aed', badgeBg: '#f5f3ff', isRevision: false, isRenvoi: false, isFinal: false };
-      } else if (tglReviewEthos && tglReviewEthos !== '-') {
-        stageObj = { step: 3, key: 'review_legal_ethos', label: '3. Review Legal Ethos', percent: 30, badgeColor: '#4f46e5', badgeBg: '#eef2ff', isRevision: false, isRenvoi: false, isFinal: false };
-      } else if (tglPengajuan && tglPengajuan !== '-') {
-        stageObj = { step: 2, key: 'pengajuan', label: '2. Pengajuan Ke Legal', percent: 20, badgeColor: '#2563eb', badgeBg: '#eff6ff', isRevision: false, isRenvoi: false, isFinal: false };
-      } else if (tglDokumen && tglDokumen !== '-') {
-        stageObj = { step: 1, key: 'persiapan_dokumen', label: '1. Persiapan Dokumen', percent: 10, badgeColor: '#0284c7', badgeBg: '#f0f9ff', isRevision: false, isRenvoi: false, isFinal: false };
-      }
+      if (minStage) stageObj = minStage;
+    } else if (minStage && stageObj.step < minStage.step) {
+      // Jika teks tahap di sheet tertinggal dibanding tanggal yang sudah diisi, otomatis naik ke tahap tanggal!
+      stageObj = minStage;
     }
 
     // Hitung Selisih Hari Masa Berlaku Kontrak
