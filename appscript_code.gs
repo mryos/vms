@@ -1890,7 +1890,7 @@ function normalizeContractStage(rawStage, rawStatus, tglSelesai) {
       step: 7,
       key: 'paraf_ttd_ethos',
       label: '7. Paraf & Tanda Tangan Ethos',
-      percent: 85,
+      percent: 75,
       badgeColor: '#9333ea',
       badgeBg: '#faf5ff',
       isRevision: false,
@@ -1932,12 +1932,12 @@ function normalizeContractStage(rawStage, rawStatus, tglSelesai) {
       step: 8,
       key: 'aktif',
       label: '8. Kontrak Aktif',
-      percent: 100,
+      percent: 85,
       badgeColor: '#16a34a',
       badgeBg: '#f0fdf4',
       isRevision: false,
       isRenvoi: false,
-      isFinal: true
+      isFinal: false
     };
   }
 
@@ -1963,12 +1963,12 @@ function normalizeContractStage(rawStage, rawStatus, tglSelesai) {
       step: 8,
       key: 'aktif',
       label: '8. Kontrak Aktif',
-      percent: 100,
+      percent: 85,
       badgeColor: '#16a34a',
       badgeBg: '#f0fdf4',
       isRevision: false,
       isRenvoi: false,
-      isFinal: true
+      isFinal: false
     };
   }
 
@@ -2168,7 +2168,7 @@ function getContractCompliance(ss) {
     } else if (tglRenvoi && tglRenvoi !== '-' && !tglRenvoi.toLowerCase().includes('belum')) {
       minStage = { step: 9, key: 'renvoi', label: '9. Renvoi (Jika Ada)', percent: 90, badgeColor: '#ea580c', badgeBg: '#fff7ed', isRevision: false, isRenvoi: true, isFinal: false };
     } else if (tglParafEthos && tglParafEthos !== '-') {
-      minStage = { step: 7, key: 'paraf_ttd_ethos', label: '7. Paraf & Tanda Tangan Ethos', percent: 85, badgeColor: '#9333ea', badgeBg: '#faf5ff', isRevision: false, isRenvoi: false, isFinal: false };
+      minStage = { step: 7, key: 'paraf_ttd_ethos', label: '7. Paraf & Tanda Tangan Ethos', percent: 75, badgeColor: '#9333ea', badgeBg: '#faf5ff', isRevision: false, isRenvoi: false, isFinal: false };
     } else if (tglParafVendor && tglParafVendor !== '-') {
       minStage = { step: 6, key: 'paraf_ttd_vendor', label: '6. Paraf & Tanda Tangan Vendor', percent: 70, badgeColor: '#d97706', badgeBg: '#fffbeb', isRevision: false, isRenvoi: false, isFinal: false };
     } else if (tglReviewVendor && tglReviewVendor !== '-') {

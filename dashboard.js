@@ -1,7 +1,7 @@
 // =====================================================
 // KONFIGURASI
 // Ganti URL di bawah dengan URL Web App Google Apps Script Anda
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwrL6_iy3CT5c_bPbfx1wN7XiVDkH9ShGkMXzJ9evlfzvtLQJMmIgCD-bmWliev2Gqfxw/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbybsdAUI50UF7-_Ie9zqRyZTr7a74jLpCe_721CT2iFmK6DgqQZXCGZMye9_2lShQD0Cg/exec';
 
 // =====================================================
 // STATE & INIT
@@ -1589,7 +1589,7 @@ function normalizeContractStageFrontend(rawStage, rawStatus, tglSelesai) {
     }
     // 7. Paraf & Tanda Tangan Ethos
     if (s.includes('paraf & tanda tangan ethos') || s.includes('paraf & ttd ethos') || s.includes('paraf ethos') || s.includes('paraf internal') || s.includes('ttd ethos') || s.includes('7. paraf')) {
-        return { step: 7, key: 'paraf_ttd_ethos', label: '7. Paraf & Tanda Tangan Ethos', percent: 85, badgeColor: '#9333ea', badgeBg: '#faf5ff', isRevision: false, isRenvoi: false, isFinal: false };
+        return { step: 7, key: 'paraf_ttd_ethos', label: '7. Paraf & Tanda Tangan Ethos', percent: 75, badgeColor: '#9333ea', badgeBg: '#faf5ff', isRevision: false, isRenvoi: false, isFinal: false };
     }
     // 9. Renvoi (Jika Ada)
     if (s.includes('renvoi') || s.includes('9. renvoi')) {
@@ -1601,7 +1601,7 @@ function normalizeContractStageFrontend(rawStage, rawStatus, tglSelesai) {
     }
     // 8. Kontrak Aktif
     if (s.includes('kontrak aktif') || s.includes('aktif') || s.includes('aktif sah') || s.includes('berlaku') || s.includes('8. kontrak aktif')) {
-        return { step: 8, key: 'aktif', label: '8. Kontrak Aktif', percent: 100, badgeColor: '#16a34a', badgeBg: '#f0fdf4', isRevision: false, isRenvoi: false, isFinal: true };
+        return { step: 8, key: 'aktif', label: '8. Kontrak Aktif', percent: 85, badgeColor: '#16a34a', badgeBg: '#f0fdf4', isRevision: false, isRenvoi: false, isFinal: false };
     }
 
     if (rawStage && rawStage.toString().trim() !== '') {
@@ -1610,7 +1610,7 @@ function normalizeContractStageFrontend(rawStage, rawStatus, tglSelesai) {
 
     const isComply = (rawStatus || '').toString().toLowerCase().includes('comply');
     if (isComply) {
-        return { step: 8, key: 'aktif', label: '8. Kontrak Aktif', percent: 100, badgeColor: '#16a34a', badgeBg: '#f0fdf4', isRevision: false, isRenvoi: false, isFinal: true };
+        return { step: 8, key: 'aktif', label: '8. Kontrak Aktif', percent: 85, badgeColor: '#16a34a', badgeBg: '#f0fdf4', isRevision: false, isRenvoi: false, isFinal: false };
     }
 
     return { step: 1, key: 'persiapan_dokumen', label: '1. Persiapan Dokumen', percent: 10, badgeColor: '#0284c7', badgeBg: '#f0f9ff', isRevision: false, isRenvoi: false, isFinal: false };
@@ -1724,7 +1724,7 @@ function renderContractTable(cc) {
 
         // Jika tanggal alur yang lebih tinggi sudah terisi, otomatis sesuaikan tahapnya
         if (c.tglParafEthos && c.tglParafEthos !== '-' && stage.step < 7) {
-            stage = { step: 7, key: 'paraf_ttd_ethos', label: '7. Paraf & Tanda Tangan Ethos', percent: 85, badgeColor: '#9333ea', badgeBg: '#faf5ff', isRevision: false, isRenvoi: false, isFinal: false };
+            stage = { step: 7, key: 'paraf_ttd_ethos', label: '7. Paraf & Tanda Tangan Ethos', percent: 75, badgeColor: '#9333ea', badgeBg: '#faf5ff', isRevision: false, isRenvoi: false, isFinal: false };
         } else if (c.tglParafVendor && c.tglParafVendor !== '-' && stage.step < 6) {
             stage = { step: 6, key: 'paraf_ttd_vendor', label: '6. Paraf & Tanda Tangan Vendor', percent: 70, badgeColor: '#d97706', badgeBg: '#fffbeb', isRevision: false, isRenvoi: false, isFinal: false };
         }
@@ -2085,15 +2085,18 @@ function openContractDetailModal(noKontrak) {
     const processDays = getContractProcessDays(c.tglPengajuan, c.tglRealisasi);
     const isComply = c.status && c.status.toLowerCase() === 'comply';
 
-    // Standar 7 Tahapan Stepper
+    // Standar 10 Tahapan Stepper
     const workflowSteps = [
-        { num: 1, key: 'pengajuan', title: 'Pengajuan ke Legal', desc: 'ToR & Penawaran' },
-        { num: 2, key: 'draft', title: 'Draft Keluar', desc: 'Drafting Legalitas' },
-        { num: 3, key: 'paraf_vendor', title: 'Paraf Vendor', desc: 'Review Rekanan' },
-        { num: 4, key: 'paraf_ethos', title: 'Paraf Ethos', desc: 'Review Internal' },
-        { num: 5, key: 'revisi', title: 'Revisi / Renvoi', desc: 'Klausul & Pasal' },
-        { num: 6, key: 'ttd', title: 'Tanda Tangan', desc: 'Direksi & Rekanan' },
-        { num: 7, key: 'aktif', title: 'Aktif & Sah', desc: 'Berlaku Efektif' }
+        { num: 1, key: 'persiapan_dokumen', title: 'Persiapan Dokumen', desc: 'ToR & Syarat' },
+        { num: 2, key: 'pengajuan', title: 'Pengajuan Ke Legal', desc: 'Masuk Antrean' },
+        { num: 3, key: 'review_legal_ethos', title: 'Review Legal Ethos', desc: 'Telaah Internal' },
+        { num: 4, key: 'draft', title: 'Draft Keluar', desc: 'Naskah Resmi' },
+        { num: 5, key: 'review_vendor', title: 'Review Vendor', desc: 'Telaah Rekanan' },
+        { num: 6, key: 'paraf_ttd_vendor', title: 'Paraf & TTD Vendor', desc: 'Pihak Rekanan' },
+        { num: 7, key: 'paraf_ttd_ethos', title: 'Paraf & TTD Ethos', desc: 'Pihak Ethos' },
+        { num: 8, key: 'aktif', title: 'Kontrak Aktif', desc: 'Berlaku Efektif' },
+        { num: 9, key: 'renvoi', title: 'Renvoi (Jika Ada)', desc: 'Perbaikan Klausul' },
+        { num: 10, key: 'selesai', title: 'Kontrak Selesai', desc: 'Masa Berlaku Berakhir' }
     ];
 
     const currentStepNum = stage.step;
@@ -2116,8 +2119,8 @@ function openContractDetailModal(noKontrak) {
             <div class="h-2 rounded-full transition-all duration-500" style="width:${stage.percent}%; background:${stage.badgeColor};"></div>
         </div>
 
-        <!-- 7 Steps Visual Badges -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 text-center text-xs">
+        <!-- 10 Steps Visual Badges -->
+        <div class="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-1.5 text-center text-xs">
     `;
 
     workflowSteps.forEach(st => {
@@ -2127,8 +2130,48 @@ function openContractDetailModal(noKontrak) {
         let stepBg = 'bg-white';
         let textColor = 'text-slate-600';
 
-        if (st.num < 5) {
-            if (currentStepNum > st.num || currentStepNum >= 7) {
+        if (st.num === 9) {
+            // Renvoi step
+            if (hasRevision) {
+                if (currentStepNum === 9) {
+                    stepBorder = 'border-rose-400 shadow-xs ring-2 ring-rose-100';
+                    stepBg = 'bg-rose-50';
+                    textColor = 'text-rose-900 font-black';
+                    iconHtml = '⚠️';
+                } else if (currentStepNum > 9) {
+                    stepBorder = 'border-amber-300';
+                    stepBg = 'bg-amber-50';
+                    textColor = 'text-amber-800 font-bold';
+                    iconHtml = '✓';
+                } else {
+                    iconHtml = '9';
+                    textColor = 'text-slate-400';
+                }
+            } else {
+                if (currentStepNum >= 10) {
+                    stepBorder = 'border-slate-200';
+                    stepBg = 'bg-slate-100/60';
+                    textColor = 'text-slate-400';
+                    iconHtml = '—';
+                } else {
+                    iconHtml = '9';
+                    textColor = 'text-slate-400';
+                }
+            }
+        } else if (st.num === 10) {
+            // Step 10: Kontrak Selesai
+            if (currentStepNum >= 10) {
+                stepBorder = 'border-slate-400 shadow-xs bg-slate-100';
+                stepBg = 'bg-slate-100';
+                textColor = 'text-slate-800 font-black';
+                iconHtml = '✓';
+            } else {
+                iconHtml = '10';
+                textColor = 'text-slate-400';
+            }
+        } else {
+            // Steps 1 to 8
+            if (currentStepNum > st.num || currentStepNum >= 10) {
                 // Completed
                 stepBorder = 'border-emerald-300';
                 stepBg = 'bg-emerald-50/70';
@@ -2143,62 +2186,6 @@ function openContractDetailModal(noKontrak) {
             } else {
                 // Pending
                 iconHtml = st.num;
-                textColor = 'text-slate-400';
-            }
-        } else if (st.num === 5) {
-            // Revisi / Renvoi step
-            if (hasRevision) {
-                if (currentStepNum === 5 || currentStepNum === 6) {
-                    stepBorder = 'border-rose-400 shadow-xs ring-2 ring-rose-100';
-                    stepBg = 'bg-rose-50';
-                    textColor = 'text-rose-900 font-black';
-                    iconHtml = '⚠️';
-                } else if (currentStepNum > 6) {
-                    stepBorder = 'border-amber-300';
-                    stepBg = 'bg-amber-50';
-                    textColor = 'text-amber-800 font-bold';
-                    iconHtml = '✓';
-                } else {
-                    iconHtml = '5';
-                    textColor = 'text-slate-400';
-                }
-            } else {
-                // Skipped / Normal bypass
-                if (currentStepNum >= 7) {
-                    stepBorder = 'border-slate-200';
-                    stepBg = 'bg-slate-100/60';
-                    textColor = 'text-slate-400';
-                    iconHtml = '—';
-                } else {
-                    iconHtml = '5';
-                    textColor = 'text-slate-400';
-                }
-            }
-        } else if (st.num === 6) {
-            // Tanda Tangan
-            if (currentStepNum > 7) {
-                stepBorder = 'border-emerald-300';
-                stepBg = 'bg-emerald-50/70';
-                textColor = 'text-emerald-800 font-bold';
-                iconHtml = '✓';
-            } else if (currentStepNum === 7) {
-                stepBorder = 'border-teal-500 shadow-xs ring-2 ring-teal-100';
-                stepBg = 'bg-teal-50';
-                textColor = 'text-teal-900 font-black';
-                iconHtml = '▶';
-            } else {
-                iconHtml = '6';
-                textColor = 'text-slate-400';
-            }
-        } else if (st.num === 7) {
-            // Aktif & Sah
-            if (currentStepNum >= 8) {
-                stepBorder = 'border-emerald-500 shadow-xs';
-                stepBg = 'bg-emerald-100/80';
-                textColor = 'text-emerald-900 font-black';
-                iconHtml = '🎉';
-            } else {
-                iconHtml = '7';
                 textColor = 'text-slate-400';
             }
         }

@@ -1,7 +1,7 @@
 // =====================================================
 // KONFIGURASI API & STATE DASHBOARD KONTRAK
 // =====================================================
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwrL6_iy3CT5c_bPbfx1wN7XiVDkH9ShGkMXzJ9evlfzvtLQJMmIgCD-bmWliev2Gqfxw/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbybsdAUI50UF7-_Ie9zqRyZTr7a74jLpCe_721CT2iFmK6DgqQZXCGZMye9_2lShQD0Cg/exec';
 
 let contractDashboardData = null;
 let lastContractComplianceData = null;
@@ -342,7 +342,7 @@ function normalizeContractStageFrontend(rawStage, rawStatus, tglSelesai) {
     }
     // 7. Paraf & Tanda Tangan Ethos
     if (s.includes('paraf & tanda tangan ethos') || s.includes('paraf & ttd ethos') || s.includes('paraf ethos') || s.includes('paraf internal') || s.includes('ttd ethos') || s.includes('7. paraf') || s.includes('tanda tangan') || s.includes('ttd')) {
-        return { step: 7, key: 'paraf_ttd_ethos', label: '7. Paraf & Tanda Tangan Ethos', percent: 85, badgeColor: '#9333ea', badgeBg: '#faf5ff', isRevision: false, isRenvoi: false, isFinal: false };
+        return { step: 7, key: 'paraf_ttd_ethos', label: '7. Paraf & Tanda Tangan Ethos', percent: 75, badgeColor: '#9333ea', badgeBg: '#faf5ff', isRevision: false, isRenvoi: false, isFinal: false };
     }
     // 9. Renvoi (Jika Ada)
     if (s.includes('renvoi')) {
@@ -354,7 +354,7 @@ function normalizeContractStageFrontend(rawStage, rawStatus, tglSelesai) {
     }
     // 8. Kontrak Aktif
     if (s.includes('kontrak aktif') || s.includes('aktif') || s.includes('berlaku') || s.includes('done') || s.includes('8. kontrak') || s.includes('10. aktif')) {
-        return { step: 8, key: 'aktif', label: '8. Kontrak Aktif', percent: 100, badgeColor: '#16a34a', badgeBg: '#f0fdf4', isRevision: false, isRenvoi: false, isFinal: true };
+        return { step: 8, key: 'aktif', label: '8. Kontrak Aktif', percent: 85, badgeColor: '#16a34a', badgeBg: '#f0fdf4', isRevision: false, isRenvoi: false, isFinal: false };
     }
 
     if (rawStage && rawStage.toString().trim() !== '') {
@@ -363,7 +363,7 @@ function normalizeContractStageFrontend(rawStage, rawStatus, tglSelesai) {
 
     const isComply = (rawStatus || '').toString().toLowerCase().includes('comply');
     if (isComply) {
-        return { step: 8, key: 'aktif', label: '8. Kontrak Aktif', percent: 100, badgeColor: '#16a34a', badgeBg: '#f0fdf4', isRevision: false, isRenvoi: false, isFinal: true };
+        return { step: 8, key: 'aktif', label: '8. Kontrak Aktif', percent: 85, badgeColor: '#16a34a', badgeBg: '#f0fdf4', isRevision: false, isRenvoi: false, isFinal: false };
     }
 
     return { step: 2, key: 'pengajuan', label: '2. Pengajuan Ke Legal', percent: 20, badgeColor: '#2563eb', badgeBg: '#eff6ff', isRevision: false, isRenvoi: false, isFinal: false };
@@ -393,7 +393,7 @@ function inferStageFromDates(c, currentStageObj) {
     if (dates[9] && dates[9] !== '-' && !dates[9].toLowerCase().includes('belum')) {
         minStageFromDates = { step: 9, key: 'renvoi', label: '9. Renvoi (Jika Ada)', percent: 90, badgeColor: '#ea580c', badgeBg: '#fff7ed', isRevision: false, isRenvoi: true, isFinal: false };
     } else if (dates[7] && dates[7] !== '-') {
-        minStageFromDates = { step: 7, key: 'paraf_ttd_ethos', label: '7. Paraf & Tanda Tangan Ethos', percent: 85, badgeColor: '#9333ea', badgeBg: '#faf5ff', isRevision: false, isRenvoi: false, isFinal: false };
+        minStageFromDates = { step: 7, key: 'paraf_ttd_ethos', label: '7. Paraf & Tanda Tangan Ethos', percent: 75, badgeColor: '#9333ea', badgeBg: '#faf5ff', isRevision: false, isRenvoi: false, isFinal: false };
     } else if (dates[6] && dates[6] !== '-') {
         minStageFromDates = { step: 6, key: 'paraf_ttd_vendor', label: '6. Paraf & Tanda Tangan Vendor', percent: 70, badgeColor: '#d97706', badgeBg: '#fffbeb', isRevision: false, isRenvoi: false, isFinal: false };
     } else if (dates[5] && dates[5] !== '-') {
