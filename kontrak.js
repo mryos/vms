@@ -1103,24 +1103,47 @@ function renderTableRows(list) {
                         </div>
                     </div>
 
-                    <!-- Ringkasan Info Tambahan (Ruang Lingkup, PIC, Keterangan, Revisi) -->
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-[11px]">
+                    <!-- Ringkasan Info Tambahan -->
+                    ${(() => {
+                        // Hitung durasi pembuatan PKS: tgl Dokumen/Pengajuan → tgl Kontrak Aktif
+                        const sdMap = getContractStageDatesMap(c);
+                        const tglStart = parseAnyDate(sdMap[1] !== '-' ? sdMap[1] : sdMap[2]);
+                        const tglAktifParsed = parseAnyDate(sdMap[8] !== '-' ? sdMap[8] : null);
+                        const tglSelesaiParsed = parseAnyDate(sdMap[10] !== '-' ? sdMap[10] : (c._cleanSelesai || c.tglSelesai));
+                        const todayNow = new Date(); todayNow.setHours(0,0,0,0);
+                        const durasiPembuatan = tglStart && tglAktifParsed
+                            ? Math.max(0, Math.round((tglAktifParsed - tglStart) / (1000*60*60*24)))
+                            : (c._processDays !== null ? c._processDays : null);
+                        const durasiMasaBerlaku = tglAktifParsed && tglSelesaiParsed
+                            ? Math.abs(Math.round((tglSelesaiParsed - tglAktifParsed) / (1000*60*60*24)))
+                            : null;
+                        const isFinalStage = stage.step >= 10;
+                        const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+                        const fmtDate = d => d ? `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}` : '-';
+                        return `
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-slate-100 text-[11px]">
                         <div class="bg-slate-50 p-2 rounded-lg border border-slate-100">
                             <span class="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">Ruang Lingkup &amp; PIC</span>
                             <div class="font-bold text-slate-800 mt-0.5 truncate" title="${esc(c.jenisPekerjaan || '-')}">${esc(c.jenisPekerjaan || '-')}</div>
                             <div class="text-slate-500 text-[10.5px]">Divisi/PIC: <span class="font-semibold text-slate-700">${esc(c.picDivisi || '-')}</span></div>
                         </div>
-                        <div class="bg-slate-50 p-2 rounded-lg border border-slate-100">
-                            <span class="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">Durasi &amp; Status SLA</span>
-                            <div class="font-bold text-slate-800 mt-0.5">${c._processDays !== null ? `${c._processDays} hari kalender` : '-'}</div>
-                            <div class="text-[10.5px] ${c.isOverdueSla ? 'text-rose-600 font-bold' : 'text-emerald-600 font-semibold'}">${c.slaStatus || (c.isOverdueSla ? '⚠️ Lewat SLA' : '✓ Sesuai SLA')}</div>
+                        <div class="bg-indigo-50 p-2 rounded-lg border border-indigo-100">
+                            <span class="text-[10px] text-indigo-400 font-bold block uppercase tracking-wider">⏱ Durasi Pembuatan PKS</span>
+                            <div class="font-black text-indigo-800 mt-0.5 text-[13px]">${durasiPembuatan !== null ? `${durasiPembuatan} hari` : '-'}</div>
+                            <div class="text-[10px] text-indigo-500 mt-0.5">${tglStart ? fmtDate(tglStart) : '-'} → ${tglAktifParsed ? fmtDate(tglAktifParsed) : (c.tglRealisasi && c.tglRealisasi !== '-' ? c.tglRealisasi : '-')}</div>
+                        </div>
+                        <div class="${isFinalStage ? 'bg-slate-100' : 'bg-emerald-50'} p-2 rounded-lg border ${isFinalStage ? 'border-slate-200' : 'border-emerald-100'}">
+                            <span class="text-[10px] ${isFinalStage ? 'text-slate-400' : 'text-emerald-500'} font-bold block uppercase tracking-wider">${isFinalStage ? '✓ Masa Berlaku Kontrak' : '📅 Masa Berlaku Kontrak'}</span>
+                            <div class="font-black ${isFinalStage ? 'text-slate-600' : 'text-emerald-800'} mt-0.5 text-[12px]">${durasiMasaBerlaku !== null ? `${durasiMasaBerlaku} hari` : '-'}</div>
+                            <div class="text-[10px] ${isFinalStage ? 'text-slate-400 line-through' : 'text-emerald-600'} mt-0.5">${tglAktifParsed ? fmtDate(tglAktifParsed) : '-'} → ${tglSelesaiParsed ? fmtDate(tglSelesaiParsed) : '-'}</div>
                         </div>
                         <div class="bg-slate-50 p-2 rounded-lg border border-slate-100">
-                            <span class="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">Revisi &amp; Catatan</span>
-                            <div class="font-medium text-slate-700 mt-0.5 truncate" title="${esc(c.statusRevisi || c.keterangan || '-')}">${esc(c.statusRevisi || c.keterangan || 'Tidak ada catatan revisi')}</div>
-                            <div class="text-[10px] text-slate-400">Kelengkapan: ${esc(c.kelengkapan || 'Lengkap')}</div>
+                            <span class="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">Status SLA &amp; Catatan</span>
+                            <div class="font-bold text-[11px] mt-0.5 ${c.isOverdueSla ? 'text-rose-600' : 'text-emerald-600'}">${c.slaStatus || (c.isOverdueSla ? '⚠️ Lewat SLA' : '✓ Sesuai SLA')}</div>
+                            <div class="text-[10px] text-slate-500 mt-0.5 truncate" title="${esc(c.statusRevisi || c.keterangan || '-')}">${esc(c.statusRevisi || c.keterangan || 'Tidak ada catatan')}</div>
                         </div>
-                    </div>
+                    </div>`;
+                    })()}
                 </div>
             </td>
         </tr>`;
@@ -1461,7 +1484,37 @@ function renderInlineWorkflowSteps(c, stage) {
                 : (c._runningDays || 0);
             const isBottleneck = (st.num < 8) && (runDays >= 7 || c.isOverdueSla);
 
-            if (isBottleneck) {
+            if (st.num === 10) {
+                // Step 10 Kontrak Selesai: tampilkan tanggal berakhir, bukan "Berjalan X hari"
+                titleClass = 'text-slate-600 font-bold';
+                const selesaiDate = parsedDates[10] || parseAnyDate(c._cleanSelesai || c.tglSelesai);
+                if (selesaiDate) {
+                    // Hitung durasi masa berlaku kontrak (tglMulai → tglSelesai)
+                    const mulaiDate = parsedDates[8] || parseAnyDate(c._cleanMulai || c.tglMulai);
+                    const durasiMasaBerlaku = mulaiDate && selesaiDate
+                        ? Math.round((selesaiDate - mulaiDate) / (1000 * 60 * 60 * 24))
+                        : null;
+                    const selesaiFmt = formatStepperDate(selesaiDate);
+                    subTextHtml = `
+                        <div class="text-[10px] text-slate-500 font-medium mt-1 leading-tight whitespace-nowrap">
+                            ${esc(selesaiFmt || '-')}
+                        </div>
+                        ${durasiMasaBerlaku !== null ? `<div class="text-[9px] text-slate-400 mt-0.5 leading-tight whitespace-nowrap">${durasiMasaBerlaku} hari berlaku</div>` : ''}`;
+                } else {
+                    subTextHtml = `<div class="text-[9.5px] text-slate-500 font-medium mt-1">PKS Selesai</div>`;
+                }
+            } else if (st.num === 8) {
+                // Step 8 Kontrak Aktif: tampilkan "Berjalan X hari" (masa berlaku saat ini)
+                titleClass = 'text-slate-900 font-black';
+                const mulaiDate = parsedDates[8];
+                const aktifDays = mulaiDate
+                    ? Math.max(0, Math.round((today - mulaiDate) / (1000 * 60 * 60 * 24)))
+                    : runDays;
+                subTextHtml = `
+                    <div class="text-[10px] text-emerald-700 font-bold mt-1 leading-tight whitespace-nowrap">
+                        Berjalan ${aktifDays} hari
+                    </div>`;
+            } else if (isBottleneck) {
                 titleClass = 'text-amber-900 font-black';
                 const warnMsg = c.isOverdueSla ? 'Lewat Target SLA' : `Mandek ${runDays} hari`;
                 subTextHtml = `
