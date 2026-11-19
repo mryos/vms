@@ -1105,21 +1105,24 @@ function renderTableRows(list) {
 
                     <!-- Ringkasan Info Tambahan -->
                     ${(() => {
-                        // Hitung durasi pembuatan PKS: tgl Dokumen/Pengajuan → tgl Kontrak Aktif
+                        // SLA: Draft Keluar (step 4) - Pengajuan Ke Legal (step 2)
                         const sdMap = getContractStageDatesMap(c);
-                        const tglStart = parseAnyDate(sdMap[1] !== '-' ? sdMap[1] : sdMap[2]);
-                        const tglAktifParsed = parseAnyDate(sdMap[8] !== '-' ? sdMap[8] : null);
+                        const tglPengajuanLegal = parseAnyDate(sdMap[2] !== '-' ? sdMap[2] : null);
+                        const tglDraftKeluar   = parseAnyDate(sdMap[4] !== '-' ? sdMap[4] : null);
+                        const tglAktifParsed   = parseAnyDate(sdMap[8] !== '-' ? sdMap[8] : null);
                         const tglSelesaiParsed = parseAnyDate(sdMap[10] !== '-' ? sdMap[10] : (c._cleanSelesai || c.tglSelesai));
-                        const todayNow = new Date(); todayNow.setHours(0,0,0,0);
-                        const durasiPembuatan = tglStart && tglAktifParsed
-                            ? Math.max(0, Math.round((tglAktifParsed - tglStart) / (1000*60*60*24)))
-                            : (c._processDays !== null ? c._processDays : null);
+                        const durasiSLA = tglPengajuanLegal && tglDraftKeluar
+                            ? Math.max(0, Math.round((tglDraftKeluar - tglPengajuanLegal) / (1000*60*60*24)))
+                            : null;
                         const durasiMasaBerlaku = tglAktifParsed && tglSelesaiParsed
                             ? Math.abs(Math.round((tglSelesaiParsed - tglAktifParsed) / (1000*60*60*24)))
                             : null;
                         const isFinalStage = stage.step >= 10;
                         const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
                         const fmtDate = d => d ? `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}` : '-';
+                        const slaColor = durasiSLA === null ? 'text-indigo-800' : durasiSLA <= 7 ? 'text-emerald-800' : durasiSLA <= 14 ? 'text-amber-700' : 'text-rose-700';
+                        const slaBg = durasiSLA === null ? 'bg-indigo-50 border-indigo-100' : durasiSLA <= 7 ? 'bg-emerald-50 border-emerald-100' : durasiSLA <= 14 ? 'bg-amber-50 border-amber-100' : 'bg-rose-50 border-rose-100';
+                        const slaLabelColor = durasiSLA === null ? 'text-indigo-400' : durasiSLA <= 7 ? 'text-emerald-500' : durasiSLA <= 14 ? 'text-amber-500' : 'text-rose-400';
                         return `
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-slate-100 text-[11px]">
                         <div class="bg-slate-50 p-2 rounded-lg border border-slate-100">
@@ -1127,10 +1130,11 @@ function renderTableRows(list) {
                             <div class="font-bold text-slate-800 mt-0.5 truncate" title="${esc(c.jenisPekerjaan || '-')}">${esc(c.jenisPekerjaan || '-')}</div>
                             <div class="text-slate-500 text-[10.5px]">Divisi/PIC: <span class="font-semibold text-slate-700">${esc(c.picDivisi || '-')}</span></div>
                         </div>
-                        <div class="bg-indigo-50 p-2 rounded-lg border border-indigo-100">
-                            <span class="text-[10px] text-indigo-400 font-bold block uppercase tracking-wider">⏱ Durasi Pembuatan PKS</span>
-                            <div class="font-black text-indigo-800 mt-0.5 text-[13px]">${durasiPembuatan !== null ? `${durasiPembuatan} hari` : '-'}</div>
-                            <div class="text-[10px] text-indigo-500 mt-0.5">${tglStart ? fmtDate(tglStart) : '-'} → ${tglAktifParsed ? fmtDate(tglAktifParsed) : (c.tglRealisasi && c.tglRealisasi !== '-' ? c.tglRealisasi : '-')}</div>
+                        <div class="${slaBg} p-2 rounded-lg border">
+                            <span class="text-[10px] ${slaLabelColor} font-bold block uppercase tracking-wider">⏱ SLA Draft Legal</span>
+                            <div class="font-black ${slaColor} mt-0.5 text-[13px]">${durasiSLA !== null ? `${durasiSLA} hari` : '-'}</div>
+                            <div class="text-[10px] ${slaLabelColor} mt-0.5">Pengiriman Ke Legal → Draft Keluar</div>
+                            <div class="text-[9.5px] text-slate-400 mt-0.5">${fmtDate(tglPengajuanLegal)} → ${fmtDate(tglDraftKeluar)}</div>
                         </div>
                         <div class="${isFinalStage ? 'bg-slate-100' : 'bg-emerald-50'} p-2 rounded-lg border ${isFinalStage ? 'border-slate-200' : 'border-emerald-100'}">
                             <span class="text-[10px] ${isFinalStage ? 'text-slate-400' : 'text-emerald-500'} font-bold block uppercase tracking-wider">${isFinalStage ? '✓ Masa Berlaku Kontrak' : '📅 Masa Berlaku Kontrak'}</span>
