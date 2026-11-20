@@ -1,7 +1,7 @@
 // =====================================================
 // KONFIGURASI API SPREADSHEET
 // =====================================================
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbybsdAUI50UF7-_Ie9zqRyZTr7a74jLpCe_721CT2iFmK6DgqQZXCGZMye9_2lShQD0Cg/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxDKDHcbF5i1W4qBM2opDk4-UBEcFqOCHOl-gVcEp6omQ4ZQ4LGDN0mxghAq1PQnPNnKQ/exec';
 
 // =====================================================
 // STATE & INIT
