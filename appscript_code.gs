@@ -369,56 +369,76 @@ function doGet(e) {
         var namaPenilai = assessorResult.namaPenilai;
         var assignedVendors = assessorResult.assignedVendors;
 
-        // Buat filteredPeriods khusus penilai ini
-        // Hanya tampilkan vendor yang ditugaskan DAN memiliki data PO di periode tersebut
+        // Coba juga baca dari kolom Penilai di sheet-sheet Q untuk menambah/menyempurnakan akses
+        var periodPenilaiResult = getVendorsByPenilaiFromPeriods(pin, namaPenilai, periods, allMasterVendors);
+
+        // Gabung filteredPeriods: utamakan hasil dari kolom Penilai di sheet Q
         var filteredPeriods = {};
-        for (var pKey in periods) {
-          var pObj = periods[pKey];
-
-          // Kumpulkan nama vendor yang memiliki PO di periode ini
-          var periodVendorNames = {};
-          if (pObj.rawOrders && pObj.rawOrders.length > 0) {
-            pObj.rawOrders.forEach(function(o) {
-              if (o.vendor) periodVendorNames[o.vendor.toLowerCase().trim()] = true;
-            });
-          }
-          if (pObj.poStats && pObj.poStats.vendorMap) {
-            for (var vk in pObj.poStats.vendorMap) {
-              periodVendorNames[vk.toLowerCase().trim()] = true;
+        if (periodPenilaiResult && Object.keys(periodPenilaiResult.filteredPeriods).length > 0) {
+          // Pakai hasil kolom Penilai sebagai dasar, tambah periode dari Akses Penilai jika ada yang tidak tercakup
+          filteredPeriods = periodPenilaiResult.filteredPeriods;
+          // Merge vendor dari kedua sumber
+          var mergedVendorMap = {};
+          assignedVendors.forEach(function(v) {
+            var key = (typeof v === 'object' ? v.nama : v).toLowerCase().trim();
+            mergedVendorMap[key] = v;
+          });
+          periodPenilaiResult.assignedVendors.forEach(function(v) {
+            var key = (typeof v === 'object' ? v.nama : v).toLowerCase().trim();
+            mergedVendorMap[key] = v;
+          });
+          assignedVendors = Object.keys(mergedVendorMap).map(function(k) { return mergedVendorMap[k]; });
+        } else {
+          // Fallback ke logika lama (Akses Penilai tanpa kolom Penilai di Q)
+          for (var pKey in periods) {
+            var pObj = periods[pKey];
+            var periodVendorNames = {};
+            if (pObj.rawOrders && pObj.rawOrders.length > 0) {
+              pObj.rawOrders.forEach(function(o) {
+                if (o.vendor) periodVendorNames[o.vendor.toLowerCase().trim()] = true;
+              });
             }
-          }
-
-          // Filter: hanya vendor yang ditugaskan DAN memiliki PO di periode ini
-          var periodAssigned = assignedVendors;
-          var hasPeriodPoData = Object.keys(periodVendorNames).length > 0;
-          if (hasPeriodPoData) {
-            periodAssigned = assignedVendors.filter(function(av) {
-              var avName = (typeof av === 'object' ? (av.nama || '') : av.toString()).toLowerCase().trim();
-              // Cek kecocokan langsung atau fuzzy
-              for (var pvn in periodVendorNames) {
-                if (avName === pvn) return true;
-                var normAv = avName.replace(/[^a-z0-9]/g, '');
-                var normPv = pvn.replace(/[^a-z0-9]/g, '');
-                if (normAv === normPv) return true;
-                if (normAv.length > 4 && normPv.length > 4 && (normAv.indexOf(normPv) !== -1 || normPv.indexOf(normAv) !== -1)) return true;
+            if (pObj.poStats && pObj.poStats.vendorMap) {
+              for (var vk in pObj.poStats.vendorMap) {
+                periodVendorNames[vk.toLowerCase().trim()] = true;
               }
-              return false;
-            });
-            // Jika tidak ada match sama sekali, tetap tampilkan semua assigned (safety fallback)
-            if (periodAssigned.length === 0) periodAssigned = assignedVendors;
+            }
+            var periodAssigned = assignedVendors;
+            var hasPeriodPoData = Object.keys(periodVendorNames).length > 0;
+            if (hasPeriodPoData) {
+              periodAssigned = assignedVendors.filter(function(av) {
+                var avName = (typeof av === 'object' ? (av.nama || '') : av.toString()).toLowerCase().trim();
+                for (var pvn in periodVendorNames) {
+                  if (avName === pvn) return true;
+                  var normAv = avName.replace(/[^a-z0-9]/g, '');
+                  var normPv = pvn.replace(/[^a-z0-9]/g, '');
+                  if (normAv === normPv) return true;
+                  if (normAv.length > 4 && normPv.length > 4 && (normAv.indexOf(normPv) !== -1 || normPv.indexOf(normAv) !== -1)) return true;
+                }
+                return false;
+              });
+              if (periodAssigned.length === 0) periodAssigned = assignedVendors;
+            }
+            filteredPeriods[pKey] = {
+              id: pObj.id,
+              label: pObj.label,
+              sheetName: pObj.sheetName,
+              year: pObj.year,
+              quarter: pObj.quarter,
+              vendors: periodAssigned,
+              poStats: pObj.poStats,
+              rawOrders: pObj.rawOrders || []
+            };
           }
-
-          filteredPeriods[pKey] = {
-            id: pObj.id,
-            label: pObj.label,
-            sheetName: pObj.sheetName,
-            year: pObj.year,
-            quarter: pObj.quarter,
-            vendors: periodAssigned,
-            poStats: pObj.poStats,
-            rawOrders: pObj.rawOrders || []
-          };
         }
+
+        // Hitung defaultPeriod yang relevan untuk penilai ini
+        var myPeriodList = Object.keys(filteredPeriods).sort(function(a, b) {
+          var pA = filteredPeriods[a], pB = filteredPeriods[b];
+          if (pA.year !== pB.year) return pA.year - pB.year;
+          return pA.quarter - pB.quarter;
+        });
+        var myDefaultPeriod = myPeriodList.length > 0 ? myPeriodList[myPeriodList.length - 1] : defaultPeriodId;
 
         return createJsonResponse({
           status: 'success',
@@ -430,8 +450,39 @@ function doGet(e) {
           kriteria: kriteriaList,
           poStats: aggregatedPoStats,
           periods: filteredPeriods,
-          periodList: periodList,
-          defaultPeriod: defaultPeriodId,
+          periodList: myPeriodList.length > 0 ? myPeriodList : periodList,
+          defaultPeriod: myDefaultPeriod,
+          prList: prList,
+          scoreSummary: scoreSummary,
+          evaluationsList: evaluationsList,
+          contractCompliance: contractCompliance,
+          allRawOrders: allRawOrders
+        });
+      }
+
+      // Jika tidak ada di Akses Penilai, cek langsung di kolom Penilai sheet Q
+      var periodPenilaiResult = getVendorsByPenilaiFromPeriods(pin, '', periods, allMasterVendors);
+      if (periodPenilaiResult && periodPenilaiResult.assignedVendors.length > 0) {
+        var myPeriodList2 = Object.keys(periodPenilaiResult.filteredPeriods).sort(function(a, b) {
+          var pA = periodPenilaiResult.filteredPeriods[a];
+          var pB = periodPenilaiResult.filteredPeriods[b];
+          if (pA.year !== pB.year) return pA.year - pB.year;
+          return pA.quarter - pB.quarter;
+        });
+        var myDefaultPeriod2 = myPeriodList2.length > 0 ? myPeriodList2[myPeriodList2.length - 1] : defaultPeriodId;
+
+        return createJsonResponse({
+          status: 'success',
+          pin: pin,
+          namaPenilai: 'Penilai',
+          vendors: periodPenilaiResult.assignedVendors,
+          allVendors: allMasterVendors,
+          kategori: kategoriList,
+          kriteria: kriteriaList,
+          poStats: aggregatedPoStats,
+          periods: periodPenilaiResult.filteredPeriods,
+          periodList: myPeriodList2,
+          defaultPeriod: myDefaultPeriod2,
           prList: prList,
           scoreSummary: scoreSummary,
           evaluationsList: evaluationsList,
@@ -1211,6 +1262,7 @@ function parsePoFromSheet(sheet, masterMap) {
   var idxNilai = getHeaderIndex(headers, ['total', 'grand total', 'total untaxed amount', 'nilai', 'nilai (rp)', 'harga', 'amount', 'nominal']);
   var idxExp = getHeaderIndex(headers, ['expected date', 'tanggal diharapkan', 'deadline', 'diharapkan', 'tgl estimasi', 'scheduled date']);
   var idxEff = getHeaderIndex(headers, ['tanggal diterima', 'effective date', 'effective date / tanggal diterima', 'diterima', 'realisasi', 'tgl selesai', 'delivery with receipt date']);
+  var idxPenilai = getHeaderIndex(headers, ['penilai', 'assessor', 'assigned to', 'assignedto', 'pic penilai', 'evaluator']);
 
   if (idxVendor === -1) {
     return { hasData: false, poStats: stats, vendors: [], rawOrders: [] };
@@ -1225,6 +1277,7 @@ function parsePoFromSheet(sheet, masterMap) {
     var expDate = idxExp !== -1 ? data[i][idxExp] : '';
     var effDate = idxEff !== -1 ? data[i][idxEff] : '';
     var item = idxItem !== -1 && data[i][idxItem] ? data[i][idxItem].toString().trim() : 'Barang/Jasa';
+    var penilaiVal = idxPenilai !== -1 && data[i][idxPenilai] ? data[i][idxPenilai].toString().trim() : '';
 
     stats.totalOrders++;
     stats.totalValue += nilai;
@@ -1300,6 +1353,7 @@ function parsePoFromSheet(sheet, masterMap) {
       status: status,
       isOnTime: isOnTime,
       nilai: nilai,
+      penilai: penilaiVal,
       periode: sheet.getName().trim()
     };
 
@@ -1322,6 +1376,116 @@ function parsePoFromSheet(sheet, masterMap) {
     poStats: stats,
     vendors: vendorList,
     rawOrders: rawOrders
+  };
+}
+
+/**
+ * Mencari vendor yang ditugaskan ke seorang penilai berdasarkan kolom "Penilai"
+ * di sheet-sheet periode (Q1 2026, Q2 2026, dst).
+ *
+ * @param {string} pin - PIN penilai yang login
+ * @param {string} namaPenilai - Nama penilai (opsional, untuk matching nama)
+ * @param {Object} periods - Hasil detectAllPeriodSheets().periods
+ * @param {Array} allMasterVendors - Semua vendor master
+ * @return {Object|null} { assignedVendors, filteredPeriods } atau null jika tidak ditemukan
+ */
+function getVendorsByPenilaiFromPeriods(pin, namaPenilai, periods, allMasterVendors) {
+  var masterMap = {};
+  allMasterVendors.forEach(function(v) {
+    masterMap[v.nama.toLowerCase().trim()] = v;
+  });
+
+  var assignedVendorMap = {}; // key: nama vendor lowercase, value: vendor object
+  var filteredPeriods = {};
+  var foundInAnyPeriod = false;
+
+  var pinNorm = pin ? pin.toString().trim().toLowerCase() : '';
+  var namaLower = namaPenilai ? namaPenilai.toString().trim().toLowerCase() : '';
+
+  for (var pKey in periods) {
+    var pObj = periods[pKey];
+    if (!pObj.rawOrders || pObj.rawOrders.length === 0) continue;
+
+    var periodVendorMap = {}; // vendor yang di-assign ke penilai ini di periode ini
+
+    pObj.rawOrders.forEach(function(order) {
+      if (!order.penilai) return;
+
+      // Normalisasi nilai kolom Penilai — bisa berisi beberapa penilai dipisah koma/titik koma
+      var penilaiTokens = order.penilai.toString().split(/[,;\/\n]+/).map(function(t) {
+        return t.trim().toLowerCase();
+      });
+
+      var isAssigned = penilaiTokens.some(function(tok) {
+        if (!tok) return false;
+        // Match: PIN persis, atau nama persis, atau nama mengandung PIN / PIN mengandung nama
+        if (tok === pinNorm) return true;
+        if (namaLower && tok === namaLower) return true;
+        // Partial match: nama di kolom Penilai mengandung PIN (berguna jika isi: "1234-Budi")
+        if (pinNorm.length >= 3 && tok.indexOf(pinNorm) !== -1) return true;
+        return false;
+      });
+
+      if (isAssigned && order.vendor) {
+        var vLower = order.vendor.toLowerCase().trim();
+        var masterV = masterMap[vLower];
+        if (!periodVendorMap[vLower]) {
+          periodVendorMap[vLower] = masterV || {
+            nama: order.vendor,
+            kategori: 'BarangJasa',
+            kontak: '-',
+            alamat: '-'
+          };
+        }
+        if (!assignedVendorMap[vLower]) {
+          assignedVendorMap[vLower] = periodVendorMap[vLower];
+        }
+        foundInAnyPeriod = true;
+      }
+    });
+
+    // Hanya masukkan periode ini jika ada vendor yang di-assign ke penilai
+    if (Object.keys(periodVendorMap).length > 0) {
+      var periodVendors = [];
+      for (var vk in periodVendorMap) {
+        periodVendors.push(periodVendorMap[vk]);
+      }
+
+      // Filter rawOrders hanya milik penilai ini
+      var myOrders = pObj.rawOrders.filter(function(o) {
+        if (!o.penilai) return false;
+        var tokens = o.penilai.toString().split(/[,;\/\n]+/).map(function(t) { return t.trim().toLowerCase(); });
+        return tokens.some(function(tok) {
+          if (tok === pinNorm) return true;
+          if (namaLower && tok === namaLower) return true;
+          if (pinNorm.length >= 3 && tok.indexOf(pinNorm) !== -1) return true;
+          return false;
+        });
+      });
+
+      filteredPeriods[pKey] = {
+        id: pObj.id,
+        label: pObj.label,
+        sheetName: pObj.sheetName,
+        year: pObj.year,
+        quarter: pObj.quarter,
+        vendors: periodVendors,
+        poStats: pObj.poStats,
+        rawOrders: myOrders
+      };
+    }
+  }
+
+  if (!foundInAnyPeriod) return null;
+
+  var assignedVendors = [];
+  for (var avk in assignedVendorMap) {
+    assignedVendors.push(assignedVendorMap[avk]);
+  }
+
+  return {
+    assignedVendors: assignedVendors,
+    filteredPeriods: filteredPeriods
   };
 }
 
