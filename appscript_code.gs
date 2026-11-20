@@ -372,23 +372,79 @@ function doGet(e) {
         // Coba juga baca dari kolom Penilai di sheet-sheet Q untuk menambah/menyempurnakan akses
         var periodPenilaiResult = getVendorsByPenilaiFromPeriods(pin, namaPenilai, periods, allMasterVendors);
 
-        // Gabung filteredPeriods: utamakan hasil dari kolom Penilai di sheet Q
+        // Gabung filteredPeriods dari kolom Penilai di sheet Q dan sheet Akses Penilai
         var filteredPeriods = {};
-        if (periodPenilaiResult && Object.keys(periodPenilaiResult.filteredPeriods).length > 0) {
-          // Pakai hasil kolom Penilai sebagai dasar, tambah periode dari Akses Penilai jika ada yang tidak tercakup
-          filteredPeriods = periodPenilaiResult.filteredPeriods;
-          // Merge vendor dari kedua sumber
-          var mergedVendorMap = {};
-          assignedVendors.forEach(function(v) {
-            var key = (typeof v === 'object' ? v.nama : v).toLowerCase().trim();
-            mergedVendorMap[key] = v;
-          });
+        if (periodPenilaiResult && periodPenilaiResult.filteredPeriods) {
+          for (var pk in periodPenilaiResult.filteredPeriods) {
+            filteredPeriods[pk] = periodPenilaiResult.filteredPeriods[pk];
+          }
+        }
+
+        // Cek juga vendor dari Akses Penilai di setiap periode PO
+        if (assignedVendors && assignedVendors.length > 0) {
+          for (var pKey in periods) {
+            var pObj = periods[pKey];
+            var pRawOrders = pObj.rawOrders || [];
+            var matchingVendorsForThisPeriod = [];
+
+            assignedVendors.forEach(function(av) {
+              var avName = (typeof av === 'object' ? (av.nama || '') : av.toString()).toLowerCase().trim();
+              if (!avName) return;
+              var hasOrder = pRawOrders.some(function(o) {
+                if (!o.vendor) return false;
+                var ov = o.vendor.toLowerCase().trim();
+                return ov === avName || ov.indexOf(avName) !== -1 || avName.indexOf(ov) !== -1;
+              });
+              if (hasOrder) {
+                matchingVendorsForThisPeriod.push(av);
+              }
+            });
+
+            if (matchingVendorsForThisPeriod.length > 0) {
+              if (!filteredPeriods[pKey]) {
+                filteredPeriods[pKey] = {
+                  id: pObj.id,
+                  label: pObj.label,
+                  sheetName: pObj.sheetName,
+                  year: pObj.year,
+                  quarter: pObj.quarter,
+                  vendors: matchingVendorsForThisPeriod,
+                  poStats: pObj.poStats,
+                  rawOrders: pObj.rawOrders || []
+                };
+              } else {
+                var existingVMap = {};
+                filteredPeriods[pKey].vendors.forEach(function(ev) {
+                  var evn = (typeof ev === 'object' ? ev.nama : ev).toLowerCase().trim();
+                  existingVMap[evn] = true;
+                });
+                matchingVendorsForThisPeriod.forEach(function(mv) {
+                  var mvn = (typeof mv === 'object' ? mv.nama : mv).toLowerCase().trim();
+                  if (!existingVMap[mvn]) {
+                    filteredPeriods[pKey].vendors.push(mv);
+                    existingVMap[mvn] = true;
+                  }
+                });
+              }
+            }
+          }
+        }
+
+        // Merge total daftar assignedVendors
+        var mergedVendorMap = {};
+        assignedVendors.forEach(function(v) {
+          var key = (typeof v === 'object' ? v.nama : v).toLowerCase().trim();
+          mergedVendorMap[key] = v;
+        });
+        if (periodPenilaiResult && periodPenilaiResult.assignedVendors) {
           periodPenilaiResult.assignedVendors.forEach(function(v) {
             var key = (typeof v === 'object' ? v.nama : v).toLowerCase().trim();
             mergedVendorMap[key] = v;
           });
-          assignedVendors = Object.keys(mergedVendorMap).map(function(k) { return mergedVendorMap[k]; });
-        } else {
+        }
+        assignedVendors = Object.keys(mergedVendorMap).map(function(k) { return mergedVendorMap[k]; });
+
+        if (Object.keys(filteredPeriods).length === 0) {
           // Fallback ke logika lama (Akses Penilai tanpa kolom Penilai di Q)
           for (var pKey in periods) {
             var pObj = periods[pKey];

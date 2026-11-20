@@ -418,10 +418,7 @@ async function refreshPoStatsFromServer(pin) {
                     allRawOrders = data.allRawOrders;
                 }
 
-                if (pin !== '9999' && pin !== 'admin') {
-                    selectedPeriode = getBestPeriodForUser(userAssignedVendors);
-                }
-
+                selectedPeriode = 'all';
                 renderPeriodChips(serverPeriodList);
                 switchPeriod(selectedPeriode);
             } else {
@@ -590,11 +587,7 @@ async function processPinLogin(pin) {
                         allRawOrders = data.allRawOrders;
                     }
 
-                    if (pin === '9999' || pin === 'admin') {
-                        selectedPeriode = serverPeriodList.length > 0 ? serverPeriodList[0] : '';
-                    } else {
-                        selectedPeriode = getBestPeriodForUser(userAssignedVendors);
-                    }
+                    selectedPeriode = 'all';
                     renderPeriodChips(serverPeriodList);
 
                     verifiedData = {
@@ -911,9 +904,7 @@ function initSearch() {
     if (!input) return;
 
     input.addEventListener('input', () => {
-        const q = input.value.trim().toLowerCase();
-        const filtered = vendors.filter(v => v.toLowerCase().includes(q));
-        renderVendorList(filtered);
+        renderVendorList();
     });
 }
 
@@ -921,7 +912,6 @@ function initSearch() {
 // PERIODE CHIPS (DINAMIS DARI SHEET DI SPREADSHEET)
 // =====================================================
 function initPeriodeChips() {
-    // Awalnya tampilkan loading, akan di-render ulang setelah data server masuk
     const container = document.getElementById('periodeChips');
     if (!container) return;
     container.innerHTML = `<span style="color:#6b7280; font-size:0.85rem;">⏳ Memuat periode...</span>`;
@@ -931,7 +921,6 @@ function renderPeriodChips(periodList) {
     const container = document.getElementById('periodeChips');
     if (!container) return;
 
-    // Gunakan langsung periodList dari server (nama sheet di spreadsheet)
     const list = Array.isArray(periodList) ? periodList : [];
 
     if (list.length === 0) {
@@ -939,13 +928,13 @@ function renderPeriodChips(periodList) {
         return;
     }
 
-    // Jika selectedPeriode belum di-set atau tidak ada di list, gunakan yang pertama
-    if (!selectedPeriode || !list.includes(selectedPeriode)) {
-        selectedPeriode = list[0];
+    if (!selectedPeriode) {
+        selectedPeriode = 'all';
     }
 
     container.innerHTML = `
         <select id="periodeSelect" class="tremor-select font-semibold text-sm text-blue-900 bg-blue-50/60 border-blue-200 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-sm py-2 px-3.5 pr-8 rounded-lg transition" title="Pilih Periode Penilaian">
+            <option value="all"${selectedPeriode === 'all' ? ' selected' : ''}>🌐 Semua Periode</option>
             ${list.map(p => `<option value="${esc(p)}"${p === selectedPeriode ? ' selected' : ''}>📅 ${esc(p)}</option>`).join('')}
         </select>
     `;
@@ -959,8 +948,88 @@ function renderPeriodChips(periodList) {
 }
 
 /**
- * Berpindah periode: secara instan memuat vendor & PO stats dari sheet periode tersebut.
- * Vendor yang ditampilkan difilter agar hanya muncul jika memiliki PO di periode ini.
+ * Mengambil daftar penugasan vendor per periode:
+ * Jika 'all', mengembalikan array { vendor, period } dari seluruh sheet periode aktif.
+ * Memisahkan baris jika vendor digunakan di beberapa periode (misal: Vendor A - Q3, Vendor B - Q2).
+ */
+function getVendorAssignments(periodId) {
+    const isAdmin = (currentPin === '9999' || currentPin === 'admin');
+    const assignments = [];
+    const seen = new Set();
+
+    const isAll = (!periodId || periodId === 'all');
+    const periodsToScan = isAll 
+        ? (serverPeriodList && serverPeriodList.length > 0 ? serverPeriodList : Object.keys(serverPeriods || {}))
+        : [periodId];
+
+    if (isAdmin) {
+        periodsToScan.forEach(pKey => {
+            const pObj = serverPeriods[pKey];
+            if (!pObj) return;
+            const pVendors = (pObj.vendors && pObj.vendors.length > 0) ? pObj.vendors : allMasterVendors;
+            pVendors.forEach(v => {
+                const vName = typeof v === 'object' ? (v.nama || '') : v.toString();
+                if (!vName) return;
+                const key = `${vName}__${pKey}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    assignments.push({
+                        vendor: vName,
+                        period: pKey
+                    });
+                }
+            });
+        });
+    } else {
+        // Penilai biasa: kumpulkan vendor yang di-assign pada masing-masing periode
+        periodsToScan.forEach(pKey => {
+            const pObj = serverPeriods[pKey];
+            if (!pObj) return;
+            const pVendors = pObj.vendors || [];
+            pVendors.forEach(v => {
+                const vName = typeof v === 'object' ? (v.nama || '') : v.toString();
+                if (!vName) return;
+                const key = `${vName}__${pKey}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    assignments.push({
+                        vendor: vName,
+                        period: pKey
+                    });
+                }
+            });
+        });
+
+        // Fallback jika filteredPeriods belum berisi vendor tapi userAssignedVendors ada
+        if (assignments.length === 0 && userAssignedVendors && userAssignedVendors.length > 0) {
+            userAssignedVendors.forEach(v => {
+                const vName = typeof v === 'object' ? (v.nama || '') : v.toString();
+                if (!vName) return;
+                const pKey = isAll ? (serverPeriodList[0] || 'General') : periodId;
+                const key = `${vName}__${pKey}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    assignments.push({
+                        vendor: vName,
+                        period: pKey
+                    });
+                }
+            });
+        }
+    }
+
+    // Urutkan: periode terbaru (Q4 -> Q3 -> Q2 -> Q1), lalu nama vendor
+    assignments.sort((a, b) => {
+        if (a.period !== b.period) return b.period.localeCompare(a.period);
+        return a.vendor.localeCompare(b.vendor);
+    });
+
+    return assignments;
+}
+
+/**
+ * Berpindah periode: secara instan memuat vendor & PO stats.
+ * Mendukung 'all' untuk menampilkan seluruh penugasan lintas kuartal.
  */
 function switchPeriod(periodId) {
     selectedPeriode = periodId;
@@ -970,62 +1039,37 @@ function switchPeriod(periodId) {
         selectEl.value = periodId;
     }
 
-    if (serverPeriods && serverPeriods[periodId] && serverPeriods[periodId].poStats) {
+    if (periodId !== 'all' && serverPeriods && serverPeriods[periodId] && serverPeriods[periodId].poStats) {
         poStats = serverPeriods[periodId].poStats;
     } else {
+        // Gabungkan agregat poStats jika 'all'
         poStats = { totalOrders: 0, totalOnTime: 0, overallOnTimePct: 0, vendorMap: {} };
+        if (serverPeriods) {
+            for (let pk in serverPeriods) {
+                const cur = serverPeriods[pk];
+                if (cur && cur.poStats) {
+                    poStats.totalOrders += (cur.poStats.totalOrders || 0);
+                    poStats.totalOnTime += (cur.poStats.totalOnTime || 0);
+                    if (cur.poStats.vendorMap) {
+                        for (let vk in cur.poStats.vendorMap) {
+                            if (!poStats.vendorMap[vk]) {
+                                poStats.vendorMap[vk] = { ...cur.poStats.vendorMap[vk] };
+                            }
+                        }
+                    }
+                }
+            }
+            poStats.overallOnTimePct = poStats.totalOrders > 0 
+                ? Math.round((poStats.totalOnTime / poStats.totalOrders) * 100) 
+                : 100;
+        }
     }
 
-    if (currentPin === '9999' || currentPin === 'admin') {
-        const pVendors = (serverPeriods && serverPeriods[periodId] && serverPeriods[periodId].vendors && serverPeriods[periodId].vendors.length > 0)
-            ? serverPeriods[periodId].vendors
-            : (allMasterVendors.length > 0 ? allMasterVendors : DEFAULT_VENDORS);
-        processVendorData(pVendors);
-    } else {
-        // Penilai biasa: filter vendor yang ditugaskan agar hanya tampil yang memiliki PO di periode ini
-        const filtered = filterVendorsByPeriodPo(userAssignedVendors, periodId);
-        processVendorData(filtered.length > 0 ? filtered : userAssignedVendors);
-    }
+    const assignments = getVendorAssignments(periodId);
+    vendors = Array.from(new Set(assignments.map(a => a.vendor)));
 
     updatePoInsightsBanner();
     renderVendorList();
-}
-
-/**
- * Filter daftar vendor: hanya kembalikan vendor yang memiliki data PO pada periode tertentu.
- * Digunakan agar vendor Q2 tidak muncul saat memilih Q3, dan sebaliknya.
- */
-function filterVendorsByPeriodPo(vendorList, periodId) {
-    if (!vendorList || vendorList.length === 0) return [];
-    if (!serverPeriods || !serverPeriods[periodId]) return vendorList;
-
-    const pObj = serverPeriods[periodId];
-
-    // Kumpulkan semua nama vendor yang memiliki PO di periode ini
-    const poVendorNames = new Set();
-
-    if (pObj.rawOrders && pObj.rawOrders.length > 0) {
-        pObj.rawOrders.forEach(o => {
-            if (o.vendor) poVendorNames.add(o.vendor.toLowerCase().trim());
-        });
-    }
-
-    if (pObj.poStats && pObj.poStats.vendorMap) {
-        for (let k in pObj.poStats.vendorMap) {
-            poVendorNames.add(k.toLowerCase().trim());
-        }
-    }
-
-    // Jika tidak ada data PO sama sekali di periode ini, tampilkan semua vendor yang ditugaskan
-    if (poVendorNames.size === 0) return vendorList;
-
-    return vendorList.filter(v => {
-        const vName = (typeof v === 'object' ? (v.nama || '') : v.toString());
-        for (const pvn of poVendorNames) {
-            if (isSameVendor(vName, pvn)) return true;
-        }
-        return false;
-    });
 }
 
 // =====================================================
@@ -1064,14 +1108,15 @@ function isCancelledVendor(vName) {
  * Mengambil PO yang dimiliki suatu vendor HANYA pada periode yang dipilih (selectedPeriode).
  * Tidak lagi fallback ke periode lain agar saat menilai Q3, hanya PO Q3 yang muncul.
  */
-function getAllOrdersForVendor(vendorName) {
-    if (!vendorName) return { orders: [], period: selectedPeriode };
+function getAllOrdersForVendor(vendorName, targetPeriod = null) {
+    const period = targetPeriod || selectedPeriode;
+    if (!vendorName) return { orders: [], period: period };
 
     let foundOrders = [];
 
-    // 1. Cek periode aktif (selectedPeriode) — HANYA periode ini
-    if (serverPeriods && serverPeriods[selectedPeriode]) {
-        const cur = serverPeriods[selectedPeriode];
+    // 1. Jika ada targetPeriod tertentu (bukan 'all')
+    if (period && period !== 'all' && serverPeriods && serverPeriods[period]) {
+        const cur = serverPeriods[period];
         if (cur.rawOrders && cur.rawOrders.length > 0) {
             foundOrders = cur.rawOrders.filter(o => isSameVendor(o.vendor, vendorName));
         }
@@ -1083,9 +1128,25 @@ function getAllOrdersForVendor(vendorName) {
                 }
             }
         }
+    } else {
+        // 2. Jika 'all', cari di seluruh periode atau allRawOrders
+        if (Array.isArray(allRawOrders) && allRawOrders.length > 0) {
+            foundOrders = allRawOrders.filter(o => isSameVendor(o.vendor, vendorName));
+        }
+        if (foundOrders.length === 0 && serverPeriods) {
+            for (let pk in serverPeriods) {
+                const cur = serverPeriods[pk];
+                if (cur.rawOrders && cur.rawOrders.length > 0) {
+                    const match = cur.rawOrders.filter(o => isSameVendor(o.vendor, vendorName));
+                    if (match.length > 0) {
+                        foundOrders = foundOrders.concat(match);
+                    }
+                }
+            }
+        }
     }
 
-    // 2. Fallback: cek di poStats global (sudah difilter per periode oleh switchPeriod)
+    // 3. Fallback: cek di poStats global
     if (foundOrders.length === 0 && poStats && poStats.vendorMap) {
         for (let k in poStats.vendorMap) {
             if (isSameVendor(k, vendorName)) {
@@ -1095,7 +1156,7 @@ function getAllOrdersForVendor(vendorName) {
         }
     }
 
-    return { orders: foundOrders, period: selectedPeriode };
+    return { orders: foundOrders, period: period };
 }
 
 /**
@@ -1134,23 +1195,22 @@ function getBestPeriodForUser(assignedVendors) {
     return (serverPeriodList && serverPeriodList.includes('Q3 2026')) ? 'Q3 2026' : (serverPeriodList[0] || 'Q3 2026');
 }
 
-function getVendorPoStats(vName) {
+function getVendorPoStats(vName, targetPeriod = null) {
     if (!vName) return null;
+    const period = targetPeriod || selectedPeriode;
 
-    // Hanya cek poStats periode saat ini (sudah difilter oleh switchPeriod)
-    if (poStats && poStats.vendorMap) {
-        for (let k in poStats.vendorMap) {
-            if (isSameVendor(k, vName)) return poStats.vendorMap[k];
-        }
-    }
-
-    // Cek di serverPeriods untuk periode aktif saja
-    if (serverPeriods && serverPeriods[selectedPeriode]) {
-        const pObj = serverPeriods[selectedPeriode];
+    if (period && period !== 'all' && serverPeriods && serverPeriods[period]) {
+        const pObj = serverPeriods[period];
         if (pObj && pObj.poStats && pObj.poStats.vendorMap) {
             for (let k in pObj.poStats.vendorMap) {
                 if (isSameVendor(k, vName)) return pObj.poStats.vendorMap[k];
             }
+        }
+    }
+
+    if (poStats && poStats.vendorMap) {
+        for (let k in poStats.vendorMap) {
+            if (isSameVendor(k, vName)) return poStats.vendorMap[k];
         }
     }
 
@@ -1185,13 +1245,18 @@ function updateAssessorWelcomeCard() {
     const totalProgEl = document.getElementById('assessorTotalProgress');
 
     const isAdmin = (currentPin === '9999' || currentPin === 'admin');
-    const total = vendors.length;
-    const assessed = getAssessedVendorsForPeriod(selectedPeriode);
-    const doneCount = vendors.filter(v => assessed.includes(v)).length;
+    const allAssignments = getVendorAssignments(selectedPeriode);
+    const total = allAssignments.length;
+    const doneCount = allAssignments.filter(item => {
+        const assessed = getAssessedVendorsForPeriod(item.period);
+        return assessed.includes(item.vendor);
+    }).length;
     const pendingCount = Math.max(total - doneCount, 0);
 
     if (periodBadge) {
-        periodBadge.textContent = selectedPeriode ? `Periode: ${selectedPeriode}` : 'Periode Aktif';
+        periodBadge.textContent = (!selectedPeriode || selectedPeriode === 'all') 
+            ? '🌐 Semua Periode' 
+            : `Periode: ${selectedPeriode}`;
     }
 
     if (heading) {
@@ -1206,15 +1271,16 @@ function updateAssessorWelcomeCard() {
 
     if (sub) {
         if (!isAdmin) {
+            const periodLabel = (!selectedPeriode || selectedPeriode === 'all') ? 'seluruh periode' : `periode ${selectedPeriode}`;
             if (pendingCount > 0) {
-                sub.textContent = `Anda memiliki ${pendingCount} rekanan yang perlu dinilai pada periode ${selectedPeriode || 'ini'}. Pilih vendor untuk mulai menilai.`;
+                sub.textContent = `Anda memiliki ${pendingCount} rekanan yang perlu dinilai pada ${periodLabel}. Pilih vendor untuk mulai menilai.`;
             } else if (total > 0) {
-                sub.textContent = `Semua ${total} rekanan telah selesai dinilai pada periode ${selectedPeriode || 'ini'}. Terima kasih! 🎉`;
+                sub.textContent = `Semua ${total} rekanan telah selesai dinilai pada ${periodLabel}. Terima kasih! 🎉`;
             } else {
                 sub.textContent = 'Belum ada rekanan yang ditugaskan untuk Anda saat ini.';
             }
         } else {
-            sub.textContent = `Monitoring seluruh penugasan evaluasi vendor periode ${selectedPeriode || '-'}.`;
+            sub.textContent = `Monitoring seluruh penugasan evaluasi vendor (${selectedPeriode === 'all' ? 'Semua Periode' : selectedPeriode}).`;
         }
     }
 
@@ -1248,76 +1314,89 @@ function renderVendorList(overrideList = null) {
 
     updateAssessorWelcomeCard();
 
-    let displayVendors = overrideList;
+    let displayList = overrideList;
 
-    if (!displayVendors) {
-        let baseList = vendors;
+    if (!displayList) {
+        let baseList = getVendorAssignments(selectedPeriode);
 
         // Filter Pinned / Vendorku jika viewMode === 'pinned'
         if (viewMode === 'pinned') {
             const pinned = getPinnedVendors();
-            baseList = vendors.filter(v => pinned.includes(v));
+            baseList = baseList.filter(item => pinned.includes(item.vendor));
         }
 
         // Filter berdasarkan Bidang / Kategori (multi-select)
         if (!activeCategories.includes('all')) {
-            baseList = baseList.filter(v => {
-                const vCat = getVendorCategory(v);
+            baseList = baseList.filter(item => {
+                const vCat = getVendorCategory(item.vendor);
                 return activeCategories.includes(vCat);
             });
         }
 
         // Filter berdasarkan Status (Semua / Perlu Dinilai / Selesai)
         if (currentStatusFilter !== 'all') {
-            const assessedSet = new Set(getAssessedVendorsForPeriod(selectedPeriode));
-            if (currentStatusFilter === 'pending') {
-                baseList = baseList.filter(v => !assessedSet.has(v));
-            } else if (currentStatusFilter === 'done') {
-                baseList = baseList.filter(v => assessedSet.has(v));
-            }
+            baseList = baseList.filter(item => {
+                const assessed = getAssessedVendorsForPeriod(item.period);
+                const isDone = assessed.includes(item.vendor);
+                if (currentStatusFilter === 'pending') return !isDone;
+                if (currentStatusFilter === 'done') return isDone;
+                return true;
+            });
         }
 
-        displayVendors = baseList;
+        displayList = baseList;
     }
+
+    // Normalisasi array: pastikan setiap item adalah object { vendor, period }
+    displayList = displayList.map(item => {
+        if (typeof item === 'string') {
+            return { vendor: item, period: selectedPeriode || 'General' };
+        }
+        return item;
+    });
 
     // Filter pencarian jika ada di input search
     const searchVal = document.getElementById('searchInput')?.value.trim().toLowerCase();
-    if (searchVal && !overrideList) {
-        displayVendors = displayVendors.filter(v => v.toLowerCase().includes(searchVal));
+    if (searchVal) {
+        displayList = displayList.filter(item => 
+            item.vendor.toLowerCase().includes(searchVal) || 
+            (item.period && item.period.toLowerCase().includes(searchVal))
+        );
     }
 
     if (countEl) {
-        countEl.textContent = `${displayVendors.length} Rekanan${viewMode === 'pinned' ? ' (Vendorku)' : ''}`;
+        countEl.textContent = `${displayList.length} Penugasan${viewMode === 'pinned' ? ' (Vendorku)' : ''}`;
     }
 
-    if (displayVendors.length === 0) {
+    if (displayList.length === 0) {
         const isAdm = currentPin === '9999' || currentPin === 'admin';
         list.innerHTML = `
         <div style="grid-column: 1 / -1; text-align:center; padding:3.5rem 1.5rem; background:#fff; border:1px dashed #cbd5e1; border-radius:1rem; color:#64748b;">
             <div style="font-size:2.5rem; margin-bottom:0.75rem;">📋</div>
             <div style="font-weight:700; color:#0f172a; font-size:1rem; margin-bottom:0.25rem;">
-                ${isAdm ? 'Tidak Ada Vendor pada Periode "' + esc(selectedPeriode) + '"' : (currentStatusFilter === 'pending' ? 'Semua Rekanan Sudah Selesai Dinilai 🎉' : 'Belum Ada Vendor Ditugaskan')}
+                ${isAdm ? 'Tidak Ada Penugasan pada Periode Ini' : (currentStatusFilter === 'pending' ? 'Semua Rekanan Sudah Selesai Dinilai 🎉' : 'Belum Ada Penugasan Vendor')}
             </div>
             <div style="font-size:0.85rem; color:#64748b; max-width:440px; margin:0 auto;">
                 ${currentStatusFilter === 'pending' 
                     ? 'Seluruh rekanan yang ditugaskan kepada Anda telah selesai dievaluasi pada periode ini.'
-                    : (viewMode === 'pinned' ? 'Anda belum menyematkan vendor favorit.' : (isAdm ? 'Tidak ada catatan PO untuk vendor pada periode ini, atau belum cocok dengan filter pencarian.' : 'Belum ada vendor yang ditugaskan untuk PIN Penilai Anda di sheet "Akses Penilai", atau belum cocok dengan filter.'))
+                    : (viewMode === 'pinned' ? 'Anda belum menyematkan vendor favorit.' : (isAdm ? 'Tidak ada catatan PO untuk vendor pada periode ini.' : 'Belum ada vendor yang ditugaskan untuk PIN Penilai Anda di sheet Q (kolom Penilai) atau sheet Akses Penilai.'))
                 }
             </div>
             ${viewMode === 'pinned' ? '<button class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 shadow-2xs mt-3" onclick="document.getElementById(\'btnFilterAll\').click()">🌐 Lihat Semua Vendorku</button>' : ''}
-            ${currentStatusFilter !== 'all' ? '<button class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 shadow-2xs mt-3" onclick="filterByStatus(\'all\')">Tampilkan Semua Rekanan</button>' : ''}
+            ${currentStatusFilter !== 'all' ? '<button class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 shadow-2xs mt-3" onclick="filterByStatus(\'all\')">Tampilkan Semua Penugasan</button>' : ''}
         </div>`;
         return;
     }
 
-    const assessed = getAssessedVendorsForPeriod(selectedPeriode);
     const pinned = getPinnedVendors();
 
-    list.innerHTML = displayVendors.map((v, i) => {
-        const originalIndex = vendors.indexOf(v);
+    list.innerHTML = displayList.map((item, i) => {
+        const v = item.vendor;
+        const period = item.period;
+        const assessed = getAssessedVendorsForPeriod(period);
         const done = assessed.includes(v);
         const isPinned = pinned.includes(v);
-        const color = AVATAR_COLORS[(originalIndex >= 0 ? originalIndex : i) % AVATAR_COLORS.length];
+        const color = AVATAR_COLORS[i % AVATAR_COLORS.length];
         const vNameStr = (v || '').toString();
         const initials = vNameStr.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2) || 'VN';
 
@@ -1325,9 +1404,18 @@ function renderVendorList(overrideList = null) {
         const catCode = getVendorCategory(v);
         const catObj = (categoriesList && categoriesList.find(c => c.kode === catCode)) || { nama: 'Pengadaan Barang & Jasa', ikon: '📦' };
 
-        const vOrdersInfo = getAllOrdersForVendor(v);
+        // Riwayat penggunaan vendor pada periode ini
+        const vOrdersInfo = getAllOrdersForVendor(v, period);
         const vOrders = vOrdersInfo.orders || [];
-        const itemPreview = vOrders.length > 0 ? vOrders.map(o => o.product).filter(Boolean).slice(0, 2).join(', ') : '';
+        let usageText = '';
+        if (vOrders.length > 0) {
+            const products = vOrders.map(o => o.product).filter(Boolean);
+            const prodSnippet = products.slice(0, 2).join(', ');
+            const poNums = vOrders.map(o => o.poNum).filter(Boolean).slice(0, 2).join(', ');
+            usageText = `${vOrders.length} PO: ${prodSnippet || poNums || 'Pengadaan Barang/Jasa'}`;
+        } else {
+            usageText = `Digunakan pada ${period}`;
+        }
 
         // Score preview if evaluated
         let scoreBadge = '';
@@ -1340,26 +1428,35 @@ function renderVendorList(overrideList = null) {
 
         const rowStyle = done && !isAdmin ? 'style="opacity: 0.9;"' : '';
 
-        // Tentukan apakah tampilan admin (card kompleks) atau penilai biasa (row simpel)
+        // TAMPILAN PENILAI BIASA: Compact Row Card dengan Badge Periode & Keterangan Penggunaan
         if (!isAdmin) {
-            // ========== TAMPILAN PENILAI BIASA: Compact Row Card ==========
             return `
-            <div class="vendor-card vendor-row ${done ? 'locked' : ''} group" data-vendor="${esc(v)}" ${rowStyle} style="padding:1rem 1.25rem;">
+            <div class="vendor-card vendor-row ${done ? 'locked' : ''} group" data-vendor="${esc(v)}" data-period="${esc(period)}" ${rowStyle} style="padding:1rem 1.25rem;">
                 <div class="flex items-center justify-between gap-3">
                     <div class="flex items-center gap-3 min-w-0">
                         <div class="vendor-avatar group-hover:scale-105 transition-transform" style="background:${color}14; color:${color}; border:1px solid ${color}28;">
                             ${initials}
                         </div>
                         <div class="min-w-0">
-                            <h3 class="font-bold text-sm sm:text-base text-gray-900 group-hover:text-blue-600 transition-colors leading-snug truncate" title="${esc(v)}">
-                                ${esc(v)}
-                            </h3>
-                            <div class="flex items-center gap-2 mt-0.5 flex-wrap">
-                                <span class="inline-flex items-center gap-1 text-[11px] font-medium text-gray-500">
+                            <div class="flex items-center gap-2 flex-wrap mb-0.5">
+                                <h3 class="font-bold text-sm sm:text-base text-gray-900 group-hover:text-blue-600 transition-colors leading-snug truncate" title="${esc(v)}">
+                                    ${esc(v)}
+                                </h3>
+                                <!-- BADGE PERIODE (Q1/Q2/Q3/Q4) -->
+                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs">
+                                    📅 ${esc(period)}
+                                </span>
+                                ${scoreBadge}
+                            </div>
+                            <div class="flex items-center gap-2 flex-wrap text-[11px] text-gray-500">
+                                <span class="inline-flex items-center gap-1 font-medium">
                                     <span>${esc(catObj.ikon || '📦')}</span>
                                     <span>${esc(catObj.nama)}</span>
                                 </span>
-                                ${itemPreview ? `<span class="text-[10px] text-gray-400 font-medium truncate max-w-[180px]" title="${esc(itemPreview)}">${esc(itemPreview)}</span>` : ''}
+                                <span class="text-gray-300">•</span>
+                                <span class="text-gray-600 font-medium truncate max-w-[280px]" title="${esc(usageText)}">
+                                    ${esc(usageText)}
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -1379,21 +1476,26 @@ function renderVendorList(overrideList = null) {
             </div>`;
         }
 
-        // ========== TAMPILAN ADMIN: Full Card dengan PO Preview ==========
+        // TAMPILAN ADMIN: Full Card dengan PO Preview + Badge Periode
         return `
-        <div class="vendor-card vendor-row ${done ? 'locked' : ''} group" data-vendor="${esc(v)}" ${rowStyle}>
+        <div class="vendor-card vendor-row ${done ? 'locked' : ''} group" data-vendor="${esc(v)}" data-period="${esc(period)}" ${rowStyle}>
             <div>
-                <!-- Top Row: Avatar + Name + Status Pill -->
+                <!-- Top Row: Avatar + Name + Period Badge + Status Pill -->
                 <div class="flex items-start justify-between gap-3 mb-3.5">
                     <div class="flex items-center gap-3 min-w-0">
                         <div class="vendor-avatar group-hover:scale-105 transition-transform" style="background:${color}14; color:${color}; border:1px solid ${color}28;">
                             ${initials}
                         </div>
                         <div class="min-w-0">
-                            <h3 class="font-bold text-sm text-gray-900 group-hover:text-blue-600 transition-colors leading-snug truncate" title="${esc(v)}">
-                                ${esc(v)}
-                            </h3>
-                            <div class="flex items-center gap-1.5 mt-1">
+                            <div class="flex items-center gap-2 flex-wrap mb-1">
+                                <h3 class="font-bold text-sm text-gray-900 group-hover:text-blue-600 transition-colors leading-snug truncate" title="${esc(v)}">
+                                    ${esc(v)}
+                                </h3>
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs">
+                                    📅 ${esc(period)}
+                                </span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
                                 <span class="inline-flex items-center gap-1 text-[11px] font-medium text-gray-500">
                                     <span>${esc(catObj.ikon || '📦')}</span>
                                     <span class="truncate max-w-[150px]">${esc(catObj.nama)}</span>
@@ -1418,44 +1520,46 @@ function renderVendorList(overrideList = null) {
                 <!-- Middle Snippet: Product / PO Scope Preview -->
                 <div class="p-3 bg-slate-50/80 rounded-xl border border-slate-100 text-xs mb-4">
                     <div class="flex items-center justify-between text-[10px] text-gray-400 font-bold mb-1 uppercase tracking-wider">
-                        <span>Ruang Lingkup / PO</span>
-                        ${vOrders.length > 0 ? `<span class="text-blue-600 font-bold">${vOrders.length} Pesanan PO</span>` : ''}
+                        <span>Lingkup Pekerjaan</span>
+                        <span class="font-bold text-blue-600">${esc(period)}</span>
                     </div>
-                    <div class="text-gray-700 font-medium text-xs line-clamp-2 leading-relaxed" title="${esc(itemPreview || 'Pengadaan barang & jasa operasional')}">
-                        ${itemPreview ? `📦 ${esc(itemPreview)}` : '📦 Pengadaan barang & jasa operasional'}
+                    <div class="font-semibold text-gray-800 line-clamp-2">
+                        ${esc(usageText)}
                     </div>
                 </div>
-            </div>
 
-            <!-- Card Bottom: Meta info & Action button -->
-            <div class="pt-3 border-t border-gray-100 flex items-center justify-between">
-                <div class="flex items-center gap-1.5 text-2xs text-gray-400 font-medium">
-                    ${done 
-                        ? (scoreBadge || '<span>🔒 Terkunci</span>')
-                        : '<span class="text-amber-600/80 font-medium">⭐ Menunggu penilaian</span>'
-                    }
-                </div>
-                <div class="flex items-center gap-1.5">
-                    ${done && isAdmin ? `<button class="vendor-unlock-btn text-xs px-2.5 py-1 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 transition font-medium shadow-2xs" data-unlock="${esc(v)}" title="Buka Kunci Penilaian">🔓 Buka</button>` : ''}
-                    <span class="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl transition shadow-2xs ${done ? 'bg-gray-100 text-gray-600 group-hover:bg-gray-200' : 'bg-blue-600 text-white group-hover:bg-blue-700'}">
-                        <span>${done ? 'Lihat Nilai' : 'Beri Nilai'}</span>
-                        <span class="group-hover:translate-x-0.5 transition-transform font-bold">→</span>
-                    </span>
+                <!-- Footer: Score or Action -->
+                <div class="flex items-center justify-between pt-3 border-t border-gray-100 text-xs">
+                    <div>
+                        ${done && scoreSummary && scoreSummary[v]
+                            ? `<span class="text-xs font-bold text-emerald-600">★ ${Number(scoreSummary[v].avgScore || 5).toFixed(1)} / 5.0</span>`
+                            : `<span class="text-xs text-gray-400 font-medium">Belum Dinilai</span>`
+                        }
+                    </div>
+                    <div class="flex items-center gap-2">
+                        ${done 
+                            ? `<button class="vendor-unlock-btn px-2.5 py-1 text-2xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg border border-red-200 transition" data-unlock="${esc(v)}" data-unlock-period="${esc(period)}">Buka Kunci</button>`
+                            : `<span class="text-xs font-bold text-blue-600 group-hover:translate-x-1 transition-transform inline-block">Beri Nilai →</span>`
+                        }
+                    </div>
                 </div>
             </div>
         </div>`;
     }).join('');
 
-    // Attach row click (modal open)
+    // Attach click listener ke setiap vendor card
     list.querySelectorAll('.vendor-row').forEach(row => {
         row.addEventListener('click', (e) => {
             if (e.target.closest('.vendor-pin-btn') || e.target.closest('.vendor-unlock-btn')) return;
             
+            const v = row.dataset.vendor;
+            const p = row.dataset.period || selectedPeriode;
+
             if (row.classList.contains('locked') && !isAdmin) {
-                showToast(`Vendor ini sudah dinilai pada periode ${selectedPeriode} dan terkunci.`, 'info');
+                showToast(`Vendor ini sudah dinilai pada periode ${p} dan terkunci.`, 'info');
                 return;
             }
-            openModal(row.dataset.vendor);
+            openModal(v, p);
         });
     });
 
@@ -1464,13 +1568,13 @@ function renderVendorList(overrideList = null) {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
             const vendor = btn.dataset.unlock;
-            if (confirm(`Buka kunci penilaian untuk "${vendor}" pada periode ${selectedPeriode}?`)) {
-                unlockVendor(vendor);
+            const period = btn.dataset.unlockPeriod || selectedPeriode;
+            if (confirm(`Buka kunci penilaian untuk "${vendor}" pada periode ${period}?`)) {
+                unlockVendor(vendor, period);
             }
         });
     });
 }
-
 function getAssessedVendorsForPeriod(period) {
     const assessedSet = new Set();
 
@@ -1522,20 +1626,21 @@ function saveAssessedForPeriod(vendorName, period) {
     scoreSummary[vendorName].periodeScores.push({ periode: period, score: 5, predikat: 'Baik' });
 }
 
-function unlockVendor(vendorName) {
+function unlockVendor(vendorName, targetPeriod = null) {
+    const period = targetPeriod || selectedPeriode;
     let localList = [];
     try {
-        localList = JSON.parse(localStorage.getItem(`ethos_assessed_${selectedPeriode}`) || '[]');
+        localList = JSON.parse(localStorage.getItem(`ethos_assessed_${period}`) || '[]');
     } catch (e) {}
 
     localList = localList.filter(v => v !== vendorName);
-    localStorage.setItem(`ethos_assessed_${selectedPeriode}`, JSON.stringify(localList));
+    localStorage.setItem(`ethos_assessed_${period}`, JSON.stringify(localList));
 
     if (scoreSummary[vendorName] && scoreSummary[vendorName].periodeScores) {
-        scoreSummary[vendorName].periodeScores = scoreSummary[vendorName].periodeScores.filter(p => p.periode !== selectedPeriode);
+        scoreSummary[vendorName].periodeScores = scoreSummary[vendorName].periodeScores.filter(p => p.periode !== period);
     }
 
-    showToast(`Kunci penilaian untuk "${vendorName}" pada periode ${selectedPeriode} berhasil dibuka.`, 'success');
+    showToast(`Kunci penilaian untuk "${vendorName}" pada periode ${period} berhasil dibuka.`, 'success');
     renderVendorList();
 }
 
@@ -1549,10 +1654,14 @@ function esc(str) {
 // =====================================================
 // MODAL & PO INSIGHTS INTEGRATION
 // =====================================================
-function openModal(vendorName) {
+let currentAssessmentPeriod = '';
+
+function openModal(vendorName, period = null) {
     if (!vendorName) return;
 
     selectedVendor = vendorName;
+    const activePeriod = period || selectedPeriode || (serverPeriodList && serverPeriodList[0]) || 'Q3 2026';
+    currentAssessmentPeriod = activePeriod;
 
     const modalEl = document.getElementById('modalBg');
     if (!modalEl) {
@@ -1566,15 +1675,15 @@ function openModal(vendorName) {
         console.warn('resetForm error:', e);
     }
 
-    // Ambil PO vendor HANYA pada periode yang dipilih (tidak pindah periode)
-    const poInfo = getAllOrdersForVendor(vendorName);
+    // Ambil PO vendor HANYA pada periode yang dinilai
+    const poInfo = getAllOrdersForVendor(vendorName, activePeriod);
 
     const titleEl = document.getElementById('modalVendorName');
     if (titleEl) titleEl.textContent = vendorName;
 
     const badgeEl = document.getElementById('modalPeriodBadge');
-    if (badgeEl && selectedPeriode) {
-        badgeEl.textContent = `• Periode ${selectedPeriode}`;
+    if (badgeEl) {
+        badgeEl.textContent = `• Periode ${activePeriod}`;
     }
 
     // Render form dinamis berdasarkan kriteria & kategori vendor
@@ -1586,7 +1695,7 @@ function openModal(vendorName) {
 
     // Auto-suggest rating ketepatan waktu jika vendor memiliki PO stats dan kriterianya aktif
     try {
-        const vStats = getVendorPoStats(vendorName);
+        const vStats = getVendorPoStats(vendorName, activePeriod);
         if (vStats && vStats.totalPo > 0 && ratings && 'ketepatanWaktu' in ratings) {
             let suggestVal = 2;
             if (vStats.onTimeRatePct >= 90) suggestVal = 5;
@@ -1600,7 +1709,7 @@ function openModal(vendorName) {
 
     // Render panel ringkasan PO vendor pada periode ini
     try {
-        renderVendorPoPanel(vendorName);
+        renderVendorPoPanel(vendorName, activePeriod);
     } catch (e) {
         console.warn('renderVendorPoPanel error:', e);
     }
@@ -1618,14 +1727,15 @@ function openModal(vendorName) {
  * Render daftar item PO (BarangJasa) vendor pada periode yang dipilih
  * di panel atas modal, agar penilai tahu apa yang disuplai vendor.
  */
-function renderVendorPoPanel(vendorName) {
+function renderVendorPoPanel(vendorName, targetPeriod = null) {
     const panel = document.getElementById('vendorPoPanel');
     const body = document.getElementById('vendorPoBody');
     const countEl = document.getElementById('vendorPoCount');
     const titleEl = document.getElementById('vendorPoTitle');
     if (!panel || !body) return;
 
-    const poInfo = getAllOrdersForVendor(vendorName);
+    const activePeriod = targetPeriod || currentAssessmentPeriod || selectedPeriode;
+    const poInfo = getAllOrdersForVendor(vendorName, activePeriod);
     const allOrders = poInfo.orders;
 
     if (!allOrders || allOrders.length === 0) {
@@ -1960,7 +2070,7 @@ async function submitAssessment() {
         }
     }
 
-    const activePeriod = selectedPeriode || (serverPeriodList && serverPeriodList.length > 0 ? serverPeriodList[0] : 'Q3 2026');
+    const activePeriod = currentAssessmentPeriod || selectedPeriode || (serverPeriodList && serverPeriodList.length > 0 ? serverPeriodList[0] : 'Q3 2026');
     const assessorName = currentAssessorName || 
                          sessionStorage.getItem('ethos_nama') || 
                          localStorage.getItem('ethos_nama') || 
